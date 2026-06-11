@@ -4,7 +4,7 @@ int main() {
 	
 	Application app;
 
-	if (app.InitGL()) {
+	if (!app.InitGL()) {
 		return 1;
 	}
 

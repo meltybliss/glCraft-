@@ -46,4 +46,6 @@ bool Application::InitGL() {
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	return true;
+
 }
