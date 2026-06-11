@@ -19,6 +19,9 @@
     <Filter Include="third_party">
       <UniqueIdentifier>{93fd2bda-1a7d-4e66-a2ff-1c253ec235f2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{b0daae04-05f1-4174-ada2-e377ff64c652}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="third_party\glad\glad.h">
@@ -61,5 +64,13 @@
     <Library Include="lib\glfw3.lib">
       <Filter>lib</Filter>
     </Library>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assets\Shaders\basic.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\Shaders\basic.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
