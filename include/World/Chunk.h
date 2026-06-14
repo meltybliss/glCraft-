@@ -20,8 +20,18 @@ struct Chunk {
 
 	std::array<BlockType, CHUNK_SIZE> blocks;
 
-	int Index(uint8_t x, uint16_t y, uint8_t z) {
+	int Index(int x, int y, int z) {
 		return x + CHUNK_WIDTH * z + y * CHUNK_WIDTH * CHUNK_DEPTH;
+	}
+
+	unsigned int GetBlock(int x, int y, int z) {
+		return (unsigned int)blocks[Index(x, y, z)];
+	}
+
+	void SetBlock(int x, int y, int z, BlockType b) {
+		blocks[Index(x, y, z)] = b;
+
+		dirty = true;
 	}
 
 };

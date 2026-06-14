@@ -128,6 +128,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\Core\Application.h" />
+    <ClInclude Include="include\Render\ChunkMesh.h" />
+    <ClInclude Include="include\Render\MeshBuilder.h" />
+    <ClInclude Include="include\Render\MeshData.h" />
     <ClInclude Include="include\Render\Shader.h" />
     <ClInclude Include="include\World\BlockData.h" />
     <ClInclude Include="include\World\Chunk.h" />
@@ -141,6 +144,7 @@
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\main.cpp" />
+    <ClCompile Include="src\Render\MeshBuilder.cpp" />
     <ClCompile Include="src\Render\Shader.cpp" />
     <ClCompile Include="src\World\Chunk.cpp" />
     <ClCompile Include="src\World\World.cpp" />
