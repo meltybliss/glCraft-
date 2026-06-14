@@ -5,13 +5,16 @@
 #include "MeshData.h"
 
 struct ChunkMesh {
-	unsigned int vao;
-	unsigned int vbo;
-	unsigned int ebo;
+	unsigned int vao = 0;
+	unsigned int vbo = 0;
+	unsigned int ebo = 0;
+	GLsizei indexCount = 0;
 
 	void Upload(const MeshData& data) {
 		auto& vertices = data.vertices;
 		auto& indices = data.indices;
+
+		indexCount = static_cast<GLsizei>(indices.size());
 
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
@@ -32,12 +35,13 @@ struct ChunkMesh {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(
 			GL_ELEMENT_ARRAY_BUFFER,
-			indices.size() * sizeof(uint8_t),
+			indices.size() * sizeof(unsigned int),
 			indices.data(),
 			GL_STATIC_DRAW
 		);
 
 		//vao
+		//xyz
 		glVertexAttribPointer(
 			0,
 			3,
@@ -48,6 +52,7 @@ struct ChunkMesh {
 		);
 		glEnableVertexAttribArray(0);
 
+		//UV
 		glVertexAttribPointer(
 			1,
 			2,
@@ -65,7 +70,20 @@ struct ChunkMesh {
 
 
 	void Draw() {
+		if (vao == 0 || indexCount == 0) {
+			return;
+		}
 
+		glBindVertexArray(vao);
+
+		glDrawElements(
+			GL_TRIANGLES,
+			indexCount,
+			GL_UNSIGNED_INT,
+			nullptr
+		);
+
+		glBindVertexArray(0);
 	}
 
 };

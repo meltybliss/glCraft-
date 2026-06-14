@@ -1,8 +1,11 @@
 #pragma once
 
 enum class BlockType {
-	GRASS = 0,
+	AIR = 0,
+	GRASS,
 	DIRT,
 	STONE,
 
 };
+
+constexpr float BLOCK_SIZE = 1.f;

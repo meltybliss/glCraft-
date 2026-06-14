@@ -3,11 +3,15 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "World/BlockData.h"
+#include "Render/ChunkMesh.h"
 #include <array>
 
 struct Chunk {
-	unsigned int vao = -1;
-	unsigned int vbo = -1;
+	
+	int32_t cx = 0;
+	int32_t cz = 0;
+
+	ChunkMesh mesh;
 
 	bool dirty = true;
 
@@ -20,7 +24,7 @@ struct Chunk {
 
 	std::array<BlockType, CHUNK_SIZE> blocks;
 
-	int Index(int x, int y, int z) {
+	static int Index(int x, int y, int z) {
 		return x + CHUNK_WIDTH * z + y * CHUNK_WIDTH * CHUNK_DEPTH;
 	}
 
