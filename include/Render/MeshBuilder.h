@@ -30,9 +30,9 @@ private:
 private:
 	
 
-	static UV GetUV(const BlockType b, uint8_t index, BlockFace face) const;
-	static UV GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face) const;
-	static UV GetTileVertexUV(uint8_t index, int tileX, int tileY) const;
+	static UV GetUV(const BlockType b, uint8_t index, BlockFace face);
+	static UV GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face);
+	static UV GetTileVertexUV(uint8_t index, int tileX, int tileY);
 
 	static void AddFace(std::array<std::array<float, 3>, 4>& pointsSet, const BlockType b, const BlockFace face, std::vector<unsigned int>& indices, std::vector<float>& v);
 

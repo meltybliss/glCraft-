@@ -123,7 +123,7 @@ MeshData MeshBuilder::BuildChunkMesh(const World& w, const Chunk& c) {
 }
 
 
-UV MeshBuilder::GetUV(const BlockType b, uint8_t index, BlockFace face) const {
+UV MeshBuilder::GetUV(const BlockType b, uint8_t index, BlockFace face) {
 	if (b == BlockType::AIR) {
 		return { 0.f, 0.f };
 	}
@@ -132,7 +132,7 @@ UV MeshBuilder::GetUV(const BlockType b, uint8_t index, BlockFace face) const {
 
 }
 
-UV MeshBuilder::GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face) const {
+UV MeshBuilder::GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face) {
 	switch (b) {
 		case BlockType::GRASS: {
 			if (face == BlockFace::TOP) {
@@ -173,7 +173,7 @@ UV MeshBuilder::GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face)
 
 }
 
-UV MeshBuilder::GetTileVertexUV(uint8_t index, int tileX, int tileY) const {
+UV MeshBuilder::GetTileVertexUV(uint8_t index, int tileX, int tileY) {
 	UVPoint p = (UVPoint)index;
 
 	float tileUV_X = 1.0f / atlasTilesX;

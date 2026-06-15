@@ -948,6 +948,9 @@
     <ClInclude Include="third_party\glm\simd\vector_relational.h">
       <Filter>third_party</Filter>
     </ClInclude>
+    <ClInclude Include="include\Render\Camera.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="third_party\glad.c">

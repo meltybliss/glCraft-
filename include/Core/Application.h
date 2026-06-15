@@ -2,6 +2,12 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 
+#include "Render/Camera.h"
+#include "World/World.h"
+#include "Render/WorldRenderer.h"
+#include "Render/Shader.h"
+#include <optional>
+
 class Application {
 public:
 	Application() = default;
@@ -14,4 +20,11 @@ private:
 
 private:
 	GLFWwindow* m_window = nullptr;
+
+	World m_world;
+	WorldRenderer m_wRenderer;
+	Camera m_camera;
+
+	std::optional<Shader> baseShader;
+
 };

@@ -6,6 +6,9 @@
 
 
 using ChunkKey = uint64_t;
+
+struct Camera;
+
 class World {
 public:
 	using ChunkMap = std::unordered_map<ChunkKey, std::unique_ptr<Chunk>>;
@@ -22,10 +25,17 @@ public:
 		return chunks;
 	}
 
+	void Tick(float dt, const Camera& cam);
+	void UpdateChunksAround(const Camera& cam);
+private:
+
+	static constexpr int LOAD_CHUNKS_DISTANCE = 2;
+	static constexpr int UNLOAD_CHUNKS_DISTANCE = 4;
 
 private:
 
 	ChunkMap chunks;
+
 
 private:
 	

@@ -4,13 +4,14 @@
 #include "GLFW/glfw3.h"
 
 #include "Shader.h"
+#include "Camera.h"
 
 class World;
 
 class WorldRenderer {
 public:
-	void RebuildChunkMesh(World& w);
+	void RebuildDrityChunkMesh(World& w);
 
-	void RenderWorld(const World& w, Shader& shader);
+	void RenderWorld(const World& w, Shader& shader, const Camera& cam);
 
 };

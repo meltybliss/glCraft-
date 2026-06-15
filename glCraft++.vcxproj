@@ -136,6 +136,7 @@
     <ClInclude Include="include\Math\Vec2.h" />
     <ClInclude Include="include\Math\Vec3.h" />
     <ClInclude Include="include\Render\BlockFace.h" />
+    <ClInclude Include="include\Render\Camera.h" />
     <ClInclude Include="include\Render\ChunkMesh.h" />
     <ClInclude Include="include\Render\MeshBuilder.h" />
     <ClInclude Include="include\Render\MeshData.h" />
