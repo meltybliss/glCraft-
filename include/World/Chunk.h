@@ -28,7 +28,7 @@ struct Chunk {
 		return x + CHUNK_WIDTH * z + y * CHUNK_WIDTH * CHUNK_DEPTH;
 	}
 
-	unsigned int GetBlock(int x, int y, int z) {
+	[[nodiscard]] unsigned int GetBlock(int x, int y, int z) const {
 		return (unsigned int)blocks[Index(x, y, z)];
 	}
 

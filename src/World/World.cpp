@@ -21,7 +21,7 @@ int floorMod(int64_t a, int b) {//-17, 16 ->
 	return static_cast<int>(r);
 }
 
-unsigned int World::GetBlockGlobal(int64_t x, int64_t y, int64_t z) {
+unsigned int World::GetBlockGlobal(int64_t x, int64_t y, int64_t z) const {
 	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
 	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
 

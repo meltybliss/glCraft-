@@ -1,6 +1,6 @@
 #include "Render/MeshBuilder.h"
 
-MeshData MeshBuilder::BuildChunkMesh(World& w, Chunk& c) {
+MeshData MeshBuilder::BuildChunkMesh(const World& w, const Chunk& c) {
 	MeshData result;
 	auto& v = result.vertices;
 	auto& indices = result.indices;
@@ -19,9 +19,9 @@ MeshData MeshBuilder::BuildChunkMesh(World& w, Chunk& c) {
 			return c.GetBlock(nx, ny, nz) == 0;
 		}
 
-		int64_t gx = static_cast<int64_t>(cx * Chunk::CHUNK_WIDTH) + nx;
+		int64_t gx = static_cast<int64_t>(cx) * Chunk::CHUNK_WIDTH + nx;
 		int64_t gy = ny;
-		int64_t gz = static_cast<int64_t>(cz * Chunk::CHUNK_DEPTH) + nz;
+		int64_t gz = static_cast<int64_t>(cz) * Chunk::CHUNK_DEPTH + nz;
 
 		return w.GetBlockGlobal(gx, gy, gz) == 0;
 	};
@@ -31,7 +31,7 @@ MeshData MeshBuilder::BuildChunkMesh(World& w, Chunk& c) {
 			for (int z = 0; z < Chunk::CHUNK_DEPTH; z++) {
 
 
-				const auto& b = c.GetBlock(x, y, z);
+				unsigned int b = c.GetBlock(x, y, z);
 
 				if (b == 0) {//AIR
 					continue;
