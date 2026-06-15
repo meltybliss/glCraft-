@@ -19,10 +19,14 @@ public:
 	void Run();
 private:
 
+	void OnMouseMove(double xpos, double ypos);
 	void ProcessInput(float dt);
 
 private:
 	GLFWwindow* m_window = nullptr;
+	bool m_firstMouse = true;
+	float m_lastMouseX = 400.0f;
+	float m_lastMouseY = 300.0f;
 
 	World m_world;
 	WorldRenderer m_wRenderer;

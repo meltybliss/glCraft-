@@ -6,6 +6,7 @@ void Application::Run() {
 	while (!glfwWindowShouldClose(m_window)) {
 		float curTime = (float)glfwGetTime();
 		float dt = curTime - lastTime;
+		lastTime = curTime;
 
 		glfwPollEvents();
 
@@ -50,6 +51,16 @@ bool Application::InitGL() {
 		return false;
 	}
 
+
+	glfwSetWindowUserPointer(m_window, this);
+	glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double xpos, double ypos) {//register callBack
+		auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+		if (app) {
+			app->OnMouseMove(xpos, ypos);
+		}
+	});
+
+	glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -98,4 +109,35 @@ void Application::ProcessInput(float dt) {
 	if (glfwGetKey(m_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
 		m_camera.position -= m_camera.worldUp * velocity;
 	}
+}
+
+
+void Application::OnMouseMove(double xpos, double ypos) {
+	if (m_firstMouse) {
+		m_lastMouseX = static_cast<float>(xpos);
+		m_lastMouseY = static_cast<float>(ypos);
+		m_firstMouse = false;
+	}
+
+	float xoffset = static_cast<float>(xpos) - m_lastMouseX;
+	float yoffset = m_lastMouseY - static_cast<float>(ypos);
+
+	m_lastMouseX = static_cast<float>(xpos);
+	m_lastMouseY = static_cast<float>(ypos);
+
+	xoffset *= m_camera.mouseSensitivity;
+	yoffset *= m_camera.mouseSensitivity;
+
+	m_camera.yaw += xoffset;
+	m_camera.pitch += yoffset;
+
+	if (m_camera.pitch > 89.0f) {
+		m_camera.pitch = 89.0f;
+	}
+
+	if (m_camera.pitch < -89.0f) {
+		m_camera.pitch = -89.0f;
+	}
+
+	m_camera.UpdateVectors();
 }
