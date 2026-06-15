@@ -4,18 +4,28 @@
 #include <memory>
 #include <stdint.h>
 
+
+using ChunkKey = uint64_t;
 class World {
 public:
-
+	using ChunkMap = std::unordered_map<ChunkKey, std::unique_ptr<Chunk>>;
 
 	[[nodiscard]] unsigned int GetBlockGlobal(int64_t x, int64_t y, int64_t z) const;
 
 	void SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b);
 
-private:
-	using ChunkKey = uint64_t;
+	[[nodiscard]] ChunkMap& GetChunks() {
+		return chunks;
+	}
 
-	std::unordered_map<ChunkKey, std::unique_ptr<Chunk>> chunks;
+	[[nodiscard]] const ChunkMap& GetChunks() const {
+		return chunks;
+	}
+
+
+private:
+
+	ChunkMap chunks;
 
 private:
 	

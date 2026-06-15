@@ -21,19 +21,19 @@ enum class UVPoint {
 class MeshBuilder {
 public:
 
-	MeshData BuildChunkMesh(const World& w, const Chunk& c);
+	static MeshData BuildChunkMesh(const World& w, const Chunk& c);
 
 private:
 
-	int atlasTilesX = 32;
-	int atlasTilesY = 15;
+	static constexpr int atlasTilesX = 32;
+	static constexpr int atlasTilesY = 15;
 private:
 	
 
-	UV GetUV(const BlockType b, uint8_t index, BlockFace face) const;
-	UV GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face) const;
-	UV GetTileVertexUV(uint8_t index, int tileX, int tileY) const;
+	static UV GetUV(const BlockType b, uint8_t index, BlockFace face) const;
+	static UV GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face) const;
+	static UV GetTileVertexUV(uint8_t index, int tileX, int tileY) const;
 
-	void AddFace(std::array<std::array<float, 3>, 4>& pointsSet, const BlockType b, const BlockFace face, std::vector<unsigned int>& indices, std::vector<float>& v);
+	static void AddFace(std::array<std::array<float, 3>, 4>& pointsSet, const BlockType b, const BlockFace face, std::vector<unsigned int>& indices, std::vector<float>& v);
 
 };
