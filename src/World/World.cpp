@@ -1,4 +1,5 @@
 #include "World/World.h"
+#include "World/TerrainGenerator.h"
 #include "Render/Camera.h"
 
 int64_t floorDiv(int64_t a, int64_t b) {
@@ -38,13 +39,16 @@ void World::UpdateChunksAround(const Camera& cam) {
 	for (int64_t cx = curCx - LOAD_CHUNKS_DISTANCE; cx <= curCx + LOAD_CHUNKS_DISTANCE; ++cx) {
 		for (int64_t cz = curCz - LOAD_CHUNKS_DISTANCE; cz <= curCz + LOAD_CHUNKS_DISTANCE; ++cz) {
 			uint64_t key = Index(cx, cz);
-			if (chunks.find(key) == chunks.end()) {
+			if (chunks.find(key) != chunks.end()) {
 				continue;
 			}
 
-			std::unique_ptr<Chunk> c = std::make_unique<Chunk>();
+			std::unique_ptr<Chunk> c = std::make_unique<Chunk>(cx, cz);
+
+			TerrainGenerator::GenerateTerrain(*c);
 			chunks[key] = std::move(c);
 
+			
 		}
 	}
 
@@ -75,9 +79,9 @@ unsigned int World::GetBlockGlobal(int64_t x, int64_t y, int64_t z) const {
 	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
 	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
 
-	int lx = floorMod(x, cx);
+	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
-	int lz = floorMod(z, cz);
+	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
 	auto it = chunks.find(Index(cx, cz));
 	if (it == chunks.end() || !it->second) {
@@ -95,9 +99,9 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
 	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
 
-	int lx = floorMod(x, cx);
+	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
-	int lz = floorMod(z, cz);
+	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
 	auto it = chunks.find(Index(cx, cz));
 	if (it == chunks.end() || !it->second) {

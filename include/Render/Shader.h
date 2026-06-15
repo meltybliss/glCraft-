@@ -18,6 +18,7 @@ public:
 
 	void Use();
 	void SetMat4(const char* name, const glm::mat4& mat4);
+	void SetInt(const char* name, const int& value);
 
 private:
 	std::string ReadFile(const std::string& shaderPath);

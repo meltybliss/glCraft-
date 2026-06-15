@@ -2,7 +2,7 @@
 
 void TerrainGenerator::GenerateTerrain(Chunk& c) {
 
-	int ground = 4;
+	int ground = 16;
 
 	for (int y = Chunk::CHUNK_HEIGHT-1; y >= 0; --y) {
 		for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {

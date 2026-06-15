@@ -6,7 +6,9 @@
 #include "World/World.h"
 #include "Render/WorldRenderer.h"
 #include "Render/Shader.h"
+#include "Render/Texture.h"
 #include <optional>
+#include <memory>
 
 class Application {
 public:
@@ -26,5 +28,6 @@ private:
 	Camera m_camera;
 
 	std::optional<Shader> baseShader;
+	std::unique_ptr<Texture> blockAtlas;
 
 };

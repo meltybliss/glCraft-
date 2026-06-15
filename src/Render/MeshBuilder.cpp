@@ -176,14 +176,25 @@ UV MeshBuilder::GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face)
 UV MeshBuilder::GetTileVertexUV(uint8_t index, int tileX, int tileY) {
 	UVPoint p = (UVPoint)index;
 
+	float pixelU = 1.0f / atlasPixelWidth;
+	float pixelV = 1.0f / atlasPixelHeight;
+
+	float insetU = pixelU * 0.94f;
+	float insetV = pixelV * 0.94f;
+
 	float tileUV_X = 1.0f / atlasTilesX;
 	float tileUV_Y = 1.0f / atlasTilesY;
 
 	float u0 = tileUV_X * tileX;
-	float v0 = tileUV_Y * tileY;
+	float v1 = 1.0f - (tileUV_Y * tileY);
 
 	float u1 = u0 + tileUV_X;
-	float v1 = v0 + tileUV_Y;
+	float v0 = v1 - tileUV_Y;
+
+	u0 += insetU;
+	u1 -= insetU;
+	v1 -= insetV;
+	v0 += insetV;
 
 	if (p == UVPoint::LeftTop) {
 		return { u0, v1 };
@@ -208,6 +219,7 @@ void MeshBuilder::AddFace(
 	const BlockFace face,
 	std::vector<unsigned int>& indices, std::vector<float>& v)
 {
+
 	unsigned int base = static_cast<unsigned int>(v.size() / 5);
 
 	//base+0,1,2,3

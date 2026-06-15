@@ -4,9 +4,10 @@
 
 struct Camera {
 
-	glm::vec3 position = glm::vec3(0.0f, 16.0f, 0.0f);//floatだと32bit. worldにつかうならworld座標である64bitと対応できるように。
+	glm::vec3 position = glm::vec3(8.0f, 28.0f, 24.0f);//floatだと32bit. worldにつかうならworld座標である64bitと対応できるように。
 	//だが描画はfloatに直すように
-	glm::vec3 target = glm::vec3(8.0f, 14.0f, 8.0f);
+	glm::vec3 target = glm::vec3(8.0f, 3.0f, 8.0f);
+
 	glm::vec3 top = glm::vec3(0.0f, 1.0f, 0.0f);
 
 	glm::mat4 GetViewMatrix() const {

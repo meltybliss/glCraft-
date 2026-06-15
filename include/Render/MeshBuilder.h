@@ -26,7 +26,10 @@ public:
 private:
 
 	static constexpr int atlasTilesX = 32;
-	static constexpr int atlasTilesY = 15;
+	static constexpr int atlasTilesY = 16;
+
+	static constexpr int atlasPixelWidth = 512;
+	static constexpr int atlasPixelHeight = 256;
 private:
 	
 

@@ -11,6 +11,7 @@ void Application::Run() {
 
 		m_world.Tick(dt, m_camera);
 
+		blockAtlas->Bind(0);
 
 		m_wRenderer.RebuildDrityChunkMesh(m_world);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -55,11 +56,17 @@ bool Application::InitGL() {
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	blockAtlas = std::make_unique<Texture>("assets/textures/block_atlas.png");
+
 	//shader build
 	baseShader.emplace(
 		"assets/Shaders/basic.vert",
 		"assets/Shaders/basic.frag"
 	);
+
+	baseShader->Use();
+	baseShader->SetInt("u_Texture", 0);
+
 	
 
 	return true;

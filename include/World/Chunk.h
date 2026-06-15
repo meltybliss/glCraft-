@@ -9,6 +9,10 @@
 
 
 struct Chunk {
+
+	Chunk(int32_t x, int32_t z) : cx(x), cz(z)  {
+		blocks.fill(BlockType::AIR);
+	}
 	
 	int32_t cx = 0;
 	int32_t cz = 0;
@@ -21,7 +25,7 @@ struct Chunk {
 	constexpr static int CHUNK_DEPTH = 16;
 	constexpr static int CHUNK_HEIGHT = 256;
 
-	constexpr static int CHUNK_SIZE = CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT;
+	constexpr static int CHUNK_SIZE = CHUNK_WIDTH * CHUNK_DEPTH * CHUNK_HEIGHT;
 
 
 	std::array<BlockType, CHUNK_SIZE> blocks;
@@ -31,16 +35,27 @@ struct Chunk {
 	}
 
 	[[nodiscard]] unsigned int GetBlock(int x, int y, int z) const {
+		if (!InBounds(x, y, z)) {
+			return 0;
+		}
+
 		return (unsigned int)blocks[Index(x, y, z)];
 	}
 
 	void SetBlock(int x, int y, int z, BlockType b) {
+		if (!InBounds(x, y, z)) {
+			return;
+		}
+
 		blocks[Index(x, y, z)] = b;
 
 		dirty = true;
 	}
 
 	void SetBlockForGenerator(int x, int y, int z, BlockType b) {
+		if (!InBounds(x, y, z)) {
+			return;
+		}
 		blocks[Index(x, y, z)] = b;
 
 	}
