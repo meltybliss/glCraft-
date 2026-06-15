@@ -4,7 +4,7 @@
 class TerrainGenerator {
 public:
 
-	void GenerateTerrain(Chunk* c);
+	void GenerateTerrain(Chunk& c);
 
 private:
 

@@ -1,8 +1,8 @@
 #include "World/TerrainGenerator.h"
 
-void TerrainGenerator::GenerateTerrain(Chunk* c) {
+void TerrainGenerator::GenerateTerrain(Chunk& c) {
 
-	int ground = Chunk::CHUNK_HEIGHT / 2;
+	int ground = 4;
 
 	for (int y = Chunk::CHUNK_HEIGHT-1; y >= 0; --y) {
 		for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
@@ -19,11 +19,11 @@ void TerrainGenerator::GenerateTerrain(Chunk* c) {
 					b = BlockType::STONE;
 				}
 
-				c->SetBlockForGenerator(x, y, z, b);
+				c.SetBlockForGenerator(x, y, z, b);
 			}
 		}
 	}
 
-	c->dirty = true;
+	c.dirty = true;
 
 }
