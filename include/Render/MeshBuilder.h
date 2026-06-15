@@ -5,11 +5,11 @@
 #include <vector>
 
 #include "World/Chunk.h"
+#include "World/World.h"
 #include "BlockFace.h"
-#include "Math/Vec2.h"
+#include "Math/UV.h"
 #include "Math/Vec3.h"
 
-using UV = Vec2;
 
 enum class UVPoint {
 	LeftTop,
@@ -21,7 +21,7 @@ enum class UVPoint {
 class MeshBuilder {
 public:
 
-	MeshData BuildChunkMesh(const Chunk& c);
+	MeshData BuildChunkMesh(World& w, Chunk& c);
 
 private:
 
@@ -30,8 +30,10 @@ private:
 private:
 	
 
-	UV GetUV(const BlockType b, uint8_t index, BlockFace face);
-	UV GetBlockTile(const BlockType b, uint8_t index, BlockFace face);
-	UV GetBlockUV(uint8_t index, int tileX, int tileY) const;
+	UV GetUV(const BlockType b, uint8_t index, BlockFace face) const;
+	UV GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face) const;
+	UV GetTileVertexUV(uint8_t index, int tileX, int tileY) const;
+
+	void AddFace(std::array<std::array<float, 3>, 4>& pointsSet, const BlockType b, const BlockFace face, std::vector<unsigned int>& indices, std::vector<float>& v);
 
 };

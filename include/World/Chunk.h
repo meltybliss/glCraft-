@@ -38,4 +38,9 @@ struct Chunk {
 		dirty = true;
 	}
 
+	static bool InBounds(int x, int y, int z) {
+		return (x < CHUNK_WIDTH && x >= 0 && y < CHUNK_HEIGHT && y >= 0 &&
+			z < CHUNK_DEPTH && z >= 0);
+	}
+
 };

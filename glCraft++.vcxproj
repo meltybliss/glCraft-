@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\Core\Application.h" />
+    <ClInclude Include="include\Math\UV.h" />
     <ClInclude Include="include\Math\Vec2.h" />
     <ClInclude Include="include\Math\Vec3.h" />
     <ClInclude Include="include\Render\BlockFace.h" />
