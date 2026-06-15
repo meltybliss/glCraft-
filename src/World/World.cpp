@@ -48,7 +48,7 @@ void World::UpdateChunksAround(const Camera& cam) {
 		}
 	}
 
-	std::erase_if(chunks, [this](const auto& item) {
+	std::erase_if(chunks, [&, this](const auto& item) {
 		const auto& c = item.second;
 
 		if (!c) {
@@ -58,8 +58,8 @@ void World::UpdateChunksAround(const Camera& cam) {
 		int64_t dx = c->cx - curCx;
 		int64_t dz = c->cz - curCz;
 
-		if (std::abs(dx) >= UNLOAD_CHUNK_DISTANCE) || 
-			std::abs(dz) >= UNLOAD_CHUNK_DISTANCE) {
+		if (std::abs(dx) >= UNLOAD_CHUNKS_DISTANCE || 
+			std::abs(dz) >= UNLOAD_CHUNKS_DISTANCE) {
 
 			return true;
 		}

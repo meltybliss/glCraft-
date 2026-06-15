@@ -951,6 +951,9 @@
     <ClInclude Include="include\Render\Camera.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="include\Render\Texture.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="third_party\glad.c">
@@ -985,6 +988,9 @@
     </ClCompile>
     <ClCompile Include="third_party\glm\detail\glm.cpp">
       <Filter>third_party</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Render\Texture.cpp">
+      <Filter>ソース ファイル</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
