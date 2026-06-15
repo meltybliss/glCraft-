@@ -77,3 +77,8 @@ unsigned int Shader::CompileShader(unsigned int type, const std::string& source)
 void Shader::Use() {
 	glUseProgram(m_id);
 }
+
+void Shader::SetMat4(const char* name, const glm::mat4& mat4) {
+	int location = glGetUniformLocation(m_id, name);
+	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(mat4));
+}

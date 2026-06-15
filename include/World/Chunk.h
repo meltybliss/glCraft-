@@ -6,6 +6,8 @@
 #include "Render/ChunkMesh.h"
 #include <array>
 
+
+
 struct Chunk {
 	
 	int32_t cx = 0;
