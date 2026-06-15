@@ -143,6 +143,7 @@
     <ClInclude Include="include\Render\WorldRenderer.h" />
     <ClInclude Include="include\World\BlockData.h" />
     <ClInclude Include="include\World\Chunk.h" />
+    <ClInclude Include="include\World\TerrainGenerator.h" />
     <ClInclude Include="include\World\World.h" />
     <ClInclude Include="third_party\glad\glad.h" />
     <ClInclude Include="third_party\GLFW\glfw3.h" />
@@ -157,6 +158,7 @@
     <ClCompile Include="src\Render\Shader.cpp" />
     <ClCompile Include="src\Render\WorldRenderer.cpp" />
     <ClCompile Include="src\World\Chunk.cpp" />
+    <ClCompile Include="src\World\TerrainGenerator.cpp" />
     <ClCompile Include="src\World\World.cpp" />
     <ClCompile Include="third_party\glad.c" />
   </ItemGroup>

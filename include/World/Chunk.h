@@ -38,6 +38,11 @@ struct Chunk {
 		dirty = true;
 	}
 
+	void SetBlockForGenerator(int x, int y, int z, BlockType b) {
+		blocks[Index(x, y, z)] = b;
+
+	}
+
 	static bool InBounds(int x, int y, int z) {
 		return (x < CHUNK_WIDTH && x >= 0 && y < CHUNK_HEIGHT && y >= 0 &&
 			z < CHUNK_DEPTH && z >= 0);
