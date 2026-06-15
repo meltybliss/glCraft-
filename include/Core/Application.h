@@ -19,6 +19,7 @@ public:
 	void Run();
 private:
 
+	void ProcessInput(float dt);
 
 private:
 	GLFWwindow* m_window = nullptr;

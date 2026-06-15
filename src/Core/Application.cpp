@@ -9,6 +9,8 @@ void Application::Run() {
 
 		glfwPollEvents();
 
+		ProcessInput(dt);
+
 		m_world.Tick(dt, m_camera);
 
 		blockAtlas->Bind(0);
@@ -71,4 +73,29 @@ bool Application::InitGL() {
 
 	return true;
 
+}
+
+
+
+void Application::ProcessInput(float dt) {
+	float velocity = m_camera.moveSpeed * dt;
+
+	if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS) {
+		m_camera.position += m_camera.front * velocity;
+	}
+	if (glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS) {
+		m_camera.position -= m_camera.front * velocity;
+	}
+	if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS) {
+		m_camera.position -= m_camera.right * velocity;
+	}
+	if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS) {
+		m_camera.position += m_camera.right * velocity;
+	}
+	if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+		m_camera.position += m_camera.worldUp * velocity;
+	}
+	if (glfwGetKey(m_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+		m_camera.position -= m_camera.worldUp * velocity;
+	}
 }
