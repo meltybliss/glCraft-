@@ -21,7 +21,7 @@ enum class UVPoint {
 class MeshBuilder {
 public:
 
-	static MeshData BuildChunkMesh(const World& w, const Chunk& c);
+	static MeshData BuildChunkMesh(World& w, const Chunk& c);
 
 private:
 

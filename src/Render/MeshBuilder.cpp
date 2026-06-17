@@ -1,6 +1,6 @@
 #include "Render/MeshBuilder.h"
 
-MeshData MeshBuilder::BuildChunkMesh(const World& w, const Chunk& c) {
+MeshData MeshBuilder::BuildChunkMesh(World& w, const Chunk& c) {
 	MeshData result;
 	auto& v = result.vertices;
 	auto& indices = result.indices;
@@ -9,6 +9,7 @@ MeshData MeshBuilder::BuildChunkMesh(const World& w, const Chunk& c) {
 	const auto& cz = c.cz;
 
 	const auto& s = BLOCK_SIZE;
+	
 
 	auto CheckNeighborAir = [&](int nx, int ny, int nz) -> bool {
 		if (ny < 0 || ny >= Chunk::CHUNK_HEIGHT) {
@@ -116,6 +117,7 @@ MeshData MeshBuilder::BuildChunkMesh(const World& w, const Chunk& c) {
 		}
 
 	}
+
 
 	return result;
 

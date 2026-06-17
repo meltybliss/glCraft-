@@ -25,6 +25,24 @@ public:
 		return chunks;
 	}
 
+	[[nodiscard]] Chunk* GetTargetChunk(int32_t cx, int32_t cz) {
+		uint64_t key = Index(cx, cz);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end()) return nullptr;
+
+		return it->second.get();
+	}
+
+	[[nodiscard]] const Chunk* GetTargetChunk(int32_t cx, int32_t cz) const {
+		uint64_t key = Index(cx, cz);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end()) return nullptr;
+
+		return it->second.get();
+	}
+
 	void Tick(float dt, const Camera& cam);
 	void UpdateChunksAround(const Camera& cam);
 

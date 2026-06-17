@@ -34,17 +34,17 @@ void World::Tick(float dt, const Camera& cam) {
 
 
 void World::UpdateChunksAround(const Camera& cam) {
-	int64_t curCx = static_cast<int64_t>(floorDiv(cam.position.x, Chunk::CHUNK_WIDTH));
-	int64_t curCz = static_cast<int64_t>(floorDiv(cam.position.z, Chunk::CHUNK_DEPTH));
+	int32_t curCx = static_cast<int32_t>(floorDiv(cam.position.x, Chunk::CHUNK_WIDTH));
+	int32_t curCz = static_cast<int32_t>(floorDiv(cam.position.z, Chunk::CHUNK_DEPTH));
 
 	int createBudget = MAX_CHUNK_CREATE_PER_TICK;
 	int destroyBudget = MAX_CHUNK_DESTROY_PER_TICK;
 
 	bool createDone = false;
 
-	for (int64_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {//‚±‚ê“ª‚¢‚¢Ž©•ª‚ÌŽüˆÍ‚©‚çload‚·‚éƒAƒ‹ƒSƒŠƒYƒ€‚¾‚í
-		for (int64_t dx = -r; dx <= r && !createDone; ++dx) {
-			for (int64_t dz = -r; dz <= r; ++dz) {
+	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {//‚±‚ê“ª‚¢‚¢Ž©•ª‚ÌŽüˆÍ‚©‚çload‚·‚éƒAƒ‹ƒSƒŠƒYƒ€‚¾‚í
+		for (int32_t dx = -r; dx <= r && !createDone; ++dx) {
+			for (int32_t dz = -r; dz <= r; ++dz) {
 				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//“à‘¤‚Íˆ—Ï‚Ý‚È‚Ì‚ÅŠOŽü‚¾‚¯
 					continue;
 				}
@@ -54,8 +54,8 @@ void World::UpdateChunksAround(const Camera& cam) {
 					break;
 				}
 
-				int64_t cx = curCx + dx;
-				int64_t cz = curCz + dz;
+				int32_t cx = curCx + dx;
+				int32_t cz = curCz + dz;
 
 				uint64_t key = Index(cx, cz);
 
@@ -71,6 +71,28 @@ void World::UpdateChunksAround(const Camera& cam) {
 
 				TerrainGenerator::GenerateTerrain(*c);
 				chunks[key] = std::move(c);
+
+				//ŽüˆÍ\Žš4chunk‚Ìmesh‚àDirty‚É‚µ‚Ä³‚µ‚­—×‚ªAIR‚©”»’f‚·‚é
+				for (int32_t x = cx - 1; x <= cx + 1; ++x) {
+					if (x == cx) continue;
+
+					uint64_t key = Index(x, cz);
+					auto it = chunks.find(key);
+					if (it == chunks.end()) continue;
+
+					it->second->dirty = true;
+				}
+
+				for (int32_t z = cz - 1; z <= cz + 1; ++z) {
+					if (z == cz) continue;
+
+					uint64_t key = Index(cx, z);
+					auto it = chunks.find(key);
+					if (it == chunks.end()) continue;
+
+					it->second->dirty = true;
+				}
+
 
 				createBudget--;
 
@@ -114,8 +136,8 @@ void World::UpdateChunksAround(const Camera& cam) {
 		}
 		else {
 
-			int64_t dx = c->cx - curCx;
-			int64_t dz = c->cz - curCz;
+			int32_t dx = c->cx - curCx;
+			int32_t dz = c->cz - curCz;
 
 
 			if (std::abs(dx) >= UNLOAD_CHUNKS_DISTANCE ||
