@@ -6,6 +6,7 @@
 
 #include "World/Chunk.h"
 #include "World/World.h"
+#include "World/ChunkMeshSnapshot.h"
 #include "BlockFace.h"
 #include "Math/UV.h"
 #include "Math/Vec3.h"
@@ -21,7 +22,7 @@ enum class UVPoint {
 class MeshBuilder {
 public:
 
-	static MeshData BuildChunkMesh(World& w, const Chunk& c);
+	static MeshData BuildChunkMesh(ChunkMeshSnapshot& snapshot);
 
 private:
 

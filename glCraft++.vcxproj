@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -147,7 +147,9 @@
     <ClInclude Include="include\World\BlockData.h" />
     <ClInclude Include="include\World\Chunk.h" />
     <ClInclude Include="include\World\ChunkKey.h" />
+    <ClInclude Include="include\World\ChunkMeshSnapshot.h" />
     <ClInclude Include="include\World\ChunkPipeline.h" />
+    <ClInclude Include="include\World\MeshResult.h" />
     <ClInclude Include="include\World\TerrainGenerator.h" />
     <ClInclude Include="include\World\World.h" />
     <ClInclude Include="third_party\glad\glad.h" />

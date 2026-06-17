@@ -2,6 +2,8 @@
 #include "Core/ChunkJob.h"
 #include "World/Chunk.h"
 #include "World/ChunkKey.h"
+#include "World/ChunkMeshSnapshot.h"
+#include "World/MeshResult.h"
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -18,6 +20,21 @@ public:
 
 	void StartWorkerThread();
 	void StopWorkerThread();
+
+	void EnqueueJob(ChunkJob&& job) {
+		m_jobQueue.push_back(std::move(job));
+	}
+
+	MeshResult* PopFrontResult() {
+		if (m_chunkResult.empty()) {
+			return nullptr;
+		}
+
+		MeshResult* result = &std::move(m_chunkResult.front());
+		m_chunkResult.pop_front();
+
+		return result;
+	}
 
 private:
 	void StartLoop();
@@ -36,10 +53,12 @@ private:
 
 	std::mutex workerMutex;
 	std::mutex jobsMutex;
+	std::mutex resultMutex;
 
 	std::condition_variable workerCv;
 
 	std::deque<ChunkJob> m_jobQueue;
+	std::deque<MeshResult> m_chunkResult;
 	std::unordered_map<uint64_t, std::unique_ptr<Chunk>> m_buildingChunks;
 private:
 };

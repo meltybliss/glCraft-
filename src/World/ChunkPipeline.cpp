@@ -1,6 +1,7 @@
 #include "World/ChunkPipeline.h"
 #include "World/TerrainGenerator.h"
 #include "Render/MeshBuilder.h"
+
 #include <memory>
 
 void ChunkPipeline::StartWorkerThread() {
@@ -85,8 +86,21 @@ void ChunkPipeline::StartLoop() {
 					auto it = m_buildingChunks.find(key);
 					if (it != m_buildingChunks.end()) {
 						auto& c = it->second;
+						if (targetJob.snapshot) {
+							MeshData data = MeshBuilder::BuildChunkMesh(targetJob.snapshot.value());
+							std::unique_ptr<Chunk> chunk = std::move(it->second);
 
-						MeshBuilder::BuildChunkMesh()
+							m_buildingChunks.erase(it);
+
+							{
+								std::lock_guard<std::mutex> lock(resultMutex);
+
+								m_chunkResult.push_back({ 
+									std::move(chunk), 
+									std::move(data) 
+								});
+							}
+						}
 					}
 				}
 			}
@@ -95,6 +109,17 @@ void ChunkPipeline::StartLoop() {
 			m_jobQueue.pop_front();
 		}
 
+	}
+
+}
+
+
+void ChunkPipeline::StopWorkerThread() {
+	runningWorker = false;
+
+	workerCv.notify_all();
+	if (workerThread.joinable()) {
+		workerThread.join();
 	}
 
 }

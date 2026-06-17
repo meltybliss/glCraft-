@@ -1,7 +1,9 @@
 #include "Render/MeshBuilder.h"
 
-MeshData MeshBuilder::BuildChunkMesh(World& w, const Chunk& c) {
+MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 	MeshData result;
+
+	Chunk& c = snapshot.c;
 	auto& v = result.vertices;
 	auto& indices = result.indices;
 
@@ -20,11 +22,13 @@ MeshData MeshBuilder::BuildChunkMesh(World& w, const Chunk& c) {
 			return c.GetBlock(nx, ny, nz) == 0;
 		}
 
-		int64_t gx = static_cast<int64_t>(cx) * Chunk::CHUNK_WIDTH + nx;
-		int64_t gy = ny;
-		int64_t gz = static_cast<int64_t>(cz) * Chunk::CHUNK_DEPTH + nz;
+		if (nx < 0 || nx >= Chunk::CHUNK_WIDTH) {
+			return snapshot.GetBoundaryBlock(nx, ny, nz, true);
+		}
+		else if (nz < 0 || nz >= Chunk::CHUNK_DEPTH) {
+			return snapshot.GetBoundaryBlock(nx, ny, nz, false);
+		}
 
-		return w.GetBlockGlobal(gx, gy, gz) == 0;
 	};
 
 	for (int y = 0; y < Chunk::CHUNK_HEIGHT; y++) {
