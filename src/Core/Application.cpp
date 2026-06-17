@@ -109,6 +109,11 @@ void Application::ProcessInput(float dt) {
 	if (glfwGetKey(m_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
 		m_camera.position -= m_camera.worldUp * velocity;
 	}
+
+
+	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
+		m_world.DebugChunkInfo();
+	}
 }
 
 
