@@ -1,11 +1,13 @@
 #pragma once
 #include "World/Chunk.h"
+#include "World/ChunkKey.h"
 #include <unordered_map>
 #include <memory>
 #include <stdint.h>
 
 
 using ChunkKey = uint64_t;
+using namespace ChunkKey;
 
 struct Camera;
 
@@ -64,11 +66,4 @@ private:
 
 private:
 
-
-	static uint64_t Index(int32_t cx, int32_t cz) {
-		uint64_t x = static_cast<uint32_t>(cx);
-		uint64_t z = static_cast<uint32_t>(cz);
-
-		return (x << 32) | z;
-	}
 };
