@@ -149,7 +149,7 @@
     <ClInclude Include="include\World\ChunkKey.h" />
     <ClInclude Include="include\World\ChunkMeshSnapshot.h" />
     <ClInclude Include="include\World\ChunkPipeline.h" />
-    <ClInclude Include="include\World\MeshResult.h" />
+    <ClInclude Include="include\World\ChunkResult.h" />
     <ClInclude Include="include\World\TerrainGenerator.h" />
     <ClInclude Include="include\World\World.h" />
     <ClInclude Include="third_party\glad\glad.h" />

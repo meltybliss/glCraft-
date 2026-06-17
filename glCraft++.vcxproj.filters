@@ -966,7 +966,7 @@
     <ClInclude Include="include\World\ChunkMeshSnapshot.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="include\World\MeshResult.h">
+    <ClInclude Include="include\World\ChunkResult.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

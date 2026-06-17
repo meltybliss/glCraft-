@@ -96,6 +96,7 @@ void ChunkPipeline::StartLoop() {
 								std::lock_guard<std::mutex> lock(resultMutex);
 
 								m_chunkResult.push_back({ 
+									key,
 									std::move(chunk), 
 									std::move(data) 
 								});
@@ -122,4 +123,29 @@ void ChunkPipeline::StopWorkerThread() {
 		workerThread.join();
 	}
 
+}
+
+
+bool ChunkPipeline::PopFrontResult(ChunkResult& out) {
+	
+	{
+		std::lock_guard<std::mutex> lock(resultMutex);
+		if (m_chunkResult.empty()) {
+			return false;
+		}
+
+		out = std::move(m_chunkResult.front());
+		m_chunkResult.pop_front();
+	}
+
+	return true;
+}
+
+void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
+	{
+		std::lock_guard<std::mutex> lock(jobsMutex);
+		m_jobQueue.push_back(std::move(job));
+	}
+
+	workerCv.notify_all();
 }

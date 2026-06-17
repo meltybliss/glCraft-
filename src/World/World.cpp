@@ -1,5 +1,6 @@
 #include "World/World.h"
 #include "World/TerrainGenerator.h"
+#include "World/ChunkPipeline.h"
 #include "Render/Camera.h"
 #include <iostream>
 
@@ -209,4 +210,30 @@ void World::DebugChunkInfo() {
 		count++;
 		std::cout << count << "," << c->cx << "," << c->cz << "," << c->dirty << "\n";
 	}
+}
+
+
+void World::ProcessChunkResult() {
+	ChunkResult result;
+	bool ok = m_chunkPipeline.PopFrontResult(result);
+	if (!ok) return;
+
+	const auto& key = result.key;
+
+	chunks[key] = std::move(result.chunk);
+
+	if (result.meshData) {
+		m_pendingMeshData.push_back(std::move(result.meshData));
+	}
+}
+
+
+bool World::PopPendingMeshData(MeshData& out) {
+	if (m_pendingMeshData.empty()) {
+		return false;
+	}
+
+	out = std::move(m_pendingMeshData.front());
+	m_pendingMeshData.pop_front();
+	return true;
 }

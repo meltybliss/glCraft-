@@ -1,15 +1,19 @@
 #pragma once
 #include "World/Chunk.h"
 #include "World/ChunkKey.h"
+#include "World/ChunkResult.h"
+#include "World/ChunkPipeline.h"
 #include <unordered_map>
 #include <memory>
 #include <stdint.h>
+#include <deque>
 
 
 using ChunkKey = uint64_t;
 using namespace ChunkKey;
 
 struct Camera;
+class ChunkPipeline;
 
 class World {
 public:
@@ -51,6 +55,7 @@ public:
 
 	void DebugChunkInfo();
 
+	bool PopPendingMeshData(MeshData& out);
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -62,8 +67,12 @@ private:
 private:
 
 	ChunkMap chunks;
+	ChunkPipeline m_chunkPipeline;
 
+	std::deque<MeshData> m_pendingMeshData;
 
 private:
+
+	void ProcessChunkResult();
 
 };
