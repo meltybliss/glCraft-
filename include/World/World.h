@@ -3,6 +3,7 @@
 #include "World/ChunkKey.h"
 #include "World/ChunkResult.h"
 #include "World/ChunkPipeline.h"
+#include "Render/PendingMesh.h"
 #include <unordered_map>
 #include <memory>
 #include <stdint.h>
@@ -40,6 +41,24 @@ public:
 		return it->second.get();
 	}
 
+	[[nodiscard]] Chunk* GetTargetChunkFromKey(uint32_t key) {
+		
+		auto it = chunks.find(key);
+
+		if (it == chunks.end()) return nullptr;
+
+		return it->second.get();
+	}
+
+	[[nodiscard]] const Chunk* GetTargetChunkFromKey(uint32_t key) const {
+
+		auto it = chunks.find(key);
+
+		if (it == chunks.end()) return nullptr;
+
+		return it->second.get();
+	}
+
 	[[nodiscard]] const Chunk* GetTargetChunk(int32_t cx, int32_t cz) const {
 		uint64_t key = Index(cx, cz);
 		auto it = chunks.find(key);
@@ -55,7 +74,7 @@ public:
 
 	void DebugChunkInfo();
 
-	bool PopPendingMeshData(MeshData& out);
+	bool PopPendingMeshData(PendingMesh& out);
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -69,7 +88,7 @@ private:
 	ChunkMap chunks;
 	ChunkPipeline m_chunkPipeline;
 
-	std::deque<MeshData> m_pendingMeshData;
+	std::deque<PendingMesh> m_pendingMeshData;
 
 private:
 

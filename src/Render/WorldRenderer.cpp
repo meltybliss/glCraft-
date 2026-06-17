@@ -52,3 +52,19 @@ void WorldRenderer::RenderWorld(const World& w, Shader& shader, const Camera& ca
 	}
 
 }
+
+
+void WorldRenderer::UploadPendingMeshData(World& w) {
+	PendingMesh out;
+
+	
+	while (w.PopPendingMeshData(out)) {
+
+		Chunk* c = w.GetTargetChunkFromKey(out.key);
+		if (!c) continue;
+
+		c->mesh.Upload(out.meshData);
+
+	}
+
+}

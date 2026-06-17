@@ -223,12 +223,12 @@ void World::ProcessChunkResult() {
 	chunks[key] = std::move(result.chunk);
 
 	if (result.meshData) {
-		m_pendingMeshData.push_back(std::move(result.meshData));
+		m_pendingMeshData.push_back({ std::move(*result.meshData), key });
 	}
 }
 
 
-bool World::PopPendingMeshData(MeshData& out) {
+bool World::PopPendingMeshData(PendingMesh& out) {
 	if (m_pendingMeshData.empty()) {
 		return false;
 	}

@@ -11,7 +11,8 @@ class World;
 class WorldRenderer {
 public:
 	void RebuildDrityChunkMesh(World& w);
-
+	void UploadPendingMeshData(World& w);
 	void RenderWorld(const World& w, Shader& shader, const Camera& cam);
+private:
 
 };
