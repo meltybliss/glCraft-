@@ -1,12 +1,19 @@
 #include "Render/WorldRenderer.h"
 #include "World/World.h"
 #include "Render/MeshBuilder.h"
+#include "Core/ChunkJob.h"
 
 void WorldRenderer::RebuildDrityChunkMesh(World& w) {
 	for (auto& [key, c] : w.GetChunks()) {
 		if (c->dirty) {
-			MeshData data = MeshBuilder::BuildChunkMesh(w, *c);
-			c->mesh.Upload(data);
+
+			ChunkMeshSnapshot snapshot(*c);
+			ChunkJob job;
+			job.cx = c->cx;
+			job.cz = c->cz;
+			job.type = JobType::BUILD_MESH;
+
+			
 
 			c->dirty = false;
 		}
@@ -65,6 +72,7 @@ void WorldRenderer::UploadPendingMeshData(World& w) {
 
 		c->mesh.Upload(out.meshData);
 
+		c->dirty = false;
 	}
 
 }

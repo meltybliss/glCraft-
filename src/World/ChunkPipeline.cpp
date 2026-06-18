@@ -21,11 +21,118 @@ void ChunkPipeline::StartWorkerThread() {
 }
 
 
+
+
+void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
+
+	switch (targetJob.type) {
+		case JobType::CREATE_CHUNK: {
+			const int32_t& cx = targetJob.cx;
+			const int32_t& cz = targetJob.cz;
+
+			uint64_t key = Index(cx, cz);
+			if (m_buildingChunks.find(key) == m_buildingChunks.end()) {//todo ä˘Ç…Ç†Ç¡ÇΩÇÁÇªÇÍÇè¡ÇµÇƒÇ©ÇÁÇ‚ÇÈÇÊÇ§Ç…Ç∑ÇÈ
+				std::unique_ptr<Chunk> c = std::make_unique<Chunk>(cx, cz);
+
+				c->cx = cx;
+				c->cz = cz;
+
+				m_buildingChunks[key] = std::move(c);
+
+				ChunkJob newJob = std::move(targetJob);
+				newJob.type = JobType::GENERATE_TERRAIN;
+
+				EnqueueJob(std::move(newJob));
+			}
+
+			break;
+
+		}
+		case JobType::GENERATE_TERRAIN: {
+			const int32_t& cx = targetJob.cx;
+			const int32_t& cz = targetJob.cz;
+
+			uint64_t key = Index(cx, cz);
+
+			auto it = m_buildingChunks.find(key);
+			if (it != m_buildingChunks.end()) {
+				auto& c = it->second;
+
+				TerrainGenerator::GenerateTerrain(*c);
+
+
+				ChunkJob newJob = std::move(targetJob);
+				newJob.type = JobType::BUILD_MESH;
+				newJob.meshSource = MeshBuildSource::INSTANCE_NEW_CHUNK;
+
+				// ç°ÇÃê›åvÇ»ÇÁÇ±Ç±Ç≈ snapshot ÇçÏÇÈ
+				newJob.snapshot = ChunkMeshSnapshot(*c);
+
+				EnqueueJob(std::move(newJob));
+			}
+
+			break;
+		}
+		case JobType::BUILD_MESH: {
+			const int32_t& cx = targetJob.cx;
+			const int32_t& cz = targetJob.cz;
+
+			uint64_t key = Index(cx, cz);
+
+			if (targetJob.meshSource == MeshBuildSource::INSTANCE_NEW_CHUNK) {
+				auto it = m_buildingChunks.find(key);
+				if (it != m_buildingChunks.end()) {
+					auto& c = it->second;
+					if (targetJob.snapshot) {
+						MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
+						std::unique_ptr<Chunk> chunk = std::move(it->second);
+
+						m_buildingChunks.erase(it);
+
+						{
+							std::lock_guard<std::mutex> lock(resultMutex);
+
+							m_chunkResult.push_back({
+								key,
+								std::move(data),
+								std::move(chunk)
+
+							});
+						}
+					}
+				}
+			}
+			else if (targetJob.meshSource == MeshBuildSource::SNAPSHOT) {
+				if (targetJob.snapshot) {
+					MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
+
+					{
+						std::lock_guard<std::mutex> lock(resultMutex);
+
+						m_chunkResult.push_back({
+							key,
+							std::move(data)
+
+						});
+					}
+
+				}
+			}
+
+
+			break;
+		}
+	}
+
+}
+
 void ChunkPipeline::StartLoop() {
 	while (runningWorker) {
 
+
+		ChunkJob targetJob;
 		{
-			std::unique_lock<std::mutex> lock(workerMutex);
+			std::unique_lock<std::mutex> lock(jobsMutex);
 
 			workerCv.wait(lock, [this]() {
 				return !runningWorker || !m_jobQueue.empty();
@@ -35,7 +142,8 @@ void ChunkPipeline::StartLoop() {
 				break;
 			}
 
-
+			targetJob = std::move(m_jobQueue.front());
+			m_jobQueue.pop_front();
 		}
 
 		{
@@ -83,31 +191,49 @@ void ChunkPipeline::StartLoop() {
 
 					uint64_t key = Index(cx, cz);
 
-					auto it = m_buildingChunks.find(key);
-					if (it != m_buildingChunks.end()) {
-						auto& c = it->second;
-						if (targetJob.snapshot) {
-							MeshData data = MeshBuilder::BuildChunkMesh(targetJob.snapshot.value());
-							std::unique_ptr<Chunk> chunk = std::move(it->second);
+					if (targetJob.meshSource == MeshBuildSource::INSTANCE_NEW_CHUNK) {
+						auto it = m_buildingChunks.find(key);
+						if (it != m_buildingChunks.end()) {
+							auto& c = it->second;
+							if (targetJob.snapshot) {
+								MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
+								std::unique_ptr<Chunk> chunk = std::move(it->second);
 
-							m_buildingChunks.erase(it);
+								m_buildingChunks.erase(it);
+
+								{
+									std::lock_guard<std::mutex> lock(resultMutex);
+
+									m_chunkResult.push_back({
+										key,
+										std::move(data),
+										std::move(chunk)
+										
+									});
+								}
+							}
+						}
+					}
+					else if (targetJob.meshSource == MeshBuildSource::SNAPSHOT) {
+						if (targetJob.snapshot) {
+							MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
 
 							{
 								std::lock_guard<std::mutex> lock(resultMutex);
 
-								m_chunkResult.push_back({ 
+								m_chunkResult.push_back({
 									key,
-									std::move(chunk), 
-									std::move(data) 
+									std::move(data)
+
 								});
 							}
+
 						}
 					}
 				}
 			}
 
 
-			m_jobQueue.pop_front();
 		}
 
 	}

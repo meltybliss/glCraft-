@@ -11,7 +11,7 @@ int64_t floorDiv(int64_t a, int64_t b) {
 	if (r != 0 && ((r < 0) != (b < 0))) {
 		--q;
 	}
-	
+
 	return q;
 
 }
@@ -27,12 +27,20 @@ int floorMod(int64_t a, int b) {//-17, 16 ->
 
 
 void World::Tick(float dt, const Camera& cam) {
-	
+
 	UpdateChunksAround(cam);
 
 }
 
 
+World::World() {
+
+	m_chunkPipeline.StartWorkerThread();
+}
+
+World::~World() {
+	m_chunkPipeline.StopWorkerThread();
+}
 
 void World::UpdateChunksAround(const Camera& cam) {
 	int32_t curCx = static_cast<int32_t>(floorDiv(cam.position.x, Chunk::CHUNK_WIDTH));
@@ -49,7 +57,7 @@ void World::UpdateChunksAround(const Camera& cam) {
 				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//“à‘¤‚Íˆ—Ï‚İ‚È‚Ì‚ÅŠOü‚¾‚¯
 					continue;
 				}
-				
+
 				if (createBudget <= 0) {
 					createDone = true;
 					break;
@@ -64,35 +72,20 @@ void World::UpdateChunksAround(const Camera& cam) {
 					continue;
 				}
 
-
-				std::unique_ptr<Chunk> c = std::make_unique<Chunk>(
-					static_cast<int32_t>(cx), 
-					static_cast<int32_t>(cz)
-				);
-
-				TerrainGenerator::GenerateTerrain(*c);
-				chunks[key] = std::move(c);
-
-				//üˆÍ\š4chunk‚Ìmesh‚àDirty‚É‚µ‚Ä³‚µ‚­—×‚ªAIR‚©”»’f‚·‚é
-				for (int32_t x = cx - 1; x <= cx + 1; ++x) {
-					if (x == cx) continue;
-
-					uint64_t key = Index(x, cz);
-					auto it = chunks.find(key);
-					if (it == chunks.end()) continue;
-
-					it->second->dirty = true;
+				if (m_pendingChunkKeys.find(key) != m_pendingChunkKeys.end()) {
+					continue;
 				}
 
-				for (int32_t z = cz - 1; z <= cz + 1; ++z) {
-					if (z == cz) continue;
+				ChunkJob job;
+				job.cx = cx;
+				job.cz = cz;
+				job.type = JobType::CREATE_CHUNK;
+				job.meshSource = MeshBuildSource::INSTANCE_NEW_CHUNK;
 
-					uint64_t key = Index(cx, z);
-					auto it = chunks.find(key);
-					if (it == chunks.end()) continue;
+				m_pendingChunkKeys.insert(key);
+				m_chunkPipeline.EnqueueJob(std::move(job));
 
-					it->second->dirty = true;
-				}
+
 
 
 				createBudget--;
@@ -122,7 +115,7 @@ void World::UpdateChunksAround(const Camera& cam) {
 			createBudget--;
 		}
 	}*/
-	
+
 
 	for (auto it = chunks.begin(); it != chunks.end();) {
 		const auto& c = it->second;
@@ -215,15 +208,26 @@ void World::DebugChunkInfo() {
 
 void World::ProcessChunkResult() {
 	ChunkResult result;
-	bool ok = m_chunkPipeline.PopFrontResult(result);
-	if (!ok) return;
+	
+	while (m_chunkPipeline.PopFrontResult(result)) {
+		const auto& key = result.key;
 
-	const auto& key = result.key;
+		m_pendingChunkKeys.erase(key);
 
-	chunks[key] = std::move(result.chunk);
 
-	if (result.meshData) {
-		m_pendingMeshData.push_back({ std::move(*result.meshData), key });
+		if (result.chunk) {
+			chunks[key] = std::move(result.chunk);
+		}
+
+		if (result.meshData) {
+			m_pendingMeshData.push_back({ std::move(*result.meshData), key });
+		}
+
+
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			MarkNeighborChunksDirty(it->second->cx, it->second->cz);
+		}
 	}
 }
 
@@ -236,4 +240,29 @@ bool World::PopPendingMeshData(PendingMesh& out) {
 	out = std::move(m_pendingMeshData.front());
 	m_pendingMeshData.pop_front();
 	return true;
+}
+
+void World::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
+
+	//üˆÍ\š4chunk‚Ìmesh‚àDirty‚É‚µ‚Ä³‚µ‚­—×‚ªAIR‚©”»’f‚·‚é
+	for (int32_t x = cx - 1; x <= cx + 1; ++x) {
+		if (x == cx) continue;
+
+		uint64_t key = Index(x, cz);
+		auto it = chunks.find(key);
+		if (it == chunks.end()) continue;
+
+		it->second->dirty = true;
+	}
+
+	for (int32_t z = cz - 1; z <= cz + 1; ++z) {
+		if (z == cz) continue;
+
+		uint64_t key = Index(cx, z);
+		auto it = chunks.find(key);
+		if (it == chunks.end()) continue;
+
+		it->second->dirty = true;
+	}
+
 }

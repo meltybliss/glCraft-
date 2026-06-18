@@ -7,6 +7,6 @@
 struct ChunkResult {
 	uint64_t key;
 
-	std::unique_ptr<Chunk> chunk;
 	std::optional<MeshData> meshData;
+	std::unique_ptr<Chunk> chunk;
 };
