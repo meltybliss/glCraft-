@@ -1,3 +1,95 @@
+
+#pragma once
+#include "World/Chunk.h"
+#include <array>
+#include <cassert>
+
+struct ChunkMeshSnapshot {
+	explicit ChunkMeshSnapshot(Chunk& chunk) : c(chunk) {
+		left.fill(BlockType::AIR);
+		right.fill(BlockType::AIR);
+		front.fill(BlockType::AIR);
+		back.fill(BlockType::AIR);
+	}
+
+	ChunkMeshSnapshot& operator=(const ChunkMeshSnapshot& other) {
+		assert(&c == &other.c);
+
+		left = other.left;
+		right = other.right;
+		front = other.front;
+		back = other.back;
+
+		hasLeft = other.hasLeft;
+		hasRight = other.hasRight;
+		hasFront = other.hasFront;
+		hasBack = other.hasBack;
+
+		return *this;
+	}
+
+	Chunk& c;//対象のchunk
+
+	//store the boundary blocks of surrounding chunks that face the target chunk
+	std::array<BlockType, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> left;
+	std::array<BlockType, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> right;
+	std::array<BlockType, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> front;
+	std::array<BlockType, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> back;
+
+
+	bool hasLeft = false;
+	bool hasRight = false;
+	bool hasFront = false;
+	bool hasBack = false;
+
+	unsigned int GetBoundaryBlock(int x, int y, int z, bool did_X_exceed) {
+		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
+
+		int index = 0;
+		if (did_X_exceed) {
+			index = IndexYZ(y, z);
+		}
+		else {
+			index = IndexYX(y, x);
+		}
+
+		BlockType type = BlockType::AIR;
+		if (did_X_exceed) {
+			if (x < 0) {
+				if (!hasLeft) return 0;
+				type = left[index];
+			}
+			else if (x >= Chunk::CHUNK_WIDTH) {
+				if (!hasRight) return 0;
+				type = right[index];
+			}
+		}
+		else {
+			if (z < 0) {
+				if (!hasBack) return 0;
+				type = back[index];
+			}
+			else if (z >= Chunk::CHUNK_DEPTH) {
+				if (!hasFront) return 0;
+				type = front[index];
+			}
+		}
+
+
+		return (unsigned int)type;
+	}
+
+	static int IndexYZ(int y, int z) {
+		return z + Chunk::CHUNK_DEPTH * y;
+	}
+
+	static int IndexYX(int y, int x) {
+		return x + Chunk::CHUNK_WIDTH * y;
+	}
+
+};
+
+
 #include "World/World.h"
 #include "World/TerrainGenerator.h"
 #include "World/ChunkPipeline.h"
@@ -29,12 +121,10 @@ int floorMod(int64_t a, int b) {//-17, 16 ->
 void World::Tick(float dt, const Camera& cam) {
 
 	UpdateChunksAround(cam);
-
+	ProcessChunkResult();
 }
 
-
-World::World() {
-
+World::World() : m_chunkPipeline(this) {
 	m_chunkPipeline.StartWorkerThread();
 }
 
@@ -76,6 +166,11 @@ void World::UpdateChunksAround(const Camera& cam) {
 					continue;
 				}
 
+				if (createBudget <= 0) {
+					createDone = true;
+					break;
+				}
+
 				ChunkJob job;
 				job.cx = cx;
 				job.cz = cz;
@@ -84,8 +179,6 @@ void World::UpdateChunksAround(const Camera& cam) {
 
 				m_pendingChunkKeys.insert(key);
 				m_chunkPipeline.EnqueueJob(std::move(job));
-
-
 
 
 				createBudget--;
@@ -208,25 +301,21 @@ void World::DebugChunkInfo() {
 
 void World::ProcessChunkResult() {
 	ChunkResult result;
-	
+
 	while (m_chunkPipeline.PopFrontResult(result)) {
+
 		const auto& key = result.key;
-
-		m_pendingChunkKeys.erase(key);
-
-
-		if (result.chunk) {
+		auto it = chunks.find(key);
+		if (it == chunks.end()) {
+			if (!result.chunk) {
+				std::cerr << "[ProcChunkResult] Couldnt find actual chunk data from worker thread\n";
+			}
 			chunks[key] = std::move(result.chunk);
 		}
 
+
 		if (result.meshData) {
 			m_pendingMeshData.push_back({ std::move(*result.meshData), key });
-		}
-
-
-		auto it = chunks.find(key);
-		if (it != chunks.end() && it->second) {
-			MarkNeighborChunksDirty(it->second->cx, it->second->cz);
 		}
 	}
 }
@@ -243,14 +332,15 @@ bool World::PopPendingMeshData(PendingMesh& out) {
 }
 
 void World::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
-
-	//周囲十字4chunkのmeshもDirtyにして正しく隣がAIRか判断する
 	for (int32_t x = cx - 1; x <= cx + 1; ++x) {
 		if (x == cx) continue;
 
 		uint64_t key = Index(x, cz);
 		auto it = chunks.find(key);
-		if (it == chunks.end()) continue;
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
 
 		it->second->dirty = true;
 	}
@@ -260,9 +350,103 @@ void World::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 
 		uint64_t key = Index(cx, z);
 		auto it = chunks.find(key);
-		if (it == chunks.end()) continue;
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
 
 		it->second->dirty = true;
 	}
+}
 
+
+
+ChunkMeshSnapshot World::CreateMeshSnapshot(Chunk& c) {
+	ChunkMeshSnapshot snapshot(c);
+
+	int32_t cx = c.cx;
+	int32_t cz = c.cz;
+
+	//left
+	{
+		uint64_t key = Index(cx - 1, cz);
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			Chunk* c = it->second.get();
+
+			snapshot.hasLeft = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+					unsigned int b = c->GetBlock(Chunk::CHUNK_WIDTH - 1, y, z);
+
+					snapshot.left[ChunkMeshSnapshot::IndexYZ(y, z)] =
+						static_cast<BlockType>(b);
+				}
+			}
+		}
+	}
+
+	//right
+	{
+		uint64_t key = Index(cx + 1, cz);
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			Chunk* c = it->second.get();
+
+			snapshot.hasRight = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+					unsigned int b = c->GetBlock(0, y, z);
+
+					snapshot.left[ChunkMeshSnapshot::IndexYZ(y, z)] =
+						static_cast<BlockType>(b);
+				}
+			}
+		}
+	}
+
+	//front
+	{
+		uint64_t key = Index(cx, cz + 1);
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			Chunk* c = it->second.get();
+
+			snapshot.hasFront = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
+					unsigned int b = c->GetBlock(x, y, 0);
+
+					snapshot.left[ChunkMeshSnapshot::IndexYX(y, x)] =
+						static_cast<BlockType>(b);
+				}
+			}
+		}
+	}
+
+
+	//back
+	{
+		uint64_t key = Index(cx, cz - 1);
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			Chunk* c = it->second.get();
+
+			snapshot.hasBack = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
+					unsigned int b = c->GetBlock(x, y, Chunk::CHUNK_DEPTH - 1);
+
+					snapshot.left[ChunkMeshSnapshot::IndexYX(y, x)] =
+						static_cast<BlockType>(b);
+				}
+			}
+		}
+	}
+
+	return snapshot;
 }

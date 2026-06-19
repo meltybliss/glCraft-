@@ -15,8 +15,11 @@
 
 using namespace ChunkKey;
 
+class World;
+
 class ChunkPipeline {
 public:
+	explicit ChunkPipeline(World* w) : m_world(w) {}
 
 	void StartWorkerThread();
 	void StopWorkerThread();
@@ -25,7 +28,6 @@ public:
 
 	bool PopFrontResult(ChunkResult& out);
 
-	ChunkMeshSnapshot ChunkMeshSnapshot(Chunk& c);
 private:
 	void StartLoop();
 
@@ -38,6 +40,7 @@ private:
 	static constexpr int MAX_CHUNK_MESH_PER_TICK = 5;
 
 private:
+	World* m_world = nullptr;
 	std::thread workerThread;
 	std::atomic<bool> runningWorker = false;
 

@@ -1,13 +1,30 @@
 #pragma once
 #include "World/Chunk.h"
 #include <array>
+#include <cassert>
 
 struct ChunkMeshSnapshot {
-	ChunkMeshSnapshot(Chunk& chunk) : c(chunk) {
+	explicit ChunkMeshSnapshot(Chunk& chunk) : c(chunk) {
 		left.fill(BlockType::AIR);
 		right.fill(BlockType::AIR);
 		front.fill(BlockType::AIR);
 		back.fill(BlockType::AIR);
+	}
+
+	ChunkMeshSnapshot& operator=(const ChunkMeshSnapshot& other) {
+		assert(&c == &other.c);
+
+		left = other.left;
+		right = other.right;
+		front = other.front;
+		back = other.back;
+
+		hasLeft = other.hasLeft;
+		hasRight = other.hasRight;
+		hasFront = other.hasFront;
+		hasBack = other.hasBack;
+
+		return *this;
 	}
 
 	Chunk& c;//ëŒè€ÇÃchunk

@@ -79,6 +79,9 @@ public:
 	void DebugChunkInfo();
 
 	bool PopPendingMeshData(PendingMesh& out);
+
+
+	ChunkMeshSnapshot CreateMeshSnapshot(Chunk& c);
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
