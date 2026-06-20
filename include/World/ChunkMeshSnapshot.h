@@ -4,7 +4,9 @@
 #include <cassert>
 
 struct ChunkMeshSnapshot {
-	explicit ChunkMeshSnapshot(Chunk& chunk) : c(chunk) {
+	ChunkMeshSnapshot() {
+		center.fill(BlockType::AIR);
+
 		left.fill(BlockType::AIR);
 		right.fill(BlockType::AIR);
 		front.fill(BlockType::AIR);
@@ -12,8 +14,9 @@ struct ChunkMeshSnapshot {
 	}
 
 	ChunkMeshSnapshot& operator=(const ChunkMeshSnapshot& other) {
-		assert(&c == &other.c);
+		//assert(&c == &other.c);
 
+		center = other.center;
 		left = other.left;
 		right = other.right;
 		front = other.front;
@@ -27,7 +30,9 @@ struct ChunkMeshSnapshot {
 		return *this;
 	}
 
-	Chunk& c;//ëŒè€ÇÃchunk
+	//Chunk& c;//ëŒè€ÇÃchunk
+
+	std::array<BlockType, Chunk::CHUNK_SIZE> center;
 
 	//store the boundary blocks of surrounding chunks that face the target chunk
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_DEPTH> left;

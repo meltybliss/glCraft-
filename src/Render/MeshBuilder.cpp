@@ -3,12 +3,10 @@
 MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 	MeshData result;
 
-	Chunk& c = snapshot.c;
+	auto& center = snapshot.center;
 	auto& v = result.vertices;
 	auto& indices = result.indices;
 
-	const auto& cx = c.cx;
-	const auto& cz = c.cz;
 
 	const auto& s = BLOCK_SIZE;
 	
@@ -18,17 +16,19 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 			return true;
 		}
 
-		if (c.InBounds(nx, ny, nz)) {
-			return c.GetBlock(nx, ny, nz) == 0;
+		if (Chunk::InBounds(nx, ny, nz)) {
+			
+			return center[Chunk::Index(nx, ny, nz)] == (BlockType)0;
 		}
 
 		if (nx < 0 || nx >= Chunk::CHUNK_WIDTH) {
-			return snapshot.GetBoundaryBlock(nx, ny, nz, true);
+			return snapshot.GetBoundaryBlock(nx, ny, nz, true) == 0;
 		}
 		else if (nz < 0 || nz >= Chunk::CHUNK_DEPTH) {
-			return snapshot.GetBoundaryBlock(nx, ny, nz, false);
+			return snapshot.GetBoundaryBlock(nx, ny, nz, false) == 0;
 		}
 
+		return true;
 	};
 
 	for (int y = 0; y < Chunk::CHUNK_HEIGHT; y++) {
@@ -36,7 +36,7 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 			for (int z = 0; z < Chunk::CHUNK_DEPTH; z++) {
 
 
-				unsigned int b = c.GetBlock(x, y, z);
+				unsigned int b = (unsigned int)center[Chunk::Index(x, y, z)];
 
 				if (b == 0) {//AIR
 					continue;

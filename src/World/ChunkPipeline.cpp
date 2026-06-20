@@ -1,7 +1,7 @@
 #include "World/ChunkPipeline.h"
 #include "World/TerrainGenerator.h"
 #include "Render/MeshBuilder.h"
-
+#include "World/World.h"
 #include <memory>
 
 void ChunkPipeline::StartWorkerThread() {

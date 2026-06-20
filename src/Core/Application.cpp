@@ -17,6 +17,8 @@ void Application::Run() {
 		blockAtlas->Bind(0);
 
 		m_wRenderer.RebuildDrityChunkMesh(m_world);
+		m_wRenderer.UploadPendingMeshData(m_world);
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		m_wRenderer.RenderWorld(m_world, *baseShader, m_camera);
 
