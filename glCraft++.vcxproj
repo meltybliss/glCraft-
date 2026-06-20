@@ -141,6 +141,7 @@
     <ClInclude Include="include\Render\ChunkMesh.h" />
     <ClInclude Include="include\Render\MeshBuilder.h" />
     <ClInclude Include="include\Render\MeshData.h" />
+    <ClInclude Include="include\Render\SelectionOutlineRenderer.h" />
     <ClInclude Include="include\Render\Shader.h" />
     <ClInclude Include="include\Render\Texture.h" />
     <ClInclude Include="include\Render\WorldRenderer.h" />
@@ -151,6 +152,7 @@
     <ClInclude Include="include\World\ChunkPipeline.h" />
     <ClInclude Include="include\World\ChunkResult.h" />
     <ClInclude Include="include\World\PendingMesh.h" />
+    <ClInclude Include="include\World\RaycastHit.h" />
     <ClInclude Include="include\World\TerrainGenerator.h" />
     <ClInclude Include="include\World\World.h" />
     <ClInclude Include="third_party\glad\glad.h" />
@@ -452,10 +454,10 @@
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\main.cpp" />
     <ClCompile Include="src\Render\MeshBuilder.cpp" />
+    <ClCompile Include="src\Render\SelectionOutlineRenderer.cpp" />
     <ClCompile Include="src\Render\Shader.cpp" />
     <ClCompile Include="src\Render\Texture.cpp" />
     <ClCompile Include="src\Render\WorldRenderer.cpp" />
-    <ClCompile Include="src\World\Chunk.cpp" />
     <ClCompile Include="src\World\ChunkPipeline.cpp" />
     <ClCompile Include="src\World\TerrainGenerator.cpp" />
     <ClCompile Include="src\World\World.cpp" />
@@ -469,6 +471,8 @@
   <ItemGroup>
     <None Include="assets\Shaders\basic.frag" />
     <None Include="assets\Shaders\basic.vert" />
+    <None Include="assets\Shaders\selectionOutline.frag" />
+    <None Include="assets\Shaders\selectionOutline.vert" />
     <None Include="third_party\glm\detail\func_common.inl" />
     <None Include="third_party\glm\detail\func_common_simd.inl" />
     <None Include="third_party\glm\detail\func_exponential.inl" />

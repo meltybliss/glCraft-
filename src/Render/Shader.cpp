@@ -74,16 +74,21 @@ unsigned int Shader::CompileShader(unsigned int type, const std::string& source)
 }
 
 
-void Shader::Use() {
+void Shader::Use() const {
 	glUseProgram(m_id);
 }
 
-void Shader::SetMat4(const char* name, const glm::mat4& mat4) {
+void Shader::SetMat4(const char* name, const glm::mat4& mat4) const {
 	int location = glGetUniformLocation(m_id, name);
 	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(mat4));
 }
 
-void Shader::SetInt(const char* name, const int& value) {
+void Shader::SetVec4(const char* name, const glm::vec4& vec4) const {
+	int location = glGetUniformLocation(m_id, name);
+	glUniform4f(location, vec4.x, vec4.y, vec4.z, vec4.w);
+}
+
+void Shader::SetInt(const char* name, const int& value) const {
 	int location = glGetUniformLocation(m_id, name);
 	glUniform1i(location, value);
 }

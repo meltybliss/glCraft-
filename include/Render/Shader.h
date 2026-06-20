@@ -16,9 +16,10 @@ class Shader {
 public:
 	Shader(const std::string& vertPath, const std::string& fragPath);
 
-	void Use();
-	void SetMat4(const char* name, const glm::mat4& mat4);
-	void SetInt(const char* name, const int& value);
+	void Use() const;
+	void SetMat4(const char* name, const glm::mat4& mat4) const;
+	void SetInt(const char* name, const int& value) const;
+	void SetVec4(const char* name, const glm::vec4& vec4) const;
 
 private:
 	std::string ReadFile(const std::string& shaderPath);

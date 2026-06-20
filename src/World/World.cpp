@@ -402,3 +402,114 @@ void World::EnqueueMeshJobFrom_Outside(Chunk& c) {
 	m_chunkPipeline.EnqueueJob(std::move(job));
 	
 }
+
+
+RaycastHit World::Raycast(
+	const glm::vec3& origin, 
+	const glm::vec3& dir, 
+	float distance) const {
+
+
+	double originX = static_cast<double>(origin.x);
+	double originY = static_cast<double>(origin.y);
+	double originZ = static_cast<double>(origin.z);
+
+	const double dirX = static_cast<double>(dir.x);
+	const double dirY = static_cast<double>(dir.y);
+	const double dirZ = static_cast<double>(dir.z);
+
+	int64_t x = static_cast<int64_t>(std::floor(originX));
+	int64_t y = static_cast<int64_t>(std::floor(originY));
+	int64_t z = static_cast<int64_t>(std::floor(originZ));
+
+	if (GetBlockGlobal(x, y, z) != 0) {
+		return RaycastHit{ true, x, y, z, x, y, z };
+	}
+
+	int64_t previousX = static_cast<int64_t>(std::floor(originX));
+	int64_t previousY = static_cast<int64_t>(std::floor(originY));
+	int64_t previousZ = static_cast<int64_t>(std::floor(originZ));
+
+	
+	const double inf = std::numeric_limits<double>::infinity();
+
+	int stepX = 0;
+	int stepY = 0;
+	int stepZ = 0;
+
+	double tMaxX = inf;
+	double tMaxY = inf;
+	double tMaxZ = inf;
+
+	double tDeltaX = inf;
+	double tDeltaY = inf;
+	double tDeltaZ = inf;
+
+	if (dirX > 0.0f) {
+		stepX = 1;
+		double nextBoundaryX = static_cast<double>(x + 1);
+		tMaxX = (nextBoundaryX - originX) / dirX;
+		tDeltaX = 1.0f / dirX;
+	}
+	else if (dirX < 0.0f) {
+		stepX = -1;
+		double nextBoundaryX = static_cast<double>(x);
+		tMaxX = (nextBoundaryX - originX) / dirX;
+		tDeltaX = -1.0f / dirX;
+	}
+
+	if (dirY > 0.0f) {
+		stepY = 1;
+		double nextBoundaryY = static_cast<double>(y + 1);
+		tMaxY = (nextBoundaryY - originY) / dirY;
+		tDeltaY = 1.0f / dirY;
+	}
+	else if (dirY < 0.0f) {
+		stepY = -1;
+		double nextBoundaryY = static_cast<double>(y);
+		tMaxY = (nextBoundaryY - originY) / dirY;
+		tDeltaY = -1.0f / dirY;
+	}
+
+	if (dirZ > 0.0f) {
+		stepZ = 1;
+		double nextBoundaryZ = static_cast<double>(z + 1);
+		tMaxZ = (nextBoundaryZ - originZ) / dirZ;
+		tDeltaZ = 1.0f / dirZ;
+	}
+	else if (dirZ < 0.0f) {
+		stepZ = -1;
+		double nextBoundaryZ = static_cast<double>(z);
+		tMaxZ = (nextBoundaryZ - originZ) / dirZ;
+		tDeltaZ = -1.0f / dirZ;
+	}
+
+
+	while (std::min({ tMaxX, tMaxY, tMaxZ }) <= distance) {
+
+		previousX = x;
+		previousY = y;
+		previousZ = z;
+
+
+		if (tMaxX < tMaxY && tMaxX < tMaxZ) {
+			x += stepX;
+			tMaxX += tDeltaX;
+		}
+		else if (tMaxY < tMaxZ) {
+			y += stepY;
+			tMaxY += tDeltaY;
+		}
+		else {
+			z += stepZ;
+			tMaxZ += tDeltaZ;
+		}
+
+		if (GetBlockGlobal(x, y, z) != 0) {
+			return RaycastHit{ true, x, y, z, previousX, previousY, previousZ };
+		}
+		
+	}
+
+	return RaycastHit{ false, x, y, z, previousX, previousY, previousZ };
+}

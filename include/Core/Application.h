@@ -5,10 +5,12 @@
 #include "Render/Camera.h"
 #include "World/World.h"
 #include "Render/WorldRenderer.h"
+#include "Render/SelectionOutlineRenderer.h"
 #include "Render/Shader.h"
 #include "Render/Texture.h"
 #include <optional>
 #include <memory>
+#include "World/RaycastHit.h"
 
 class Application {
 public:
@@ -22,6 +24,9 @@ private:
 	void OnMouseMove(double xpos, double ypos);
 	void ProcessInput(float dt);
 
+	void UpdateRayHit();
+	void RenderOutline();
+
 private:
 	GLFWwindow* m_window = nullptr;
 	bool m_firstMouse = true;
@@ -30,9 +35,15 @@ private:
 
 	World m_world;
 	WorldRenderer m_wRenderer;
+	SelectionOutlineRenderer m_outlineRenderer;
+
 	Camera m_camera;
 
 	std::optional<Shader> baseShader;
+	std::optional<Shader> selectionOutlineShader;
+
 	std::unique_ptr<Texture> blockAtlas;
 
+
+	RaycastHit lastHit;
 };
