@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include <optional>
+#include <memory>
 #include "World/ChunkMeshSnapshot.h"
 
 enum JobType {
@@ -20,5 +20,5 @@ struct ChunkJob {
 
 	JobType type;
 	MeshBuildSource meshSource;
-	std::optional<ChunkMeshSnapshot> snapshot;//for BUILD_MESH
+	std::unique_ptr<ChunkMeshSnapshot> snapshot;//for BUILD_MESH
 };

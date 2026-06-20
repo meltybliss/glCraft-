@@ -1,3 +1,4 @@
+
 #include "World/World.h"
 #include "World/TerrainGenerator.h"
 #include "World/ChunkPipeline.h"
@@ -11,7 +12,7 @@ int64_t floorDiv(int64_t a, int64_t b) {
 	if (r != 0 && ((r < 0) != (b < 0))) {
 		--q;
 	}
-	
+
 	return q;
 
 }
@@ -27,12 +28,18 @@ int floorMod(int64_t a, int b) {//-17, 16 ->
 
 
 void World::Tick(float dt, const Camera& cam) {
-	
-	UpdateChunksAround(cam);
 
+	UpdateChunksAround(cam);
+	ProcessChunkResult();
 }
 
+World::World() : m_chunkPipeline(this) {
+	m_chunkPipeline.StartWorkerThread();
+}
 
+World::~World() {
+	m_chunkPipeline.StopWorkerThread();
+}
 
 void World::UpdateChunksAround(const Camera& cam) {
 	int32_t curCx = static_cast<int32_t>(floorDiv(cam.position.x, Chunk::CHUNK_WIDTH));
@@ -49,7 +56,7 @@ void World::UpdateChunksAround(const Camera& cam) {
 				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//内側は処理済みなので外周だけ
 					continue;
 				}
-				
+
 				if (createBudget <= 0) {
 					createDone = true;
 					break;
@@ -84,15 +91,19 @@ void World::UpdateChunksAround(const Camera& cam) {
 					it->second->dirty = true;
 				}
 
-				for (int32_t z = cz - 1; z <= cz + 1; ++z) {
-					if (z == cz) continue;
-
-					uint64_t key = Index(cx, z);
-					auto it = chunks.find(key);
-					if (it == chunks.end()) continue;
-
-					it->second->dirty = true;
+				if (createBudget <= 0) {
+					createDone = true;
+					break;
 				}
+
+				ChunkJob job;
+				job.cx = cx;
+				job.cz = cz;
+				job.type = JobType::CREATE_CHUNK;
+				job.meshSource = MeshBuildSource::INSTANCE_NEW_CHUNK;
+
+				m_pendingChunkKeys.insert(key);
+				m_chunkPipeline.EnqueueJob(std::move(job));
 
 
 				createBudget--;
@@ -122,7 +133,7 @@ void World::UpdateChunksAround(const Camera& cam) {
 			createBudget--;
 		}
 	}*/
-	
+
 
 	for (auto it = chunks.begin(); it != chunks.end();) {
 		const auto& c = it->second;
@@ -215,17 +226,45 @@ void World::DebugChunkInfo() {
 
 void World::ProcessChunkResult() {
 	ChunkResult result;
-	bool ok = m_chunkPipeline.PopFrontResult(result);
-	if (!ok) return;
 
-	const auto& key = result.key;
-	auto it = chunks.find(key);
-	if (it != chunks.end()) {
-		chunks[key] = std::move(result.chunk);
-	}
-	
-	if (result.meshData) {
-		m_pendingMeshData.push_back({ std::move(*result.meshData), key });
+	while (m_chunkPipeline.PopFrontResult(result)) {
+
+		const auto& key = result.key;
+
+		bool registerdNewChunk = false;
+		int32_t cx = 0;
+		int32_t cz = 0;
+		if (result.chunk) {//INSTANCE_NEW_CHUNK�ŁA�V�Kchunk������mesh������set�ŋN��������
+			m_pendingChunkKeys.erase(key);
+
+			auto it = chunks.find(key);
+			if (it == chunks.end()) {//worker�ŐV�K�������ꂽ���́Bmesh����job�����Ȃ炱���ɂ͓���Ȃ�
+				if (!result.chunk) {
+					std::cerr << "[ProcChunkResult] Couldnt find actual chunk data from worker thread\n";
+					continue;
+				}
+
+
+				cx = result.chunk->cx;
+				cz = result.chunk->cz;
+
+				chunks[key] = std::move(result.chunk);
+				registerdNewChunk = true;
+			}
+
+
+
+		}
+		
+
+		if (result.meshData) {
+			m_pendingMeshData.push_back({ std::move(*result.meshData), key });
+		}
+
+		if (registerdNewChunk) {
+			MarkNeighborChunksDirty(cx, cz);
+		}
+
 	}
 }
 
@@ -238,4 +277,144 @@ bool World::PopPendingMeshData(PendingMesh& out) {
 	out = std::move(m_pendingMeshData.front());
 	m_pendingMeshData.pop_front();
 	return true;
+}
+
+void World::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
+	for (int32_t x = cx - 1; x <= cx + 1; ++x) {
+		if (x == cx) continue;
+
+		uint64_t key = Index(x, cz);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
+
+		it->second->dirty = true;
+	}
+
+	for (int32_t z = cz - 1; z <= cz + 1; ++z) {
+		if (z == cz) continue;
+
+		uint64_t key = Index(cx, z);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
+
+		it->second->dirty = true;
+	}
+}
+
+
+
+std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
+
+	std::unique_ptr<ChunkMeshSnapshot> snapshot = std::make_unique<ChunkMeshSnapshot>();
+
+	int32_t cx = c.cx;
+	int32_t cz = c.cz;
+
+	//center
+	
+	snapshot->center = c.blocks;
+
+
+	//left
+	{
+		uint64_t key = Index(cx - 1, cz);
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			Chunk* c = it->second.get();
+
+			snapshot->hasLeft = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+					unsigned int b = c->GetBlock(Chunk::CHUNK_WIDTH - 1, y, z);
+
+					snapshot->left[ChunkMeshSnapshot::IndexYZ(y, z)] =
+						static_cast<BlockType>(b);
+				}
+			}
+		}
+	}
+
+	//right
+	{
+		uint64_t key = Index(cx + 1, cz);
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			Chunk* c = it->second.get();
+
+			snapshot->hasRight = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+					unsigned int b = c->GetBlock(0, y, z);
+
+					snapshot->right[ChunkMeshSnapshot::IndexYZ(y, z)] =
+						static_cast<BlockType>(b);
+				}
+			}
+		}
+	}
+
+	//front
+	{
+		uint64_t key = Index(cx, cz + 1);
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			Chunk* c = it->second.get();
+
+			snapshot->hasFront = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
+					unsigned int b = c->GetBlock(x, y, 0);
+
+					snapshot->front[ChunkMeshSnapshot::IndexYX(y, x)] =
+						static_cast<BlockType>(b);
+				}
+			}
+		}
+	}
+
+
+	//back
+	{
+		uint64_t key = Index(cx, cz - 1);
+		auto it = chunks.find(key);
+		if (it != chunks.end() && it->second) {
+			Chunk* c = it->second.get();
+
+			snapshot->hasBack = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
+					unsigned int b = c->GetBlock(x, y, Chunk::CHUNK_DEPTH - 1);
+
+					snapshot->back[ChunkMeshSnapshot::IndexYX(y, x)] =
+						static_cast<BlockType>(b);
+				}
+			}
+		}
+	}
+
+	return snapshot;
+}
+
+
+void World::EnqueueMeshJobFrom_Outside(Chunk& c) {
+
+	ChunkJob job;
+	job.cx = c.cx;
+	job.cz = c.cz;
+	job.snapshot = CreateMeshSnapshot(c);
+	job.type = JobType::BUILD_MESH;
+	job.meshSource = MeshBuildSource::SNAPSHOT;
+
+	m_chunkPipeline.EnqueueJob(std::move(job));
+	
 }

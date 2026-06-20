@@ -6,11 +6,12 @@
 #include "Render/PendingMesh.h"
 #include <unordered_map>
 #include <memory>
+#include <unordered_set>
 #include <stdint.h>
 #include <deque>
 
 
-using ChunkKey = uint64_t;
+using ChunkMapKey = uint64_t;
 using namespace ChunkKey;
 
 struct Camera;
@@ -18,7 +19,10 @@ class ChunkPipeline;
 
 class World {
 public:
-	using ChunkMap = std::unordered_map<ChunkKey, std::unique_ptr<Chunk>>;
+	World();
+	~World();
+
+	using ChunkMap = std::unordered_map<ChunkMapKey, std::unique_ptr<Chunk>>;
 
 	[[nodiscard]] unsigned int GetBlockGlobal(int64_t x, int64_t y, int64_t z) const;
 
@@ -41,7 +45,7 @@ public:
 		return it->second.get();
 	}
 
-	[[nodiscard]] Chunk* GetTargetChunkFromKey(uint32_t key) {
+	[[nodiscard]] Chunk* GetTargetChunkFromKey(uint64_t key) {
 		
 		auto it = chunks.find(key);
 
@@ -50,7 +54,7 @@ public:
 		return it->second.get();
 	}
 
-	[[nodiscard]] const Chunk* GetTargetChunkFromKey(uint32_t key) const {
+	[[nodiscard]] const Chunk* GetTargetChunkFromKey(uint64_t key) const {
 
 		auto it = chunks.find(key);
 
@@ -75,6 +79,13 @@ public:
 	void DebugChunkInfo();
 
 	bool PopPendingMeshData(PendingMesh& out);
+	void EnqueuePendingChunkKey(uint64_t key) {
+	
+		m_pendingChunkKeys.insert(key);
+	}
+	void EnqueueMeshJobFrom_Outside(Chunk& c);
+
+	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshot(Chunk& c);
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -88,10 +99,12 @@ private:
 	ChunkMap chunks;
 	ChunkPipeline m_chunkPipeline;
 
-	std::deque<PendingMesh> m_pendingMeshData;
-
+	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
+	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks
 private:
 
 	void ProcessChunkResult();
+
+	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
 
 };

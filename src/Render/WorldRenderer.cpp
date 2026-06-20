@@ -1,12 +1,14 @@
 #include "Render/WorldRenderer.h"
 #include "World/World.h"
 #include "Render/MeshBuilder.h"
+#include "Core/ChunkJob.h"
 
 void WorldRenderer::RebuildDrityChunkMesh(World& w) {
 	for (auto& [key, c] : w.GetChunks()) {
 		if (c->dirty) {
-			MeshData data = MeshBuilder::BuildChunkMesh(w, *c);
-			c->mesh.Upload(data);
+
+
+			w.EnqueueMeshJobFrom_Outside(*c);
 
 			c->dirty = false;
 		}
@@ -65,6 +67,7 @@ void WorldRenderer::UploadPendingMeshData(World& w) {
 
 		c->mesh.Upload(out.meshData);
 
+		c->dirty = false;
 	}
 
 }

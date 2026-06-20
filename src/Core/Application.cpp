@@ -3,6 +3,10 @@
 void Application::Run() {
 	
 	float lastTime = (float)glfwGetTime();
+
+	float fpsTimer = 0.f;
+	int frameCount = 0;
+
 	while (!glfwWindowShouldClose(m_window)) {
 		float curTime = (float)glfwGetTime();
 		float dt = curTime - lastTime;
@@ -17,11 +21,30 @@ void Application::Run() {
 		blockAtlas->Bind(0);
 
 		m_wRenderer.RebuildDrityChunkMesh(m_world);
+		m_wRenderer.UploadPendingMeshData(m_world);
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		m_wRenderer.RenderWorld(m_world, *baseShader, m_camera);
 
 
 		glfwSwapBuffers(m_window);
+
+		//display fps
+		frameCount++;
+		fpsTimer += dt;
+
+		if (fpsTimer >= 0.5f) {
+			float fps = static_cast<float>(frameCount) / fpsTimer;
+
+			std::string title =
+				"glCraft++ | FPS: " + std::to_string(static_cast<int>(fps));
+
+			glfwSetWindowTitle(m_window, title.c_str());
+
+			frameCount = 0;
+			fpsTimer = 0.f;
+		}
+
 	}
 
 	glfwDestroyWindow(m_window);

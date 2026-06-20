@@ -1,16 +1,38 @@
 #pragma once
 #include "World/Chunk.h"
 #include <array>
+#include <cassert>
 
 struct ChunkMeshSnapshot {
-	ChunkMeshSnapshot(Chunk& chunk) : c(chunk) {
+	ChunkMeshSnapshot() {
+		center.fill(BlockType::AIR);
+
 		left.fill(BlockType::AIR);
 		right.fill(BlockType::AIR);
 		front.fill(BlockType::AIR);
 		back.fill(BlockType::AIR);
 	}
 
-	Chunk& c;//ëŒè€ÇÃchunk
+	ChunkMeshSnapshot& operator=(const ChunkMeshSnapshot& other) {
+		//assert(&c == &other.c);
+
+		center = other.center;
+		left = other.left;
+		right = other.right;
+		front = other.front;
+		back = other.back;
+
+		hasLeft = other.hasLeft;
+		hasRight = other.hasRight;
+		hasFront = other.hasFront;
+		hasBack = other.hasBack;
+
+		return *this;
+	}
+
+	//Chunk& c;//ëŒè€ÇÃchunk
+
+	std::array<BlockType, Chunk::CHUNK_SIZE> center;
 
 	//store the boundary blocks of surrounding chunks that face the target chunk
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_DEPTH> left;
