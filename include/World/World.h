@@ -11,6 +11,8 @@
 #include <stdint.h>
 #include <deque>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 using ChunkMapKey = uint64_t;
 using namespace ChunkKey;
@@ -73,7 +75,7 @@ public:
 		return it->second.get();
 	}
 
-	[[nodiscard]] RaycastHit Raycast(const glm::vec3& origin, const glm::vec3& dir, float distance);
+	[[nodiscard]] RaycastHit Raycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const;
 	
 	void Tick(float dt, const Camera& cam);
 	void UpdateChunksAround(const Camera& cam);

@@ -5,6 +5,7 @@
 #include "Render/Camera.h"
 #include "World/World.h"
 #include "Render/WorldRenderer.h"
+#include "Render/SelectionOutlineRenderer.h"
 #include "Render/Shader.h"
 #include "Render/Texture.h"
 #include <optional>
@@ -24,6 +25,7 @@ private:
 	void ProcessInput(float dt);
 
 	void UpdateRayHit();
+	void RenderOutline();
 
 private:
 	GLFWwindow* m_window = nullptr;
@@ -33,9 +35,13 @@ private:
 
 	World m_world;
 	WorldRenderer m_wRenderer;
+	SelectionOutlineRenderer m_outlineRenderer;
+
 	Camera m_camera;
 
 	std::optional<Shader> baseShader;
+	std::optional<Shader> selectionOutlineShader;
+
 	std::unique_ptr<Texture> blockAtlas;
 
 
