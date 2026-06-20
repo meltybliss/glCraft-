@@ -151,6 +151,7 @@
     <ClInclude Include="include\World\ChunkPipeline.h" />
     <ClInclude Include="include\World\ChunkResult.h" />
     <ClInclude Include="include\World\PendingMesh.h" />
+    <ClInclude Include="include\World\RaycastHit.h" />
     <ClInclude Include="include\World\TerrainGenerator.h" />
     <ClInclude Include="include\World\World.h" />
     <ClInclude Include="third_party\glad\glad.h" />

@@ -9,6 +9,7 @@
 #include "Render/Texture.h"
 #include <optional>
 #include <memory>
+#include "World/RaycastHit.h"
 
 class Application {
 public:
@@ -21,6 +22,8 @@ private:
 
 	void OnMouseMove(double xpos, double ypos);
 	void ProcessInput(float dt);
+
+	void UpdateRayHit();
 
 private:
 	GLFWwindow* m_window = nullptr;
@@ -35,4 +38,6 @@ private:
 	std::optional<Shader> baseShader;
 	std::unique_ptr<Texture> blockAtlas;
 
+
+	RaycastHit lastHit;
 };

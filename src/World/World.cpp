@@ -402,3 +402,47 @@ void World::EnqueueMeshJobFrom_Outside(Chunk& c) {
 	m_chunkPipeline.EnqueueJob(std::move(job));
 	
 }
+
+
+RaycastHit World::Raycast(
+	const glm::vec3& origin, 
+	const glm::vec3& dir, 
+	float distance) {
+
+	
+	glm::vec3 rayPoint = origin + dir * distance;
+
+	int64_t x = static_cast<int64_t>(origin.x);
+	int64_t y = static_cast<int64_t>(origin.y);
+	int64_t z = static_cast<int64_t>(origin.z);
+
+	
+	const double  inf = std::numeric_limits<double>::infinity();
+
+	int stepX = 0;
+	int stepY = 0;
+	int stepZ = 0;
+
+	double tMaxX = inf;
+	double tMaxY = inf;
+	double tMaxZ = inf;
+
+	double tDeltaX = inf;
+	double tDeltaY = inf;
+	double tDeltaZ = inf;
+
+	if (dir.x > 0.0f) {
+		stepX = 1;
+		double nextBoundaryX = static_cast<double>(x + 1);
+		tMaxX = (nextBoundaryX - (double)x) / dir.x;
+		tDeltaX = 1.0f / dir.x;
+	}
+	else if (dir.x < 0.0f) {
+		stepX = -1;
+		double nextBoundaryX = static_cast<double>(x);
+		tMaxX = (nextBoundaryX - (double)x) / dir.x;
+		tDeltaX = -1.0f / dir.x;
+	}
+
+
+}

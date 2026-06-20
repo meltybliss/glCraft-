@@ -4,6 +4,7 @@
 #include "World/ChunkResult.h"
 #include "World/ChunkPipeline.h"
 #include "Render/PendingMesh.h"
+#include "World/RaycastHit.h"
 #include <unordered_map>
 #include <memory>
 #include <unordered_set>
@@ -72,6 +73,8 @@ public:
 		return it->second.get();
 	}
 
+	[[nodiscard]] RaycastHit Raycast(const glm::vec3& origin, const glm::vec3& dir, float distance);
+	
 	void Tick(float dt, const Camera& cam);
 	void UpdateChunksAround(const Camera& cam);
 

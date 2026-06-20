@@ -16,6 +16,8 @@ void Application::Run() {
 
 		ProcessInput(dt);
 
+
+
 		m_world.Tick(dt, m_camera);
 
 		blockAtlas->Bind(0);
@@ -168,4 +170,17 @@ void Application::OnMouseMove(double xpos, double ypos) {
 	}
 
 	m_camera.UpdateVectors();
+}
+
+
+
+void Application::UpdateRayHit() {
+
+	glm::vec3 origin = m_camera.position;
+	glm::vec3 rayDir = m_camera.front;
+
+	float distance = 4.0f;
+
+	lastHit = m_world.Raycast(origin, rayDir, distance);
+
 }
