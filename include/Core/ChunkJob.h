@@ -14,7 +14,7 @@ enum class MeshBuildSource {
 	INSTANCE_NEW_CHUNK,
 	SNAPSHOT
 
-};
+}
 struct ChunkJob {
 	int32_t cx, cz;
 
