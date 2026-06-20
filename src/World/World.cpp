@@ -233,6 +233,7 @@ void World::ProcessChunkResult() {
 				int32_t cz = result.chunk->cz;
 
 				chunks[key] = std::move(result.chunk);
+				registerdNewChunk = true;
 			}
 
 

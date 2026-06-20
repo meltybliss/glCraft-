@@ -3,6 +3,10 @@
 void Application::Run() {
 	
 	float lastTime = (float)glfwGetTime();
+
+	float fpsTimer = 0.f;
+	int frameCount = 0;
+
 	while (!glfwWindowShouldClose(m_window)) {
 		float curTime = (float)glfwGetTime();
 		float dt = curTime - lastTime;
@@ -24,6 +28,23 @@ void Application::Run() {
 
 
 		glfwSwapBuffers(m_window);
+
+		//display fps
+		frameCount++;
+		fpsTimer += dt;
+
+		if (fpsTimer >= 0.5f) {
+			float fps = static_cast<float>(frameCount) / fpsTimer;
+
+			std::string title =
+				"glCraft++ | FPS: " + std::to_string(static_cast<int>(fps));
+
+			glfwSetWindowTitle(m_window, title.c_str());
+
+			frameCount = 0;
+			fpsTimer = 0.f;
+		}
+
 	}
 
 	glfwDestroyWindow(m_window);
