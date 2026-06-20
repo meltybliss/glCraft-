@@ -71,24 +71,8 @@ void World::UpdateChunksAround(const Camera& cam) {
 					continue;
 				}
 
-
-				std::unique_ptr<Chunk> c = std::make_unique<Chunk>(
-					static_cast<int32_t>(cx), 
-					static_cast<int32_t>(cz)
-				);
-
-				TerrainGenerator::GenerateTerrain(*c);
-				chunks[key] = std::move(c);
-
-				//周囲十字4chunkのmeshもDirtyにして正しく隣がAIRか判断する
-				for (int32_t x = cx - 1; x <= cx + 1; ++x) {
-					if (x == cx) continue;
-
-					uint64_t key = Index(x, cz);
-					auto it = chunks.find(key);
-					if (it == chunks.end()) continue;
-
-					it->second->dirty = true;
+				if (m_pendingChunkKeys.find(key) != m_pendingChunkKeys.end()) {
+					continue;
 				}
 
 				if (createBudget <= 0) {
@@ -234,11 +218,11 @@ void World::ProcessChunkResult() {
 		bool registerdNewChunk = false;
 		int32_t cx = 0;
 		int32_t cz = 0;
-		if (result.chunk) {//INSTANCE_NEW_CHUNK�ŁA�V�Kchunk������mesh������set�ŋN��������
+		if (result.chunk) {//INSTANCE_NEW_CHUNKで、新規chunk生成とmesh生成がsetで起こった時
 			m_pendingChunkKeys.erase(key);
 
 			auto it = chunks.find(key);
-			if (it == chunks.end()) {//worker�ŐV�K�������ꂽ���́Bmesh����job�����Ȃ炱���ɂ͓���Ȃ�
+			if (it == chunks.end()) {//workerで新規生成されたもの。meshだけjobしたならここには入らない
 				if (!result.chunk) {
 					std::cerr << "[ProcChunkResult] Couldnt find actual chunk data from worker thread\n";
 					continue;
