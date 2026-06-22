@@ -90,6 +90,15 @@ bool Application::InitGL() {
 		}
 	});
 
+	glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int mods) {
+		auto* app = static_cast<Application*>(glfwGetWindowUserPointer(window));
+		if (app) {
+			app->OnMouseButton(button, action);
+		}
+
+	});
+
+
 	glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	glEnable(GL_DEPTH_TEST);
@@ -154,6 +163,20 @@ void Application::ProcessInput(float dt) {
 
 	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
 		m_world.DebugChunkInfo();
+	}
+}
+
+
+void Application::OnMouseButton(int button, int action) {
+	if (action != GLFW_PRESS) {
+		return;
+	}
+
+	if (button == GLFW_MOUSE_BUTTON_LEFT && lastHit.isHit) {
+		m_world.SetBlockGlobal_User(lastHit.hitX, lastHit.hitY, lastHit.hitZ, BlockType::AIR);
+	}
+	if (button == GLFW_MOUSE_BUTTON_RIGHT && lastHit.isHit) {
+		m_world.SetBlockGlobal_User(lastHit.previousX, lastHit.previousY, lastHit.previousZ, BlockType::STONE);
 	}
 }
 
