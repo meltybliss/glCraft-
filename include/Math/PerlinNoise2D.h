@@ -36,7 +36,7 @@ private:
 	uint64_t m_seed = 0;
 
 	static double Fade(double t) {
-		return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f);
+		return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
 	}
 
 	static double Lerp(double a, double b, double t) {
@@ -68,14 +68,14 @@ private:
 		constexpr double invSqrt2 = 0.7071067811865475;
 
 		switch (HashGrid(gridX, gridZ) & 7ull) {
-		case 0: return  dx;                           // →
-		case 1: return -dx;                           // ←
-		case 2: return  dz;                           // ↑
-		case 3: return -dz;                           // ↓
-		case 4: return (dx + dz) * invSqrt2;         // ↗
-		case 5: return (-dx + dz) * invSqrt2;         // ↖
-		case 6: return (dx - dz) * invSqrt2;         // ↘
-		default:return (-dx - dz) * invSqrt2;         // ↙
+			case 0: return  dx;                           // →
+			case 1: return -dx;                           // ←
+			case 2: return  dz;                           // ↑
+			case 3: return -dz;                           // ↓
+			case 4: return (dx + dz) * invSqrt2;         // ↗
+			case 5: return (-dx + dz) * invSqrt2;         // ↖
+			case 6: return (dx - dz) * invSqrt2;         // ↘
+			default:return (-dx - dz) * invSqrt2;         // ↙
 		}
 
 

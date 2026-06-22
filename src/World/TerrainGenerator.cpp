@@ -32,3 +32,13 @@ void TerrainGenerator::GenerateTerrain(Chunk& c) {
 	c.dirty = true;
 
 }
+
+
+int TerrainGenerator::GetHeight(int64_t worldX, int64_t worldZ) const {
+	double n = m_perlinNoise.Noise(
+		worldX * 0.01,
+		worldZ * 0.01
+	);
+
+	return 64 + static_cast<int>(n * 68.0f);
+}
