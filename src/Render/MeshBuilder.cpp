@@ -184,8 +184,8 @@ UV MeshBuilder::GetTileVertexUV(uint8_t index, int tileX, int tileY) {
 	float pixelU = 1.0f / atlasPixelWidth;
 	float pixelV = 1.0f / atlasPixelHeight;
 
-	float insetU = pixelU * 0.94f;
-	float insetV = pixelV * 0.94f;
+	float insetU = pixelU * 0.99f;
+	float insetV = pixelV * 0.99f;
 
 	float tileUV_X = 1.0f / atlasTilesX;
 	float tileUV_Y = 1.0f / atlasTilesY;

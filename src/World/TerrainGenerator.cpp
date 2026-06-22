@@ -40,5 +40,5 @@ int TerrainGenerator::GetHeight(int64_t worldX, int64_t worldZ) const {
 		worldZ * 0.01
 	);
 
-	return 64 + static_cast<int>(n * 68.0f);
+	return 64 + static_cast<int>(n * 18.0f);
 }
