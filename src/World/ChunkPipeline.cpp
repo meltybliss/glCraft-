@@ -181,7 +181,13 @@ bool ChunkPipeline::PopFrontResult(ChunkResult& out) {
 void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
 	{
 		std::lock_guard<std::mutex> lock(jobsMutex);
-		m_jobQueue.push_back(std::move(job));
+
+		if (job.urgent) {
+			m_jobQueue.push_front(std::move(job));
+		}
+		else {
+			m_jobQueue.push_back(std::move(job));
+		}
 	}
 
 	workerCv.notify_all();

@@ -20,6 +20,7 @@ struct Chunk {
 	ChunkMesh mesh;
 
 	bool dirty = true;
+	bool editedBlocks = false;
 
 	constexpr static int CHUNK_WIDTH = 16;
 	constexpr static int CHUNK_DEPTH = 16;

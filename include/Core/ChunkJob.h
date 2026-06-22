@@ -17,6 +17,7 @@ enum class MeshBuildSource {
 };
 struct ChunkJob {
 	int32_t cx, cz;
+	bool urgent = false;
 
 	JobType type;
 	MeshBuildSource meshSource;
