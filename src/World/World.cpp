@@ -33,7 +33,7 @@ void World::Tick(float dt, const Camera& cam) {
 	ProcessChunkResult();
 }
 
-World::World() : m_chunkPipeline(this) {
+World::World() : m_chunkPipeline(this, 114514) {//send seed value
 	m_chunkPipeline.StartWorkerThread();
 }
 
@@ -71,24 +71,8 @@ void World::UpdateChunksAround(const Camera& cam) {
 					continue;
 				}
 
-
-				std::unique_ptr<Chunk> c = std::make_unique<Chunk>(
-					static_cast<int32_t>(cx), 
-					static_cast<int32_t>(cz)
-				);
-
-				TerrainGenerator::GenerateTerrain(*c);
-				chunks[key] = std::move(c);
-
-				//周囲十字4chunkのmeshもDirtyにして正しく隣がAIRか判断する
-				for (int32_t x = cx - 1; x <= cx + 1; ++x) {
-					if (x == cx) continue;
-
-					uint64_t key = Index(x, cz);
-					auto it = chunks.find(key);
-					if (it == chunks.end()) continue;
-
-					it->second->dirty = true;
+				if (m_pendingChunkKeys.find(key) != m_pendingChunkKeys.end()) {
+					continue;
 				}
 
 				if (createBudget <= 0) {

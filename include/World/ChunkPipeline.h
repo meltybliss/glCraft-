@@ -4,6 +4,7 @@
 #include "World/ChunkKey.h"
 #include "World/ChunkMeshSnapshot.h"
 #include "World/ChunkResult.h"
+#include "World/TerrainGenerator.h"
 #include <thread>
 #include <atomic>
 #include <mutex>
@@ -19,7 +20,7 @@ class World;
 
 class ChunkPipeline {
 public:
-	explicit ChunkPipeline(World* w) : m_world(w) {}
+	explicit ChunkPipeline(World* w, uint64_t seed) : m_world(w), m_terrainGen(seed) {}
 
 	void StartWorkerThread();
 	void StopWorkerThread();
@@ -41,6 +42,8 @@ private:
 
 private:
 	World* m_world = nullptr;
+	TerrainGenerator m_terrainGen;
+
 	std::thread workerThread;
 	std::atomic<bool> runningWorker = false;
 
