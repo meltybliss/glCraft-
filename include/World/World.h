@@ -30,6 +30,7 @@ public:
 	[[nodiscard]] unsigned int GetBlockGlobal(int64_t x, int64_t y, int64_t z) const;
 
 	void SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b);
+	void SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b);
 
 	[[nodiscard]] ChunkMap& GetChunks() {
 		return chunks;

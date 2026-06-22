@@ -197,6 +197,32 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 }
 
 
+void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
+	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
+	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+
+	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
+	int ly = y;
+	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
+
+	auto it = chunks.find(Index(cx, cz));
+	if (it == chunks.end() || !it->second) {
+		return;
+	}
+
+	auto* c = it->second.get();
+
+	if (b != (BlockType)0) {
+		if (c->GetBlock(lx, ly, lz) != 0) {
+			return;
+		}
+	}
+
+	c->SetBlock(lx, ly, lz, b);
+
+	c->dirty = true;
+}
+
 
 void World::DebugChunkInfo() {
 	int count = 0;

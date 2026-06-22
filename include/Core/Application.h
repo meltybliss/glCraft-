@@ -23,6 +23,7 @@ private:
 
 	void OnMouseMove(double xpos, double ypos);
 	void ProcessInput(float dt);
+	void OnMouseButton(int button, int action);
 
 	void UpdateRayHit();
 	void RenderOutline();
