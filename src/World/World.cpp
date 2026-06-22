@@ -221,6 +221,7 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 	c->SetBlock(lx, ly, lz, b);
 
 	c->dirty = true;
+	c->editedBlocks = true;
 }
 
 
@@ -424,6 +425,11 @@ void World::EnqueueMeshJobFrom_Outside(Chunk& c) {
 	job.snapshot = CreateMeshSnapshot(c);
 	job.type = JobType::BUILD_MESH;
 	job.meshSource = MeshBuildSource::SNAPSHOT;
+	if (c.editedBlocks) {
+		c.editedBlocks = false;
+		job.urgent = true;
+	}
+
 
 	m_chunkPipeline.EnqueueJob(std::move(job));
 	
