@@ -47,20 +47,20 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 				//1----2
 				if (CheckNeighborAir(x - 1, y, z)) {
 					std::array<std::array<float, 3>, 4> pointsSet = { {
-						{ (float)x, (float)y,     (float)z + s },
-						{ (float)x, (float)y,     (float)z     },
-						{ (float)x, (float)y + s, (float)z     },
-						{ (float)x, (float)y + s, (float)z + s }
+						{ (float)x, (float)y + s, (float)z     }, // 0: LeftTop
+						{ (float)x, (float)y,     (float)z     }, // 1: LeftBottom
+						{ (float)x, (float)y,     (float)z + s }, // 2: RightBottom
+						{ (float)x, (float)y + s, (float)z + s }  // 3: RightTop
 					} };
 
 					AddFace(pointsSet, (BlockType)b, BlockFace::LEFT, indices, v);
 				}
 				if (CheckNeighborAir(x + 1, y, z)) {
 					std::array<std::array<float, 3>, 4> pointsSet = { {
-						{ (float)x + s, (float)y,     (float)z     },
-						{ (float)x + s, (float)y,     (float)z + s },
-						{ (float)x + s, (float)y + s, (float)z + s },
-						{ (float)x + s, (float)y + s, (float)z     }
+						{ (float)x + s, (float)y + s, (float)z + s }, // 0: LeftTop
+						{ (float)x + s, (float)y,     (float)z + s }, // 1: LeftBottom
+						{ (float)x + s, (float)y,     (float)z     }, // 2: RightBottom
+						{ (float)x + s, (float)y + s, (float)z     }  // 3: RightTop
 					} };
 
 					AddFace(pointsSet, (BlockType)b, BlockFace::RIGHT, indices, v);
@@ -95,22 +95,21 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 				if (CheckNeighborAir(x, y, z - 1)) {
 					std::array<std::array<float, 3>, 4> pointsSet = { {
-						{ (float)x + s, (float)y,     (float)z },
-						{ (float)x,     (float)y,     (float)z },
-						{ (float)x,     (float)y + s, (float)z },
-						{ (float)x + s, (float)y + s, (float)z }
+						{ (float)x + s, (float)y + s, (float)z }, // 0: LeftTop
+						{ (float)x + s, (float)y,     (float)z }, // 1: LeftBottom
+						{ (float)x,     (float)y,     (float)z }, // 2: RightBottom
+						{ (float)x,     (float)y + s, (float)z }  // 3: RightTop
 					} };
-
 
 					AddFace(pointsSet, (BlockType)b, BlockFace::FRONT, indices, v);
 				}
 
 				if (CheckNeighborAir(x, y, z + 1)) {
 					std::array<std::array<float, 3>, 4> pointsSet = { {
-						{ (float)x,     (float)y,     (float)z + s },
-						{ (float)x + s, (float)y,     (float)z + s },
-						{ (float)x + s, (float)y + s, (float)z + s },
-						{ (float)x,     (float)y + s, (float)z + s }
+						{ (float)x,     (float)y + s, (float)z + s }, // 0: LeftTop
+						{ (float)x,     (float)y,     (float)z + s }, // 1: LeftBottom
+						{ (float)x + s, (float)y,     (float)z + s }, // 2: RightBottom
+						{ (float)x + s, (float)y + s, (float)z + s }  // 3: RightTop
 					} };
 
 					AddFace(pointsSet, (BlockType)b, BlockFace::BACK, indices, v);
