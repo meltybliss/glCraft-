@@ -15,7 +15,7 @@ struct Camera {
 	float yaw = -90.f;
 	float pitch = 0.f;
 
-	float moveSpeed = 10.f;
+	float moveSpeed = 30.f;
 	float mouseSensitivity = 0.1f;
 
 	glm::mat4 GetViewMatrix() const {
