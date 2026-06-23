@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClInclude Include="include\Core\Application.h" />
     <ClInclude Include="include\Core\ChunkJob.h" />
+    <ClInclude Include="include\Math\PerlinNoise2D.h" />
     <ClInclude Include="include\Math\UV.h" />
     <ClInclude Include="include\Math\Vec2.h" />
     <ClInclude Include="include\Math\Vec3.h" />

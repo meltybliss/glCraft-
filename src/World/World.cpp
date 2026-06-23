@@ -33,7 +33,7 @@ void World::Tick(float dt, const Camera& cam) {
 	ProcessChunkResult();
 }
 
-World::World() : m_chunkPipeline(this) {
+World::World() : m_chunkPipeline(this, 114514) {//send seed value
 	m_chunkPipeline.StartWorkerThread();
 }
 

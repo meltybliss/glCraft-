@@ -58,7 +58,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 			if (it != m_buildingChunks.end()) {
 				auto& c = it->second;
 
-				TerrainGenerator::GenerateTerrain(*c);
+				m_terrainGen.GenerateTerrain(*c);
 
 
 				ChunkJob newJob = std::move(targetJob);
