@@ -28,8 +28,20 @@ int floorMod(int64_t a, int b) {//-17, 16 ->
 
 
 void World::Tick(float dt, const Camera& cam) {
+	curCx = static_cast<int32_t>(floorDiv(cam.position.x, Chunk::CHUNK_WIDTH));
+	curCz = static_cast<int32_t>(floorDiv(cam.position.z, Chunk::CHUNK_DEPTH));
 
-	UpdateChunksAround(cam);
+	bool enteredNewChunk =
+		curCx != m_lastStreamCx ||
+		curCz != m_lastStreamCz;
+
+	if (enteredNewChunk) {
+		m_chunkPipeline.SetStreamCenter(curCx, curCz);
+		m_chunkPipeline.CancelQueuedOutside_ChunkJob();
+		
+		UpdateChunksAround(cam);
+	}
+
 	ProcessChunkResult();
 }
 
@@ -42,9 +54,7 @@ World::~World() {
 }
 
 void World::UpdateChunksAround(const Camera& cam) {
-	int32_t curCx = static_cast<int32_t>(floorDiv(cam.position.x, Chunk::CHUNK_WIDTH));
-	int32_t curCz = static_cast<int32_t>(floorDiv(cam.position.z, Chunk::CHUNK_DEPTH));
-
+	
 	int createBudget = MAX_CHUNK_CREATE_PER_TICK;
 	int destroyBudget = MAX_CHUNK_DESTROY_PER_TICK;
 

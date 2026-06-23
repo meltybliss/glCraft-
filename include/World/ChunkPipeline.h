@@ -29,17 +29,23 @@ public:
 
 	bool PopFrontResult(ChunkResult& out);
 
+	void SetStreamCenter(const int64_t curCx, const int64_t curCz);
+	void CancelQueuedOutside_ChunkJob();
+
+	//bool cancelPending = false;
 private:
 	void StartLoop();
 
 private:
 
-	static constexpr int MAX_CHUNK_CREATE_PER_TICK = 4;
-	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 5;
+	static constexpr int MAX_CHUNK_CREATE_PER_TICK = 7;
+	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 8;
 
-	static constexpr int MAX_CHUNK_TERRAIN_PER_TICK = 5;
-	static constexpr int MAX_CHUNK_MESH_PER_TICK = 5;
+	static constexpr int MAX_CHUNK_TERRAIN_PER_TICK = 7;
+	static constexpr int MAX_CHUNK_MESH_PER_TICK = 8;
 
+
+	static constexpr int JOB_CANCEL_BUDGET = 8;
 private:
 	World* m_world = nullptr;
 	TerrainGenerator m_terrainGen;
@@ -55,6 +61,13 @@ private:
 	std::deque<ChunkJob> m_jobQueue;
 	std::deque<ChunkResult> m_chunkResult;
 	std::unordered_map<uint64_t, std::unique_ptr<Chunk>> m_buildingChunks;
+
+	std::atomic<int32_t> m_curStreamCx = 0;
+	std::atomic<int32_t> m_curStreamCz = 0;
+
+
+	//size_t m_cancelScanedIndex = 0;
+
 private:
 
 	void ProcessJob(ChunkJob&& job);

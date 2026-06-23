@@ -13,4 +13,6 @@ private:
 
 private:
 	int GetHeight(int64_t worldX, int64_t worldZ) const;
+
+	static double MountainMask(double region);
 };

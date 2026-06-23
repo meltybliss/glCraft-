@@ -90,6 +90,14 @@ public:
 		m_pendingChunkKeys.insert(key);
 	}
 	void EnqueueMeshJobFrom_Outside(Chunk& c);
+	
+	static int Get_UNLOAD_DISTANCE() {
+		return UNLOAD_CHUNKS_DISTANCE;
+	}
+
+	static int Get_LOAD_DISTANCE() {
+		return LOAD_CHUNKS_DISTANCE;
+	}
 
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshot(Chunk& c);
 private:
@@ -97,8 +105,8 @@ private:
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
 	static constexpr int UNLOAD_CHUNKS_DISTANCE = 14;
 
-	static constexpr int MAX_CHUNK_CREATE_PER_TICK = 4;
-	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 5;
+	static constexpr int MAX_CHUNK_CREATE_PER_TICK = 8;
+	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 10;
 
 private:
 
@@ -107,6 +115,13 @@ private:
 
 	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
 	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks
+
+	int32_t m_lastStreamCx = std::numeric_limits<int32_t>::max();
+	int32_t m_lastStreamCz = std::numeric_limits<int32_t>::max();
+
+	int32_t curCx = 0;
+	int32_t curCz = 0;
+
 private:
 
 	void ProcessChunkResult();

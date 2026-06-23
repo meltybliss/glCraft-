@@ -193,3 +193,79 @@ void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
 	workerCv.notify_all();
 }
 
+
+void ChunkPipeline::SetStreamCenter(const int64_t curCx, const int64_t curCz) {
+	m_curStreamCx.store(curCx);
+	m_curStreamCz.store(curCz);
+}
+
+
+void ChunkPipeline::CancelQueuedOutside_ChunkJob() {
+
+	std::lock_guard<std::mutex> lock(jobsMutex);
+	if (m_jobQueue.empty()) return;
+
+	auto newEnd = std::remove_if(
+		m_jobQueue.begin(),
+		m_jobQueue.end(), 
+		[this](const ChunkJob& job) {
+
+			if (job.type != JobType::CREATE_CHUNK) return false;
+
+			const int32_t cx = job.cx;
+			const int32_t cz = job.cz;
+
+			const int32_t dx = std::abs(m_curStreamCx.load() - cx);
+			const int32_t dz = std::abs(m_curStreamCz.load() - cz);
+
+			bool willCancel =
+				dx >= World::Get_UNLOAD_DISTANCE() ||
+				dz >= World::Get_UNLOAD_DISTANCE();
+		
+			return willCancel;
+		}
+	);
+
+	m_jobQueue.erase(newEnd, m_jobQueue.end());
+
+}
+
+/*
+void ChunkPipeline::CancelQueuedOutside_ChunkJob() {
+	if (!cancelPending) return;
+
+	std::lock_guard<std::mutex> lock(jobsMutex);
+
+	int budget = JOB_CANCEL_BUDGET;
+
+	auto it = m_jobQueue.begin();
+	std::advance(it, m_cancelScanedIndex);
+
+	while (it != m_jobQueue.end() && budget > 0) {
+
+		if (budget <= 0) break;
+
+		const int32_t cx = it->cx;
+		const int32_t cz = it->cz;
+
+		const int32_t dx = std::abs(m_curStreamCx - cx);
+		const int32_t dz = std::abs(m_curStreamCz - cz);
+
+		bool shouldErase =
+			dx >= World::Get_UNLOAD_DISTANCE() ||
+			dz >= World::Get_UNLOAD_DISTANCE();
+
+		if (shouldErase) {
+			it = m_jobQueue.erase(it);
+			--budget;
+		}
+		else {
+			++it;
+		}
+
+		++m_cancelScanedIndex;
+	}
+
+
+
+}*/
