@@ -40,6 +40,8 @@ struct ChunkMesh {
 			GL_STATIC_DRAW
 		);
 
+		constexpr GLsizei stribe = 7 * sizeof(float);
+
 		//vao
 		//xyz
 		glVertexAttribPointer(
@@ -47,7 +49,7 @@ struct ChunkMesh {
 			3,
 			GL_FLOAT,
 			GL_FALSE,
-			6 * sizeof(float),
+			stribe,
 			(void*)0
 		);
 		glEnableVertexAttribArray(0);
@@ -58,28 +60,40 @@ struct ChunkMesh {
 			2,
 			GL_FLOAT,
 			GL_FALSE,
-			6 * sizeof(float),
+			stribe,
 			(void*)(3 * sizeof(float))
 		);
 		glEnableVertexAttribArray(1);
 
-		//light level
+		//block light level
 		glVertexAttribPointer(
 			2,
 			1,
 			GL_FLOAT,
 			GL_FALSE,
-			6 * sizeof(float),
+			stribe,
 			(void*)(5 * sizeof(float))
 		);
 		glEnableVertexAttribArray(2);
+
+
+		glVertexAttribPointer(
+			3,
+			1,
+			GL_FLOAT,
+			GL_FALSE,
+			stribe,
+			(void*)(6 * sizeof(float))
+		);
+		glEnableVertexAttribArray(3);
+
 
 		glBindVertexArray(0);//unbind
 
 	}
 
 
-	void Draw() {
+	void Draw() const {
 		if (vao == 0 || indexCount == 0) {
 			return;
 		}

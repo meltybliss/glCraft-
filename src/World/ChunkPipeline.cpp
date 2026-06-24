@@ -2,6 +2,7 @@
 #include "World/TerrainGenerator.h"
 #include "Render/MeshBuilder.h"
 #include "World/World.h"
+#include "World/LightEngine.h"
 #include <memory>
 
 void ChunkPipeline::StartWorkerThread() {
@@ -37,7 +38,10 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 				c->cx = cx;
 				c->cz = cz;
 
+				
 				m_buildingChunks[key] = std::move(c);
+
+
 
 				ChunkJob newJob = std::move(targetJob);
 				newJob.type = JobType::GENERATE_TERRAIN;

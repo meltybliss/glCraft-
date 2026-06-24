@@ -23,6 +23,18 @@ struct ChunkMeshSnapshot {
 		front = other.front;
 		back = other.back;
 
+		centerLights = other.centerLights;
+		leftLights = other.leftSkyLights;
+		rightLights = other.rightLights;
+		frontLights = other.frontSkyLights;
+		backLights = other.backSkyLights;
+
+		centerSkyLights = other.centerSkyLights;
+		leftSkyLights = other.leftSkyLights;
+		rightSkyLights = other.rightSkyLights;
+		frontSkyLights = other.frontSkyLights;
+		backSkyLights = other.backSkyLights;
+
 		hasLeft = other.hasLeft;
 		hasRight = other.hasRight;
 		hasFront = other.hasFront;
@@ -41,13 +53,21 @@ struct ChunkMeshSnapshot {
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> front;
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> back;
 
-	//lights
+	// block light
 	std::array<uint8_t, Chunk::CHUNK_SIZE> centerLights{};
 
 	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> leftLights{};
 	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> rightLights{};
 	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> frontLights{};
 	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> backLights{};
+
+	// sky light
+	std::array<uint8_t, Chunk::CHUNK_SIZE> centerSkyLights{};
+
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> leftSkyLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> rightSkyLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> frontSkyLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> backSkyLights{};
 
 
 	bool hasLeft = false;
@@ -93,6 +113,43 @@ struct ChunkMeshSnapshot {
 		return (unsigned int)type;
 	}
 
+	uint8_t GetBoundary_SkyLight(int x, int y, int z, bool did_X_exceed) {
+		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
+
+		int index = 0;
+		if (did_X_exceed) {
+			index = IndexYZ(y, z);
+		}
+		else {
+			index = IndexYX(y, x);
+		}
+
+		uint8_t level = 0;
+		if (did_X_exceed) {
+			if (x < 0) {
+				if (!hasLeft) return 0;
+				level = leftSkyLights[index];
+			}
+			else if (x >= Chunk::CHUNK_WIDTH) {
+				if (!hasRight) return 0;
+				level = rightSkyLights[index];
+			}
+		}
+		else {
+			if (z < 0) {
+				if (!hasBack) return 0;
+				level = backSkyLights[index];
+			}
+			else if (z >= Chunk::CHUNK_DEPTH) {
+				if (!hasFront) return 0;
+				level = frontSkyLights[index];
+			}
+		}
+
+
+		return level;
+
+	}
 
 	uint8_t GetBoundaryLight(int x, int y, int z, bool did_X_exceed) {
 		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。

@@ -272,13 +272,15 @@ void MeshBuilder::AddLightToVertex(
 
 
 
-	unsigned int base = static_cast<unsigned int>(v.size() / 6);
+	unsigned int base = static_cast<unsigned int>(v.size() / 7);
 
 
 	const auto& centerLights = snapShot.centerLights;
-
+	const auto& centerSkyLights = snapShot.centerSkyLights;
 
 	uint8_t next_lightLevel = 0;
+	uint8_t next_skyLightLevel = 0;
+
 	int tx = x;//target x
 	int ty = y;
 	int tz = z;
@@ -341,20 +343,24 @@ void MeshBuilder::AddLightToVertex(
 		ty < 0) {
 
 		next_lightLevel = 0;
+		next_skyLightLevel = 0;
 	}
 	else if (tx >= Chunk::CHUNK_WIDTH ||
 		tx < 0) {
 
 		next_lightLevel = snapShot.GetBoundaryLight(tx, ty, tz, true);
+		next_skyLightLevel = snapShot.GetBoundary_SkyLight(tx, ty, tz, true);
 	}
 	else if (tz >= Chunk::CHUNK_DEPTH ||
 		tz < 0) {
 
 		next_lightLevel = snapShot.GetBoundaryLight(tx, ty, tz, false);
+		next_skyLightLevel = snapShot.GetBoundary_SkyLight(tx, ty, tz, false);
 	}
 	else {
 
 		next_lightLevel = centerLights[Chunk::Index(tx, ty, tz)];
+		next_skyLightLevel = centerSkyLights[Chunk::Index(tx, ty, tz)];
 	}
 	
 
@@ -364,7 +370,10 @@ void MeshBuilder::AddLightToVertex(
 
 		buffer.insert(
 			buffer.begin() + point,
-			static_cast<float>(next_lightLevel)
+			{
+				static_cast<float>(next_lightLevel),
+				static_cast<float>(next_skyLightLevel)
+			}
 		);
 
 	}

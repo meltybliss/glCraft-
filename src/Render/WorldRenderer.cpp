@@ -31,6 +31,9 @@ void WorldRenderer::RenderWorld(const World& w, Shader& shader, const Camera& ca
 
 	);
 
+
+	shader.SetFloat("u_skyStrength", 1.0f);
+
 	shader.SetMat4("view", view);
 	shader.SetMat4("projection", projection);
 	

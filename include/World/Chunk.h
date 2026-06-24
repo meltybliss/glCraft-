@@ -31,6 +31,7 @@ struct Chunk {
 
 	std::array<BlockType, CHUNK_SIZE> blocks;
 	std::array<uint8_t, CHUNK_SIZE> blockLights{};
+	std::array<uint8_t, CHUNK_SIZE> skyLights{};
 
 	static int Index(int x, int y, int z) {
 		return x + CHUNK_WIDTH * z + y * CHUNK_WIDTH * CHUNK_DEPTH;
@@ -44,12 +45,20 @@ struct Chunk {
 		return (unsigned int)blocks[Index(x, y, z)];
 	}
 
-	[[nodiscard]] uint8_t GetLight(int x, int y, int z) const {
+	[[nodiscard]] uint8_t GetBlockLight(int x, int y, int z) const {
 		if (!InBounds(x, y, z)) {
 			return 0;
 		}
 
 		return blockLights[Index(x, y, z)];
+	}
+
+	[[nodiscard]] uint8_t GetSkyLight(int x, int y, int z) const {
+		if (!InBounds(x, y, z)) {
+			return 0;
+		}
+
+		return skyLights[Index(x, y, z)];
 	}
 
 	void SetBlock(int x, int y, int z, BlockType b) {
@@ -62,7 +71,7 @@ struct Chunk {
 		dirty = true;
 	}
 
-	bool SetLight(int x, int y, int z, uint8_t level) {
+	bool SetBlockLight(int x, int y, int z, uint8_t level) {
 		if (!InBounds(x, y, z)) {
 			return false;
 		}
@@ -71,6 +80,15 @@ struct Chunk {
 		return true;
 	}
 
+
+	bool SetSkyLights(int x, int y, int z, uint8_t level) {
+		if (!InBounds(x, y, z)) {
+			return false;
+		}
+
+		skyLights[Index(x, y, z)] = level;
+		return true;
+	}
 
 
 	void SetBlockForGenerator(int x, int y, int z, BlockType b) {
