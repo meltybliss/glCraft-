@@ -148,10 +148,11 @@
     <ClInclude Include="include\Render\WorldRenderer.h" />
     <ClInclude Include="include\World\BlockData.h" />
     <ClInclude Include="include\World\Chunk.h" />
-    <ClInclude Include="include\World\ChunkKey.h" />
+    <ClInclude Include="include\World\ChunkUtil.h" />
     <ClInclude Include="include\World\ChunkMeshSnapshot.h" />
     <ClInclude Include="include\World\ChunkPipeline.h" />
     <ClInclude Include="include\World\ChunkResult.h" />
+    <ClInclude Include="include\World\LightEngine.h" />
     <ClInclude Include="include\World\PendingMesh.h" />
     <ClInclude Include="include\World\RaycastHit.h" />
     <ClInclude Include="include\World\TerrainGenerator.h" />
@@ -460,6 +461,7 @@
     <ClCompile Include="src\Render\Texture.cpp" />
     <ClCompile Include="src\Render\WorldRenderer.cpp" />
     <ClCompile Include="src\World\ChunkPipeline.cpp" />
+    <ClCompile Include="src\World\LightEngine.cpp" />
     <ClCompile Include="src\World\TerrainGenerator.cpp" />
     <ClCompile Include="src\World\World.cpp" />
     <ClCompile Include="third_party\glad.c" />

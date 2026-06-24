@@ -1,7 +1,7 @@
 #pragma once
 #include "Core/ChunkJob.h"
 #include "World/Chunk.h"
-#include "World/ChunkKey.h"
+#include "World/ChunkUtil.h"
 #include "World/ChunkMeshSnapshot.h"
 #include "World/ChunkResult.h"
 #include "World/TerrainGenerator.h"
@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include <memory>
 
-using namespace ChunkKey;
+using namespace ChunkUtil;
 
 class World;
 
@@ -30,7 +30,7 @@ public:
 	bool PopFrontResult(ChunkResult& out);
 
 	void SetStreamCenter(const int64_t curCx, const int64_t curCz);
-	void CancelQueuedOutside_ChunkJob();
+	std::vector<uint64_t> CancelQueuedOutside_ChunkJob();
 
 	//bool cancelPending = false;
 private:

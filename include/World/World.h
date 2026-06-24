@@ -1,6 +1,6 @@
 #pragma once
 #include "World/Chunk.h"
-#include "World/ChunkKey.h"
+#include "World/ChunkUtil.h"
 #include "World/ChunkResult.h"
 #include "World/ChunkPipeline.h"
 #include "Render/PendingMesh.h"
@@ -15,7 +15,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 using ChunkMapKey = uint64_t;
-using namespace ChunkKey;
+using namespace ChunkUtil;
 
 struct Camera;
 class ChunkPipeline;

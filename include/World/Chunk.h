@@ -30,6 +30,7 @@ struct Chunk {
 
 
 	std::array<BlockType, CHUNK_SIZE> blocks;
+	std::array<uint8_t, CHUNK_SIZE> blockLights{};
 
 	static int Index(int x, int y, int z) {
 		return x + CHUNK_WIDTH * z + y * CHUNK_WIDTH * CHUNK_DEPTH;
@@ -43,6 +44,14 @@ struct Chunk {
 		return (unsigned int)blocks[Index(x, y, z)];
 	}
 
+	[[nodiscard]] uint8_t GetLight(int x, int y, int z) const {
+		if (!InBounds(x, y, z)) {
+			return 0;
+		}
+
+		return blockLights[Index(x, y, z)];
+	}
+
 	void SetBlock(int x, int y, int z, BlockType b) {
 		if (!InBounds(x, y, z)) {
 			return;
@@ -52,6 +61,17 @@ struct Chunk {
 
 		dirty = true;
 	}
+
+	void SetLight(int x, int y, int z, uint8_t level) {
+		if (!InBounds(x, y, z)) {
+			return;
+		}
+
+		blockLights[Index(x, y, z)] = level;
+
+	}
+
+
 
 	void SetBlockForGenerator(int x, int y, int z, BlockType b) {
 		if (!InBounds(x, y, z)) {

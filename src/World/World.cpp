@@ -5,26 +5,6 @@
 #include "Render/Camera.h"
 #include <iostream>
 
-int64_t floorDiv(int64_t a, int64_t b) {
-	int64_t q = a / b;
-	int64_t r = a % b;
-
-	if (r != 0 && ((r < 0) != (b < 0))) {
-		--q;
-	}
-
-	return q;
-
-}
-
-int floorMod(int64_t a, int b) {//-17, 16 -> 
-	int64_t r = a % b;
-	if (r < 0) {
-		r += b;
-	}
-
-	return static_cast<int>(r);
-}
 
 
 void World::Tick(float dt, const Camera& cam) {
@@ -37,8 +17,14 @@ void World::Tick(float dt, const Camera& cam) {
 
 	if (enteredNewChunk) {
 		m_chunkPipeline.SetStreamCenter(curCx, curCz);
-		m_chunkPipeline.CancelQueuedOutside_ChunkJob();
+
+		std::vector<uint64_t> canceledKey = 
+			m_chunkPipeline.CancelQueuedOutside_ChunkJob();
 		
+		for (auto& key : canceledKey) {
+			m_pendingChunkKeys.erase(key);
+		}
+
 		UpdateChunksAround(cam);
 	}
 
