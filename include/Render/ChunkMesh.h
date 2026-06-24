@@ -47,7 +47,7 @@ struct ChunkMesh {
 			3,
 			GL_FLOAT,
 			GL_FALSE,
-			5 * sizeof(float),
+			6 * sizeof(float),
 			(void*)0
 		);
 		glEnableVertexAttribArray(0);
@@ -58,11 +58,21 @@ struct ChunkMesh {
 			2,
 			GL_FLOAT,
 			GL_FALSE,
-			5 * sizeof(float),
+			6 * sizeof(float),
 			(void*)(3 * sizeof(float))
 		);
 		glEnableVertexAttribArray(1);
 
+		//light level
+		glVertexAttribPointer(
+			2,
+			1,
+			GL_FLOAT,
+			GL_FALSE,
+			6 * sizeof(float),
+			(void*)(5 * sizeof(float))
+		);
+		glEnableVertexAttribArray(2);
 
 		glBindVertexArray(0);//unbind
 

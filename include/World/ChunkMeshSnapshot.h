@@ -6,6 +6,7 @@
 struct ChunkMeshSnapshot {
 	ChunkMeshSnapshot() {
 		center.fill(BlockType::AIR);
+		
 
 		left.fill(BlockType::AIR);
 		right.fill(BlockType::AIR);
@@ -30,8 +31,8 @@ struct ChunkMeshSnapshot {
 		return *this;
 	}
 
-	//Chunk& c;//ëŒè€ÇÃchunk
 
+	//blocks
 	std::array<BlockType, Chunk::CHUNK_SIZE> center;
 
 	//store the boundary blocks of surrounding chunks that face the target chunk
@@ -39,6 +40,10 @@ struct ChunkMeshSnapshot {
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_DEPTH> right;
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> front;
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> back;
+
+	//lights
+	std::array<uint8_t, Chunk::CHUNK_SIZE> centerLights{};
+
 
 
 	bool hasLeft = false;

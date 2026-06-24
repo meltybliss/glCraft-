@@ -1,10 +1,11 @@
 #pragma once
 #include "World/Chunk.h"
-#include "World/ChunkKey.h"
+#include "World/ChunkUtil.h"
 #include "World/ChunkResult.h"
 #include "World/ChunkPipeline.h"
 #include "Render/PendingMesh.h"
 #include "World/RaycastHit.h"
+#include "World/LightEngine.h"
 #include <unordered_map>
 #include <memory>
 #include <unordered_set>
@@ -15,7 +16,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 using ChunkMapKey = uint64_t;
-using namespace ChunkKey;
+using namespace ChunkUtil;
 
 struct Camera;
 class ChunkPipeline;
@@ -112,6 +113,7 @@ private:
 
 	ChunkMap chunks;
 	ChunkPipeline m_chunkPipeline;
+	LightEngine m_lightEngine;
 
 	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
 	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks

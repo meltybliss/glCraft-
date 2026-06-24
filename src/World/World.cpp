@@ -5,26 +5,6 @@
 #include "Render/Camera.h"
 #include <iostream>
 
-int64_t floorDiv(int64_t a, int64_t b) {
-	int64_t q = a / b;
-	int64_t r = a % b;
-
-	if (r != 0 && ((r < 0) != (b < 0))) {
-		--q;
-	}
-
-	return q;
-
-}
-
-int floorMod(int64_t a, int b) {//-17, 16 -> 
-	int64_t r = a % b;
-	if (r < 0) {
-		r += b;
-	}
-
-	return static_cast<int>(r);
-}
 
 
 void World::Tick(float dt, const Camera& cam) {
@@ -37,8 +17,14 @@ void World::Tick(float dt, const Camera& cam) {
 
 	if (enteredNewChunk) {
 		m_chunkPipeline.SetStreamCenter(curCx, curCz);
-		m_chunkPipeline.CancelQueuedOutside_ChunkJob();
+
+		std::vector<uint64_t> canceledKey = 
+			m_chunkPipeline.CancelQueuedOutside_ChunkJob();
 		
+		for (auto& key : canceledKey) {
+			m_pendingChunkKeys.erase(key);
+		}
+
 		UpdateChunksAround(cam);
 	}
 
@@ -204,6 +190,7 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 	auto* c = it->second.get();
 
 	c->SetBlock(lx, ly, lz, b);
+
 }
 
 
@@ -229,6 +216,8 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 	}
 
 	c->SetBlock(lx, ly, lz, b);
+
+	m_lightEngine.AddLightLevel(*this, x, y, z, 13);
 
 	c->dirty = true;
 	c->editedBlocks = true;
@@ -341,6 +330,8 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 	
 	snapshot->center = c.blocks;
 
+	//center lights
+	snapshot->centerLights = c.blockLights;
 
 	//left
 	{

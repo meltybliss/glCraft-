@@ -200,15 +200,16 @@ void ChunkPipeline::SetStreamCenter(const int64_t curCx, const int64_t curCz) {
 }
 
 
-void ChunkPipeline::CancelQueuedOutside_ChunkJob() {
+std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
+	std::vector<uint64_t> canceledKey;
 
 	std::lock_guard<std::mutex> lock(jobsMutex);
-	if (m_jobQueue.empty()) return;
+	if (m_jobQueue.empty()) return canceledKey;
 
 	auto newEnd = std::remove_if(
 		m_jobQueue.begin(),
 		m_jobQueue.end(), 
-		[this](const ChunkJob& job) {
+		[&, this](const ChunkJob& job) {
 
 			if (job.type != JobType::CREATE_CHUNK) return false;
 
@@ -222,12 +223,18 @@ void ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 				dx >= World::Get_UNLOAD_DISTANCE() ||
 				dz >= World::Get_UNLOAD_DISTANCE();
 		
+			if (willCancel) {
+				canceledKey.push_back(Index(cx, cz));
+			}
+
 			return willCancel;
 		}
 	);
 
 	m_jobQueue.erase(newEnd, m_jobQueue.end());
 
+
+	return canceledKey;
 }
 
 /*
