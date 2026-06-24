@@ -5,9 +5,9 @@
 using namespace ChunkUtil;
 
 struct LightNode {
-	int lx = 0;
-	int ly = 0;
-	int lz = 0;
+	int64_t x = 0;
+	int64_t y = 0;
+	int64_t z = 0;
 	uint8_t lightLevel = 0;
 };
 

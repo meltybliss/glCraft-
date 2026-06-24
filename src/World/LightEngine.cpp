@@ -1,7 +1,9 @@
 #include "World/LightEngine.h"
 #include "World/Chunk.h"
+#include "World/ChunkUtil.h"
 #include "World/World.h"
 #include <queue>
+#include <unordered_set>
 
 void LightEngine::AddLightLevel(
 	World& w,
@@ -27,8 +29,11 @@ void LightEngine::AddLightLevel(
 	c->SetLight(lx, ly, lz, level);
 
 	//
+	
+	std::unordered_set<uint64_t> touchedChunkKey;
+
 	std::queue<LightNode> bfs_queue;
-	bfs_queue.push({lx, ly, lz, level});
+	bfs_queue.push({worldX, worldY, worldZ, level});
 
 	constexpr int dirs[6][3] = {
 		{1, 0, 0},
@@ -43,62 +48,55 @@ void LightEngine::AddLightLevel(
 		LightNode baseNode = bfs_queue.front();
 
 		bfs_queue.pop();
-		if (baseNode.lightLevel <= 0) {
+		if (baseNode.lightLevel <= 1) {
 			continue;
 		}
 
 		uint8_t targetLevel = baseNode.lightLevel - 1;
-		int x = baseNode.lx;
-		int y = baseNode.ly;
-		int z = baseNode.lz;
+		int64_t x = baseNode.x;
+		int64_t y = baseNode.y;
+		int64_t z = baseNode.z;
 
 
 		for (const auto& dir : dirs) {
-			int nx = x + dir[0];
-			int ny = y + dir[1];
-			int nz = z + dir[2];
+			int64_t nx = x + dir[0];
+			int64_t ny = y + dir[1];
+			int64_t nz = z + dir[2];
 
-			if (!c->InBounds(nx, ny, nz)) {
+			if (ny >= Chunk::CHUNK_HEIGHT ||
+				ny < 0) {
+
 				continue;
 			}
 
-			if (c->GetBlock(nx, ny, nz) == 0) {
+			if (w.GetBlockGlobal(nx, ny, nz) == 0) {
 
-				if (c->GetLight(nx, ny, nz) < targetLevel) {
-					c->SetLight(nx, ny, nz, targetLevel);
+				if (w.GetBlockLightGlobal(nx, ny, nz) < targetLevel) {
+					bool ok = w.SetBlockLightGlobal(nx, ny, nz, targetLevel);
+					if (ok) {
+						int32_t cx = floorDiv(nx, Chunk::CHUNK_WIDTH);
+						int32_t cz = floorDiv(nz, Chunk::CHUNK_DEPTH);
 
-					bfs_queue.push({ nx, ny, nz, targetLevel });
+						uint64_t key = Index(cx, cz);
+						touchedChunkKey.insert(key);
+
+						bfs_queue.push({ nx, ny, nz, targetLevel });
+					}
 				}
 			}
 		}
 
-		/*for (int dx = -1; dx <= 1; ++dx) {
-			for (int dy = -1; dy <= 1; ++dy) {
-				for (int dz = -1; dz <= 1; ++dz) {
-					if (dx == 0 && dy == 0 && dz == 0) continue;
-
-					int nx = x + dx;
-					int ny = y + dy;
-					int nz = z + dz;
-
-					if (!c->InBounds(nx, ny, nz)) {
-						continue;
-					}
-
-					if (c->GetBlock(nx, ny, nz) == 0) {
-
-						if (c->GetLight(nx, ny, nz) < targetLevel) {
-							c->SetLight(nx, ny, nz, targetLevel);
-
-							bfs_queue.push({nx, ny, nz, targetLevel});
-						}
-					}
-
-
-				}
-			}
-		}*/
 	}
+
+
+	for (const auto& key : touchedChunkKey) {
+		auto c = w.GetTargetChunkFromKey(key);
+
+		c->dirty = true;
+		c->urgentUpdateMesh = true;
+	}
+
+	touchedChunkKey.clear();
 
 }
 

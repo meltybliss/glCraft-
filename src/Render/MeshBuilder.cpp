@@ -277,6 +277,7 @@ void MeshBuilder::AddLightToVertex(
 
 	const auto& centerLights = snapShot.centerLights;
 
+
 	uint8_t next_lightLevel = 0;
 	int tx = x;//target x
 	int ty = y;
@@ -288,13 +289,6 @@ void MeshBuilder::AddLightToVertex(
 			ty = y;
 			tz = z;
 
-			if (!Chunk::InBounds(tx, ty, tz)) {
-				tx = x;
-				ty = y;
-				tz = z;
-				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
-			}
-
 			break;
 
 		}
@@ -303,13 +297,7 @@ void MeshBuilder::AddLightToVertex(
 			ty = y;
 			tz = z;
 
-			if (!Chunk::InBounds(tx, ty, tz)) {
-				tx = x;
-				ty = y;
-				tz = z;
-				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
-			}
-
+		
 			break;
 
 		}
@@ -318,13 +306,6 @@ void MeshBuilder::AddLightToVertex(
 			ty = y;
 			tz = z - 1;
 
-			if (!Chunk::InBounds(tx, ty, tz)) {
-				tx = x;
-				ty = y;
-				tz = z;
-				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
-			}
-
 			break;
 		}
 		case BlockFace::BACK: {
@@ -332,12 +313,6 @@ void MeshBuilder::AddLightToVertex(
 			ty = y;
 			tz = z + 1;
 
-			if (!Chunk::InBounds(tx, ty, tz)) {
-				tx = x;
-				ty = y;
-				tz = z;
-				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
-			}
 
 			break;
 
@@ -347,13 +322,7 @@ void MeshBuilder::AddLightToVertex(
 			ty = y + 1;
 			tz = z;
 
-			if (!Chunk::InBounds(tx, ty, tz)) {
-				tx = x;
-				ty = y;
-				tz = z;
-				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
-			}
-
+			
 			break;
 
 		}
@@ -362,20 +331,33 @@ void MeshBuilder::AddLightToVertex(
 			ty = y - 1;
 			tz = z;
 
-			if (!Chunk::InBounds(tx, ty, tz)) {
-				tx = x;
-				ty = y;
-				tz = z;
-				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
-			}
-
+			
 			break;
 		}
 
 	}
 
+	if (ty >= Chunk::CHUNK_HEIGHT ||
+		ty < 0) {
+
+		next_lightLevel = 0;
+	}
+	else if (tx >= Chunk::CHUNK_WIDTH ||
+		tx < 0) {
+
+		next_lightLevel = snapShot.GetBoundaryLight(tx, ty, tz, true);
+	}
+	else if (tz >= Chunk::CHUNK_DEPTH ||
+		tz < 0) {
+
+		next_lightLevel = snapShot.GetBoundaryLight(tx, ty, tz, false);
+	}
+	else {
+
+		next_lightLevel = centerLights[Chunk::Index(tx, ty, tz)];
+	}
 	
-	next_lightLevel = centerLights[Chunk::Index(tx, ty, tz)];
+
 
 	for (int i = 4; i >= 1; --i) {
 		int point = i * 5;

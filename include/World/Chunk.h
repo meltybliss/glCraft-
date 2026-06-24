@@ -20,7 +20,7 @@ struct Chunk {
 	ChunkMesh mesh;
 
 	bool dirty = true;
-	bool editedBlocks = false;
+	bool urgentUpdateMesh = false;
 
 	constexpr static int CHUNK_WIDTH = 16;
 	constexpr static int CHUNK_DEPTH = 16;
@@ -62,13 +62,13 @@ struct Chunk {
 		dirty = true;
 	}
 
-	void SetLight(int x, int y, int z, uint8_t level) {
+	bool SetLight(int x, int y, int z, uint8_t level) {
 		if (!InBounds(x, y, z)) {
-			return;
+			return false;
 		}
 
 		blockLights[Index(x, y, z)] = level;
-
+		return true;
 	}
 
 
