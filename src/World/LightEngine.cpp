@@ -22,7 +22,7 @@ void LightEngine::AddLightLevel(
 	int lz = floorMod(worldZ, Chunk::CHUNK_DEPTH);
 
 	uint8_t oldLevel = c->GetLight(lx, ly, lz);
-	if (oldLevel == level) return;
+	if (oldLevel >= level) return;
 
 	c->SetLight(lx, ly, lz, level);
 
@@ -30,9 +30,19 @@ void LightEngine::AddLightLevel(
 	std::queue<LightNode> bfs_queue;
 	bfs_queue.push({lx, ly, lz, level});
 
+	constexpr int dirs[6][3] = {
+		{1, 0, 0},
+		{-1, 0, 0},
+		{0, 1, 0},
+		{0, -1, 0},
+		{0, 0, 1},
+		{0, 0, -1}
+	};
+
 	while (!bfs_queue.empty()) {
 		LightNode baseNode = bfs_queue.front();
-		
+
+		bfs_queue.pop();
 		if (baseNode.lightLevel <= 0) {
 			continue;
 		}
@@ -42,9 +52,27 @@ void LightEngine::AddLightLevel(
 		int y = baseNode.ly;
 		int z = baseNode.lz;
 
-		bfs_queue.pop();
 
-		for (int dx = -1; dx <= 1; ++dx) {
+		for (const auto& dir : dirs) {
+			int nx = x + dir[0];
+			int ny = y + dir[1];
+			int nz = z + dir[2];
+
+			if (!c->InBounds(nx, ny, nz)) {
+				continue;
+			}
+
+			if (c->GetBlock(nx, ny, nz) == 0) {
+
+				if (c->GetLight(nx, ny, nz) < targetLevel) {
+					c->SetLight(nx, ny, nz, targetLevel);
+
+					bfs_queue.push({ nx, ny, nz, targetLevel });
+				}
+			}
+		}
+
+		/*for (int dx = -1; dx <= 1; ++dx) {
 			for (int dy = -1; dy <= 1; ++dy) {
 				for (int dz = -1; dz <= 1; ++dz) {
 					if (dx == 0 && dy == 0 && dz == 0) continue;
@@ -69,7 +97,7 @@ void LightEngine::AddLightLevel(
 
 				}
 			}
-		}
+		}*/
 	}
 
 }

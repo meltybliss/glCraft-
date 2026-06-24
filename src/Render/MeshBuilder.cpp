@@ -45,6 +45,8 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 				//0----3
 				//|	   |
 				//1----2
+
+
 				if (CheckNeighborAir(x - 1, y, z)) {
 					std::array<std::array<float, 3>, 4> pointsSet = { {
 						{ (float)x, (float)y + s, (float)z     }, // 0: LeftTop
@@ -53,7 +55,10 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						{ (float)x, (float)y + s, (float)z + s }  // 3: RightTop
 					} };
 
-					AddFace(pointsSet, (BlockType)b, BlockFace::LEFT, indices, v);
+					std::vector<float> vertices_buffer;
+
+					AddFace(pointsSet, (BlockType)b, BlockFace::LEFT, vertices_buffer);
+					AddLightToVertex(x, y, z, BlockFace::LEFT, vertices_buffer, v, indices, snapshot);
 				}
 				if (CheckNeighborAir(x + 1, y, z)) {
 					std::array<std::array<float, 3>, 4> pointsSet = { {
@@ -63,7 +68,10 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						{ (float)x + s, (float)y + s, (float)z     }  // 3: RightTop
 					} };
 
-					AddFace(pointsSet, (BlockType)b, BlockFace::RIGHT, indices, v);
+					std::vector<float> vertices_buffer;
+
+					AddFace(pointsSet, (BlockType)b, BlockFace::RIGHT, vertices_buffer);
+					AddLightToVertex(x, y, z, BlockFace::RIGHT, vertices_buffer, v, indices, snapshot);
 				}
 
 				if (CheckNeighborAir(x, y - 1, z)) {
@@ -75,8 +83,10 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 					} };
 
 
+					std::vector<float> vertices_buffer;
 
-					AddFace(pointsSet, (BlockType)b, BlockFace::BOTTOM, indices, v);
+					AddFace(pointsSet, (BlockType)b, BlockFace::BOTTOM, vertices_buffer);
+					AddLightToVertex(x, y, z, BlockFace::BOTTOM, vertices_buffer, v, indices, snapshot);
 
 				}
 
@@ -88,8 +98,10 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						{ (float)x,     (float)y + s, (float)z     }
 					} };
 
+					std::vector<float> vertices_buffer;
 
-					AddFace(pointsSet, (BlockType)b, BlockFace::TOP, indices, v);
+					AddFace(pointsSet, (BlockType)b, BlockFace::TOP, vertices_buffer);
+					AddLightToVertex(x, y, z, BlockFace::TOP, vertices_buffer, v, indices, snapshot);
 				}
 
 
@@ -101,7 +113,11 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						{ (float)x,     (float)y + s, (float)z }  // 3: RightTop
 					} };
 
-					AddFace(pointsSet, (BlockType)b, BlockFace::FRONT, indices, v);
+
+					std::vector<float> vertices_buffer;
+
+					AddFace(pointsSet, (BlockType)b, BlockFace::FRONT, vertices_buffer);
+					AddLightToVertex(x, y, z, BlockFace::FRONT, vertices_buffer, v, indices, snapshot);
 				}
 
 				if (CheckNeighborAir(x, y, z + 1)) {
@@ -112,7 +128,11 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						{ (float)x + s, (float)y + s, (float)z + s }  // 3: RightTop
 					} };
 
-					AddFace(pointsSet, (BlockType)b, BlockFace::BACK, indices, v);
+
+					std::vector<float> vertices_buffer;
+
+					AddFace(pointsSet, (BlockType)b, BlockFace::BACK, vertices_buffer);
+					AddLightToVertex(x, y, z, BlockFace::BACK, vertices_buffer, v, indices, snapshot);
 				}
 				
 			}
@@ -222,24 +242,156 @@ void MeshBuilder::AddFace(
 	std::array<std::array<float, 3>, 4>& pointsSet, 
 	const BlockType b, 
 	const BlockFace face,
-	std::vector<unsigned int>& indices, std::vector<float>& v)
+	std::vector<float>& buffer)
 {
 
-	unsigned int base = static_cast<unsigned int>(v.size() / 5);
 
 	//base+0,1,2,3
 	for (int i = 0; i < 4; i++) {
 		UV uv = GetUV((BlockType)b, i, face);
 		const std::array<float, 3>& points = pointsSet[i];
 
-		v.insert(v.end(), { points[0], points[1], points[2], uv.u, uv.v });
+		buffer.insert(buffer.end(), { points[0], points[1], points[2], uv.u, uv.v });
 
 	}
 
+	
+
+}
+
+
+void MeshBuilder::AddLightToVertex(
+	int x, 
+	int y, 
+	int z, 
+	const BlockFace face,
+	std::vector<float>& buffer, 
+	std::vector<float>& v, 
+	std::vector<unsigned int>& indices, 
+	ChunkMeshSnapshot& snapShot) {
+
+
+
+	unsigned int base = static_cast<unsigned int>(v.size() / 6);
+
+
+	const auto& centerLights = snapShot.centerLights;
+
+	uint8_t next_lightLevel = 0;
+	int tx = x;//target x
+	int ty = y;
+	int tz = z;
+
+	switch (face) {
+		case BlockFace::RIGHT: {
+			tx = x + 1;//target x
+			ty = y;
+			tz = z;
+
+			if (!Chunk::InBounds(tx, ty, tz)) {
+				tx = x;
+				ty = y;
+				tz = z;
+				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
+			}
+
+			break;
+
+		}
+		case BlockFace::LEFT: {
+			tx = x - 1;
+			ty = y;
+			tz = z;
+
+			if (!Chunk::InBounds(tx, ty, tz)) {
+				tx = x;
+				ty = y;
+				tz = z;
+				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
+			}
+
+			break;
+
+		}
+		case BlockFace::FRONT: {
+			tx = x;
+			ty = y;
+			tz = z - 1;
+
+			if (!Chunk::InBounds(tx, ty, tz)) {
+				tx = x;
+				ty = y;
+				tz = z;
+				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
+			}
+
+			break;
+		}
+		case BlockFace::BACK: {
+			tx = x; 
+			ty = y;
+			tz = z + 1;
+
+			if (!Chunk::InBounds(tx, ty, tz)) {
+				tx = x;
+				ty = y;
+				tz = z;
+				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
+			}
+
+			break;
+
+		}
+		case BlockFace::TOP: {
+			tx = x;
+			ty = y + 1;
+			tz = z;
+
+			if (!Chunk::InBounds(tx, ty, tz)) {
+				tx = x;
+				ty = y;
+				tz = z;
+				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
+			}
+
+			break;
+
+		}
+		case BlockFace::BOTTOM: {
+			tx = x;
+			ty = y - 1;
+			tz = z;
+
+			if (!Chunk::InBounds(tx, ty, tz)) {
+				tx = x;
+				ty = y;
+				tz = z;
+				break;//‚¢‚Ü‚Ì‚Æ‚±‚ë‚Í—×chunk‚©‚çŽæ‚ç‚¸–³Ž‹
+			}
+
+			break;
+		}
+
+	}
+
+	
+	next_lightLevel = centerLights[Chunk::Index(tx, ty, tz)];
+
+	for (int i = 4; i >= 1; --i) {
+		int point = i * 5;
+
+		buffer.insert(
+			buffer.begin() + point,
+			static_cast<float>(next_lightLevel)
+		);
+
+	}
+
+	v.insert(v.end(), buffer.begin(), buffer.end());
+
 	indices.insert(
 		indices.end(),
-		{base + 1, base + 2, base + 3,
-		 base + 0, base + 1, base + 3}
+		{ base + 1, base + 2, base + 3,
+		 base + 0, base + 1, base + 3 }
 	);
-
 }
