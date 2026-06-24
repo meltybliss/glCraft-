@@ -173,6 +173,26 @@ unsigned int World::GetBlockGlobal(int64_t x, int64_t y, int64_t z) const {
 
 }
 
+uint8_t World::GetBlockLightGlobal(int64_t x, int64_t y, int64_t z) const {
+
+	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
+	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+
+	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
+	int ly = y;
+	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
+
+	auto it = chunks.find(Index(cx, cz));
+	if (it == chunks.end() || !it->second) {
+		return 0;
+	}
+
+
+	auto* c = it->second.get();
+
+	return c->GetLight(lx, ly, lz);
+}
+
 
 void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
@@ -190,6 +210,26 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 	auto* c = it->second.get();
 
 	c->SetBlock(lx, ly, lz, b);
+
+}
+
+
+bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) {
+	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
+	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+
+	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
+	int ly = y;
+	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
+
+	auto it = chunks.find(Index(cx, cz));
+	if (it == chunks.end() || !it->second) {
+		return false;
+	}
+
+	auto* c = it->second.get();
+
+	return c->SetLight(lx, ly, lz, level);
 
 }
 
@@ -217,10 +257,10 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	c->SetBlock(lx, ly, lz, b);
 
-	m_lightEngine.AddLightLevel(*this, x, y, z, 13);
+	m_lightEngine.AddLightLevel(*this, x, y, z, 13);//とりあえずこのなかで統一してdirty, urgentUpdateMesh
 
-	c->dirty = true;
-	c->editedBlocks = true;
+	/*c->dirty = true;
+	c->urgentUpdateMesh = true;*/
 }
 
 
@@ -333,6 +373,8 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 	//center lights
 	snapshot->centerLights = c.blockLights;
 
+	
+
 	//left
 	{
 		uint64_t key = Index(cx - 1, cz);
@@ -341,13 +383,17 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 			Chunk* c = it->second.get();
 
 			snapshot->hasLeft = true;
+			
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
 					unsigned int b = c->GetBlock(Chunk::CHUNK_WIDTH - 1, y, z);
+					uint8_t l = c->GetLight(Chunk::CHUNK_WIDTH - 1, y, z);
 
 					snapshot->left[ChunkMeshSnapshot::IndexYZ(y, z)] =
 						static_cast<BlockType>(b);
+
+					snapshot->leftLights[ChunkMeshSnapshot::IndexYZ(y, z)] = l;
 				}
 			}
 		}
@@ -365,9 +411,12 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
 					unsigned int b = c->GetBlock(0, y, z);
+					uint8_t l = c->GetLight(0, y, z);
 
 					snapshot->right[ChunkMeshSnapshot::IndexYZ(y, z)] =
 						static_cast<BlockType>(b);
+
+					snapshot->rightLights[ChunkMeshSnapshot::IndexYZ(y, z)] = l;
 				}
 			}
 		}
@@ -385,9 +434,12 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
 					unsigned int b = c->GetBlock(x, y, 0);
+					uint8_t l = c->GetLight(x, y, 0);
 
 					snapshot->front[ChunkMeshSnapshot::IndexYX(y, x)] =
 						static_cast<BlockType>(b);
+
+					snapshot->frontLights[ChunkMeshSnapshot::IndexYX(y, x)] = l;
 				}
 			}
 		}
@@ -406,9 +458,12 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
 					unsigned int b = c->GetBlock(x, y, Chunk::CHUNK_DEPTH - 1);
+					uint8_t l = c->GetLight(x, y, Chunk::CHUNK_DEPTH - 1);
 
 					snapshot->back[ChunkMeshSnapshot::IndexYX(y, x)] =
 						static_cast<BlockType>(b);
+
+					snapshot->backLights[ChunkMeshSnapshot::IndexYX(y, x)] = l;
 				}
 			}
 		}
@@ -426,8 +481,8 @@ void World::EnqueueMeshJobFrom_Outside(Chunk& c) {
 	job.snapshot = CreateMeshSnapshot(c);
 	job.type = JobType::BUILD_MESH;
 	job.meshSource = MeshBuildSource::SNAPSHOT;
-	if (c.editedBlocks) {
-		c.editedBlocks = false;
+	if (c.urgentUpdateMesh) {
+		c.urgentUpdateMesh = false;
 		job.urgent = true;
 	}
 

@@ -44,12 +44,17 @@ struct ChunkMeshSnapshot {
 	//lights
 	std::array<uint8_t, Chunk::CHUNK_SIZE> centerLights{};
 
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> leftLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> rightLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> frontLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> backLights{};
 
 
 	bool hasLeft = false;
 	bool hasRight = false;
 	bool hasFront = false;
 	bool hasBack = false;
+	
 
 	unsigned int GetBoundaryBlock(int x, int y, int z, bool did_X_exceed) {
 		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
@@ -86,6 +91,45 @@ struct ChunkMeshSnapshot {
 	
 
 		return (unsigned int)type;
+	}
+
+
+	uint8_t GetBoundaryLight(int x, int y, int z, bool did_X_exceed) {
+		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
+
+		int index = 0;
+		if (did_X_exceed) {
+			index = IndexYZ(y, z);
+		}
+		else {
+			index = IndexYX(y, x);
+		}
+
+		uint8_t level = 0;
+		if (did_X_exceed) {
+			if (x < 0) {
+				if (!hasLeft) return 0;
+				level = leftLights[index];
+			}
+			else if (x >= Chunk::CHUNK_WIDTH) {
+				if (!hasRight) return 0;
+				level = rightLights[index];
+			}
+		}
+		else {
+			if (z < 0) {
+				if (!hasBack) return 0;
+				level = backLights[index];
+			}
+			else if (z >= Chunk::CHUNK_DEPTH) {
+				if (!hasFront) return 0;
+				level = frontLights[index];
+			}
+		}
+
+
+		return level;
+
 	}
 
 	static int IndexYZ(int y, int z) {
