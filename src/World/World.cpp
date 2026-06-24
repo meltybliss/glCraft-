@@ -190,6 +190,7 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 	auto* c = it->second.get();
 
 	c->SetBlock(lx, ly, lz, b);
+
 }
 
 
@@ -215,6 +216,8 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 	}
 
 	c->SetBlock(lx, ly, lz, b);
+
+	m_lightEngine.AddLightLevel(*this, x, y, z, 13);
 
 	c->dirty = true;
 	c->editedBlocks = true;
@@ -327,6 +330,8 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 	
 	snapshot->center = c.blocks;
 
+	//center lights
+	snapshot->centerLights = c.blockLights;
 
 	//left
 	{

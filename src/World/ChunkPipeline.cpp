@@ -204,7 +204,7 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 	std::vector<uint64_t> canceledKey;
 
 	std::lock_guard<std::mutex> lock(jobsMutex);
-	if (m_jobQueue.empty()) return;
+	if (m_jobQueue.empty()) return canceledKey;
 
 	auto newEnd = std::remove_if(
 		m_jobQueue.begin(),
