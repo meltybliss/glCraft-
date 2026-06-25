@@ -190,7 +190,28 @@ uint8_t World::GetBlockLightGlobal(int64_t x, int64_t y, int64_t z) const {
 
 	auto* c = it->second.get();
 
-	return c->GetLight(lx, ly, lz);
+	return c->GetBlockLight(lx, ly, lz);
+}
+
+
+uint8_t World::GetSkyLightGlobal(int64_t x, int64_t y, int64_t z) const {
+	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
+	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+
+	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
+	int ly = y;
+	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
+
+	auto it = chunks.find(Index(cx, cz));
+	if (it == chunks.end() || !it->second) {
+		return 0;
+	}
+
+
+	auto* c = it->second.get();
+
+	return c->GetSkyLight(lx, ly, lz);
+
 }
 
 
@@ -229,8 +250,28 @@ bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) 
 
 	auto* c = it->second.get();
 
-	return c->SetLight(lx, ly, lz, level);
+	return c->SetBlockLight(lx, ly, lz, level);
 
+}
+
+
+bool World::SetSkyLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) {
+
+	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
+	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+
+	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
+	int ly = y;
+	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
+
+	auto it = chunks.find(Index(cx, cz));
+	if (it == chunks.end() || !it->second) {
+		return false;
+	}
+
+	auto* c = it->second.get();
+
+	return c->SetSkyLights(lx, ly, lz, level);
 }
 
 
@@ -388,12 +429,14 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
 					unsigned int b = c->GetBlock(Chunk::CHUNK_WIDTH - 1, y, z);
-					uint8_t l = c->GetLight(Chunk::CHUNK_WIDTH - 1, y, z);
+					uint8_t l = c->GetBlockLight(Chunk::CHUNK_WIDTH - 1, y, z);
+					uint8_t sl = c->GetSkyLight(Chunk::CHUNK_WIDTH - 1, y, z);
 
 					snapshot->left[ChunkMeshSnapshot::IndexYZ(y, z)] =
 						static_cast<BlockType>(b);
 
 					snapshot->leftLights[ChunkMeshSnapshot::IndexYZ(y, z)] = l;
+					snapshot->leftSkyLights[ChunkMeshSnapshot::IndexYZ(y, z)] = sl;
 				}
 			}
 		}
@@ -411,12 +454,14 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
 					unsigned int b = c->GetBlock(0, y, z);
-					uint8_t l = c->GetLight(0, y, z);
+					uint8_t l = c->GetBlockLight(0, y, z);
+					uint8_t sl = c->GetSkyLight(0, y, z);
 
 					snapshot->right[ChunkMeshSnapshot::IndexYZ(y, z)] =
 						static_cast<BlockType>(b);
 
 					snapshot->rightLights[ChunkMeshSnapshot::IndexYZ(y, z)] = l;
+					snapshot->rightSkyLights[ChunkMeshSnapshot::IndexYZ(y, z)] = sl;
 				}
 			}
 		}
@@ -434,12 +479,14 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
 					unsigned int b = c->GetBlock(x, y, 0);
-					uint8_t l = c->GetLight(x, y, 0);
+					uint8_t l = c->GetBlockLight(x, y, 0);
+					uint8_t sl = c->GetSkyLight(x, y, 0);
 
 					snapshot->front[ChunkMeshSnapshot::IndexYX(y, x)] =
 						static_cast<BlockType>(b);
 
 					snapshot->frontLights[ChunkMeshSnapshot::IndexYX(y, x)] = l;
+					snapshot->frontSkyLights[ChunkMeshSnapshot::IndexYX(y, x)] = sl;
 				}
 			}
 		}
@@ -458,12 +505,14 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
 					unsigned int b = c->GetBlock(x, y, Chunk::CHUNK_DEPTH - 1);
-					uint8_t l = c->GetLight(x, y, Chunk::CHUNK_DEPTH - 1);
+					uint8_t l = c->GetBlockLight(x, y, Chunk::CHUNK_DEPTH - 1);
+					uint8_t sl = c->GetSkyLight(x, y, Chunk::CHUNK_DEPTH - 1);
 
 					snapshot->back[ChunkMeshSnapshot::IndexYX(y, x)] =
 						static_cast<BlockType>(b);
 
 					snapshot->backLights[ChunkMeshSnapshot::IndexYX(y, x)] = l;
+					snapshot->backSkyLights[ChunkMeshSnapshot::IndexYX(y, x)] = sl;
 				}
 			}
 		}

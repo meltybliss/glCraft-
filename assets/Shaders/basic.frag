@@ -3,14 +3,20 @@
 out vec4 FragColor;
 
 in vec2 TexCoord;
-in float vLightLevel;
+in float vBlockLightLevel;
+in float vSkyLightLevel;
 
 uniform sampler2D u_Texture;
+uniform float u_skyStrength;//’‹1.0, –é0.1‚Ý‚½‚¢‚È
 
 void main() {
 	vec4 texColor = texture(u_Texture, TexCoord);
 
-	float brightness = vLightLevel / 15.0f;
+	float B_brightness = vBlockLightLevel / 15.0f;
+	float S_brightness = 
+		(vSkyLightLevel / 15.0f) * u_skyStrength;
+
+	float brightness = max(B_brightness, S_brightness);
 
 	FragColor = vec4(
 		texColor.rgb * brightness,

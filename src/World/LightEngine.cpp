@@ -23,10 +23,10 @@ void LightEngine::AddLightLevel(
 	int ly = worldY;
 	int lz = floorMod(worldZ, Chunk::CHUNK_DEPTH);
 
-	uint8_t oldLevel = c->GetLight(lx, ly, lz);
+	uint8_t oldLevel = c->GetBlockLight(lx, ly, lz);
 	if (oldLevel >= level) return;
 
-	c->SetLight(lx, ly, lz, level);
+	c->SetBlockLight(lx, ly, lz, level);
 
 	//
 	
@@ -101,24 +101,114 @@ void LightEngine::AddLightLevel(
 }
 
 
+void LightEngine::InitializeSkylightForChunk(Chunk& c) {
+
+	//AIRÇ∂Ç·Ç»Ç≠Ç»ÇÈÇ‹Ç≈ÇªÇÃè„Ç©ÇÁÇÃAIRÇÃÇ∆Ç±Ç15light levelÇ…ÇµÇƒÇ¢Ç≠
+
+	c.skyLights.fill(0);
+
+	for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
+		for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+
+			for (int y = Chunk::CHUNK_HEIGHT - 1; y >= 0; --y) {
+				
+
+				if (c.GetBlock(x, y, z) != 0) {
+					break;
+				}
+
+				
+				c.SetSkyLights(x, y, z, 15);
+			}
+
+		}
+	}
+
+
+}
+
+
 void LightEngine::Propagate_SkyLight(
 	World& w,
-	int64_t worldX,
-	int64_t worldY,
-	int64_t worldZ
+	Chunk& c
 ) {
 
+	int64_t wx = static_cast<int64_t>(c.cx) * Chunk::CHUNK_WIDTH;
+	int64_t wz = static_cast<int64_t>(c.cz) * Chunk::CHUNK_DEPTH;
 
-	int32_t cx = floorDiv(worldX, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(worldZ, Chunk::CHUNK_DEPTH);
+	std::queue<LightNode> bfs_queue;
 
-	Chunk* c = w.GetTargetChunk(cx, cz);
-	if (!c) return;
+	std::unordered_set<uint64_t> touchedChunkKeys;
 
-	auto& lightMap = c->blockLights;
+	for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+		for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
+			for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
 
-	std::queue<uint8_t> bfs_queue;
+				if (c.GetSkyLight(x, y, z) == 15) {
+					bfs_queue.push({ wx + x, y, wz + z, 15 });
+				}
 
+			}
+		}
+	}
 
+	constexpr int dirs[6][3] = {
+		{1, 0, 0},
+		{-1, 0, 0},
+		{0, 1, 0},
+		{0, -1, 0},
+		{0, 0, 1},
+		{0, 0, -1}
+	};
+
+	while (!bfs_queue.empty()) {
+		LightNode targetNode = bfs_queue.front();
+		uint8_t oldLightLevel = targetNode.lightLevel;
+		
+		bfs_queue.pop();
+
+		if (oldLightLevel <= 1) {
+			continue;
+		}
+
+		for (const auto& dir : dirs) {
+			uint8_t lightLevel = targetNode.lightLevel;
+
+			int64_t nx = targetNode.x + dir[0];
+			int64_t ny = targetNode.y + dir[1];
+			int64_t nz = targetNode.z + dir[2];
+
+			if (lightLevel == 15 && dir[1] > -1) {
+				lightLevel--;
+			}
+			
+
+			if (w.GetBlockGlobal(nx, ny, nz) == 0) {
+				if (w.GetSkyLightGlobal(nx, ny, nz) < lightLevel) {
+					bool ok = w.SetSkyLightGlobal(nx, ny, nz, lightLevel);
+
+					if (ok) {
+						bfs_queue.push({ nx, ny, nz, lightLevel });
+
+						int32_t cx = floorDiv(nx, Chunk::CHUNK_WIDTH);
+						int32_t cz = floorDiv(nz, Chunk::CHUNK_DEPTH);
+
+						uint64_t key = Index(cx, cz);
+
+						touchedChunkKeys.insert(key);
+					}
+				}
+			}
+
+		}
+
+	}
+
+	for (const auto& key : touchedChunkKeys) {
+		auto* c = w.GetTargetChunkFromKey(key);
+
+		c->dirty = true;
+
+	}
 
 }

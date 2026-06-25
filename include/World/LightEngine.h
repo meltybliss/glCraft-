@@ -24,11 +24,11 @@ public:
 		uint8_t level
 	);
 
+	static void InitializeSkylightForChunk(Chunk& c);
+
 	static void Propagate_SkyLight(
 		World& w,
-		int64_t worldX,
-		int64_t worldY,
-		int64_t worldZ 
+		Chunk& c
 	);
 
 private:
