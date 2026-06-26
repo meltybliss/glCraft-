@@ -19,7 +19,7 @@ struct Chunk {
 
 	ChunkMesh mesh;
 
-	bool dirty = true;
+	bool dirty = false;
 	bool urgentUpdateMesh = false;
 
 	constexpr static int CHUNK_WIDTH = 16;

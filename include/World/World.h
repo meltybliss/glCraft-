@@ -94,7 +94,7 @@ public:
 	
 		m_pendingChunkKeys.insert(key);
 	}
-	void EnqueueMeshJobFrom_Outside(Chunk& c);
+	void EnqueueMeshJob(Chunk& c);
 	
 	static int Get_UNLOAD_DISTANCE() {
 		return UNLOAD_CHUNKS_DISTANCE;
@@ -104,7 +104,40 @@ public:
 		return LOAD_CHUNKS_DISTANCE;
 	}
 
+	void InitializeLight_Global(Chunk& c) {
+		
+		m_lightEngine.InitializeSkylightForChunk(c);
+		
+	}
+
+	void PropagateLight_Global(Chunk& c) {
+		
+		m_lightEngine.Propagate_SkyLight(*this, c);
+		
+	}
+
+	void InitializeLight_GlobalFromKey(uint64_t key) {
+
+		Chunk* c = GetTargetChunkFromKey(key);
+		if (!c) return;
+
+		m_lightEngine.InitializeSkylightForChunk(*c);
+
+	}
+
+	void PropagateLight_GlobalFromKey(uint64_t key) {
+
+		Chunk* c = GetTargetChunkFromKey(key);
+		if (!c) return;
+
+
+		m_lightEngine.Propagate_SkyLight(*this, *c);
+
+	}
+
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshot(Chunk& c);
+
+	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(uint64_t key);
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;

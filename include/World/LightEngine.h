@@ -13,6 +13,7 @@ struct LightNode {
 
 
 class World;
+class Chunk;
 class LightEngine {
 public:
 

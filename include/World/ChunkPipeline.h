@@ -27,7 +27,8 @@ public:
 
 	void EnqueueJob(ChunkJob&& job);
 
-	bool PopFrontResult(ChunkResult& out);
+	bool PopFrontMeshResult(MeshChunkResult& out);
+	bool PopFrontGenResult(GeneratedChunkResult& out);
 
 	void SetStreamCenter(const int64_t curCx, const int64_t curCz);
 	std::vector<uint64_t> CancelQueuedOutside_ChunkJob();
@@ -54,12 +55,14 @@ private:
 	std::atomic<bool> runningWorker = false;
 
 	std::mutex jobsMutex;
-	std::mutex resultMutex;
+	std::mutex meshResultMutex;
+	std::mutex genResultMutex;
 
 	std::condition_variable workerCv;
 
 	std::deque<ChunkJob> m_jobQueue;
-	std::deque<ChunkResult> m_chunkResult;
+	std::deque<MeshChunkResult> m_meshChunkResult;
+	std::deque<GeneratedChunkResult> m_genChunkResult;
 	std::unordered_map<uint64_t, std::unique_ptr<Chunk>> m_buildingChunks;
 
 	std::atomic<int32_t> m_curStreamCx = 0;

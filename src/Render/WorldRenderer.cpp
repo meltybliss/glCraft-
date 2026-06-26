@@ -8,7 +8,7 @@ void WorldRenderer::RebuildDrityChunkMesh(World& w) {
 		if (c->dirty) {
 
 
-			w.EnqueueMeshJobFrom_Outside(*c);
+			w.EnqueueLightJobFrom_Outside(*c);
 
 			c->dirty = false;
 		}
