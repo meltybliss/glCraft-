@@ -138,6 +138,17 @@ public:
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshot(Chunk& c);
 
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(uint64_t key);
+
+
+	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
+	void MarkChunkDirty(Chunk& c) {
+		c.dirty = true;
+	}
+	void MarkChunkUrgentDirty(Chunk& c) {
+		c.dirty = true;
+		c.urgentUpdateMesh = true;
+	}
+
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -165,6 +176,5 @@ private:
 
 	void ProcessChunkResult();
 
-	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
 
 };

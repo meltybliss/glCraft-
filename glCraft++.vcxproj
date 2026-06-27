@@ -153,6 +153,8 @@
     <ClInclude Include="include\World\ChunkPipeline.h" />
     <ClInclude Include="include\World\ChunkResult.h" />
     <ClInclude Include="include\World\LightEngine.h" />
+    <ClInclude Include="include\World\LightNode.h" />
+    <ClInclude Include="include\World\LightTask.h" />
     <ClInclude Include="include\World\PendingMesh.h" />
     <ClInclude Include="include\World\RaycastHit.h" />
     <ClInclude Include="include\World\TerrainGenerator.h" />

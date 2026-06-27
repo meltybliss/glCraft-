@@ -1,6 +1,21 @@
 #include "Core/Application.h"
 #include <iostream>
 
+
+void Application::UpdateStreamCenter() {
+
+	int32_t centerCx = static_cast<int32_t>(
+		floorDiv(m_camera.position.x, Chunk::CHUNK_WIDTH)
+	);
+
+	int32_t centerCz = static_cast<int32_t>(
+		floorDiv(m_camera.position.z, Chunk::CHUNK_DEPTH)
+	);
+
+
+	m_worldThread.SetDesiredStreamCenter(centerCx, centerCz);
+}
+
 void Application::Run() {
 	
 	float lastTime = (float)glfwGetTime();
@@ -18,6 +33,7 @@ void Application::Run() {
 		ProcessInput(dt);
 
 		UpdateRayHit();//raycast
+		UpdateStreamCenter();
 
 		m_world.Tick(dt, m_camera);
 

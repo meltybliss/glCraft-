@@ -298,8 +298,6 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	c->SetBlock(lx, ly, lz, b);
 
-	m_lightEngine.AddLightLevel(*this, x, y, z, 13);//とりあえずこのなかで統一してdirty, urgentUpdateMesh
-
 	/*c->dirty = true;
 	c->urgentUpdateMesh = true;*/
 }

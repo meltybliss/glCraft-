@@ -10,8 +10,13 @@ void LightEngine::AddLightLevel(
 	int64_t worldX,
 	int64_t worldY,
 	int64_t worldZ,
-	uint8_t level
+	uint8_t level,
+	LightTask& task
 ) {
+
+
+	task.bfs_queue.push({ worldX, worldY, worldZ, level });
+
 
 	int32_t cx = floorDiv(worldX, Chunk::CHUNK_WIDTH);
 	int32_t cz = floorDiv(worldZ, Chunk::CHUNK_DEPTH);
@@ -28,12 +33,23 @@ void LightEngine::AddLightLevel(
 
 	c->SetBlockLight(lx, ly, lz, level);
 
-	//
-	
-	std::unordered_set<uint64_t> touchedChunkKey;
+}
 
-	std::queue<LightNode> bfs_queue;
-	bfs_queue.push({worldX, worldY, worldZ, level});
+
+void LightEngine::Propagate_BlockLight(
+	World& w,
+	LightTask& task,
+	const int taskBudget
+) {
+
+	//
+
+	int curBudget = taskBudget;
+
+	auto& touchedChunkKey = task.touchedChunkKeys;
+	auto& bfs_queue = task.bfs_queue;
+
+
 
 	constexpr int dirs[6][3] = {
 		{1, 0, 0},
@@ -44,7 +60,7 @@ void LightEngine::AddLightLevel(
 		{0, 0, -1}
 	};
 
-	while (!bfs_queue.empty()) {
+	while (!bfs_queue.empty() && curBudget > 0) {
 		LightNode baseNode = bfs_queue.front();
 
 		bfs_queue.pop();
@@ -89,15 +105,6 @@ void LightEngine::AddLightLevel(
 	}
 
 
-	for (const auto& key : touchedChunkKey) {
-		auto c = w.GetTargetChunkFromKey(key);
-
-		c->dirty = true;
-		c->urgentUpdateMesh = true;
-	}
-
-	touchedChunkKey.clear();
-
 }
 
 
@@ -130,27 +137,15 @@ void LightEngine::InitializeSkylightForChunk(Chunk& c) {
 
 void LightEngine::Propagate_SkyLight(
 	World& w,
-	Chunk& c
+	LightTask& task,
+	const int taskBudget
 ) {
 
-	int64_t wx = static_cast<int64_t>(c.cx) * Chunk::CHUNK_WIDTH;
-	int64_t wz = static_cast<int64_t>(c.cz) * Chunk::CHUNK_DEPTH;
+	int curBudget = taskBudget;
 
-	std::queue<LightNode> bfs_queue;
+	auto& bfs_queue = task.bfs_queue;
+	auto& touchedChunkKeys = task.touchedChunkKeys;
 
-	std::unordered_set<uint64_t> touchedChunkKeys;
-
-	for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
-		for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
-			for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
-
-				if (c.GetSkyLight(x, y, z) == 15) {
-					bfs_queue.push({ wx + x, y, wz + z, 15 });
-				}
-
-			}
-		}
-	}
 
 	constexpr int dirs[6][3] = {
 		{1, 0, 0},
@@ -161,7 +156,7 @@ void LightEngine::Propagate_SkyLight(
 		{0, 0, -1}
 	};
 
-	while (!bfs_queue.empty()) {
+	while (!bfs_queue.empty() && curBudget > 0) {
 		LightNode targetNode = bfs_queue.front();
 		uint8_t oldLightLevel = targetNode.lightLevel;
 		
@@ -196,6 +191,8 @@ void LightEngine::Propagate_SkyLight(
 						uint64_t key = Index(cx, cz);
 
 						touchedChunkKeys.insert(key);
+
+						curBudget--;
 					}
 				}
 			}
@@ -204,11 +201,5 @@ void LightEngine::Propagate_SkyLight(
 
 	}
 
-	for (const auto& key : touchedChunkKeys) {
-		auto* c = w.GetTargetChunkFromKey(key);
-
-		c->dirty = true;
-
-	}
 
 }
