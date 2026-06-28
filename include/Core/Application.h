@@ -39,7 +39,6 @@ private:
 	float m_lastMouseY = 300.0f;
 
 	WorldThread m_worldThread;
-	World m_world;
 	WorldRenderer m_wRenderer;
 	SelectionOutlineRenderer m_outlineRenderer;
 

@@ -173,7 +173,8 @@ void LightEngine::Propagate_SkyLight(
 			int64_t ny = targetNode.y + dir[1];
 			int64_t nz = targetNode.z + dir[2];
 
-			if (lightLevel < 15 && dir[1] != -1) {
+
+			if (dir[1] != -1) {
 				lightLevel--;
 			}
 			

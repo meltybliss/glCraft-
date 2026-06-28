@@ -32,4 +32,12 @@ namespace ChunkUtil {
 		return static_cast<int>(r);
 	}
 
-}
+
+	inline int32_t RestoreCxFromKey(uint64_t key) {
+		return static_cast<int32_t>(key >> 32);
+	}
+
+	inline int32_t RestoreCzFromKey(uint64_t key) {
+		return static_cast<int32_t>(key & 0xffffffffu);
+	}
+} 

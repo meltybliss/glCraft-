@@ -1,7 +1,7 @@
 #include "World/ChunkPipeline.h"
 #include "World/TerrainGenerator.h"
 #include "Render/MeshBuilder.h"
-#include "World/World.h"
+#include "World/WorldThread.h"
 #include "World/LightEngine.h"
 #include <memory>
 
@@ -64,9 +64,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 				m_terrainGen.GenerateTerrain(*c);
 
-				m_world->InitializeLight_Global(*c);
 
-				m_buildingChunks.erase(it);
 
 				{
 					std::lock_guard<std::mutex> lock(genResultMutex);
@@ -76,6 +74,13 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 						std::move(c)
 
 					});
+				}
+
+
+				m_buildingChunks.erase(it);
+
+				if (m_resultReadyCallback) {
+					m_resultReadyCallback();//wake
 				}
 				
 			}
@@ -105,6 +110,11 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 					});
 				}
+
+				if (m_resultReadyCallback) {
+					m_resultReadyCallback();//wake
+				}
+
 
 			}
 			
@@ -230,8 +240,8 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 			const int32_t dz = std::abs(m_curStreamCz.load() - cz);
 
 			bool willCancel =
-				dx >= World::Get_UNLOAD_DISTANCE() ||
-				dz >= World::Get_UNLOAD_DISTANCE();
+				dx >= WorldThread::Get_UNLOAD_DISTANCE() ||
+				dz >= WorldThread::Get_UNLOAD_DISTANCE();
 		
 			if (willCancel) {
 				canceledKey.push_back(Index(cx, cz));

@@ -1,5 +1,5 @@
 #include "World/WorldThread.h"
-
+#include <iostream>
 
 
 void WorldThread::StartLoop() {
@@ -10,12 +10,32 @@ void WorldThread::StartLoop() {
 
 	runningWorldThread.store(true);
 
+	m_chunkPipeline.SetResultReadyCallback(
+		[this]() {
+			Wake();
+		}
+
+	);
 	m_chunkPipeline.StartWorkerThread();
 
 	worldThread = std::thread([this]() {
 		while (runningWorldThread.load()) {
 
 			Tick();
+
+
+			if (HasImmediateTask()) {
+				continue;//skip "wait"
+			}
+
+			std::unique_lock<std::mutex> lock(waitMutex);
+
+			worldCv.wait(lock, [this]() {
+
+				return !runningWorldThread.load() || requestedToWake;
+			});
+
+			requestedToWake = false;
 
 		}
 
@@ -30,6 +50,8 @@ void WorldThread::StopLoop() {
 	runningWorldThread.store(false);
 
 
+	Wake();
+
 	if (worldThread.joinable()) {
 		worldThread.join();
 	}
@@ -39,9 +61,9 @@ void WorldThread::StopLoop() {
 }
 
 void WorldThread::SubmitEditBlock(
-	int32_t worldX,
-	int32_t worldY,
-	int32_t worldZ,
+	int64_t worldX,
+	int64_t worldY,
+	int64_t worldZ,
 	BlockType b
 ) {
 
@@ -58,6 +80,10 @@ void WorldThread::SubmitEditBlock(
 		std::lock_guard<std::mutex> lock(commandMutex);
 		m_commands.push_back(cmd);
 	}
+
+
+	Wake();
+
 }
 
 
@@ -106,37 +132,46 @@ void WorldThread::ApplyCommand(WorldCommand& cmd) {
 
 
 void WorldThread::ApplyEditBlock(
-	int32_t x,
-	int32_t y,
-	int32_t z,
+	int64_t x,
+	int64_t y,
+	int64_t z,
 	BlockType b
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
-	Chunk* c = m_world.GetTargetChunk(x, z);
+	const int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
+	const int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+
+	Chunk* c = m_world.GetTargetChunk(cx, cz);
 	if (!c) return;
 
 	m_world.SetBlockGlobal_User(x, y, z, b);
 
 	Start_BlockLightTask(x, y, z, 14);
 
-	m_world.MarkChunkUrgentDirty(*c);
+	//m_world.MarkChunkUrgentDirty(*c);
 
 }
 
 
 void WorldThread::Start_BlockLightTask(
-	int32_t x,
-	int32_t y,
-	int32_t z,
+	int64_t x,
+	int64_t y,
+	int64_t z,
 	uint8_t level
 
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
-	int64_t wx = static_cast<int64_t>(x) * Chunk::CHUNK_WIDTH;
-	int64_t wy = y;
-	int64_t wz = static_cast<int64_t>(z) * Chunk::CHUNK_DEPTH;
+	const int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
+	const int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+
+	uint64_t key = Index(cx, cz);
+	Chunk* c = m_world.GetTargetChunkFromKey(key);
+
+	if (!c) return;
+
+	c->readyForMesh = false;
 
 
 	LightTask task;
@@ -145,9 +180,9 @@ void WorldThread::Start_BlockLightTask(
 
 	m_lightEngine.AddLightLevel(
 		m_world,
-		wx,
-		wy,
-		wz,
+		x,
+		y,
+		z,
 		level,
 		task
 	);
@@ -167,6 +202,10 @@ void WorldThread::Tick() {
 
 	ProcCommands();
 	ProcChunkResults();
+
+	ProcLightTasks();
+
+	DispatchDirtyMeshJobs();
 }
 
 
@@ -313,6 +352,8 @@ void WorldThread::SetDesiredStreamCenter(
 	m_streamCx = cx;
 	m_streamCz = cz;
 
+
+	Wake();
 }
 
 
@@ -400,10 +441,11 @@ void WorldThread::ProcChunkResults() {
 
 		}
 
+
 		chunks[key] = std::move(genResult.chunk);
 
-		Start_SkyLightTaskForNewChunk(*chunks[key].get());
 
+		Start_SkyLightTaskForNewChunk(*chunks[key]);
 	}
 }
 
@@ -462,17 +504,23 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 	int64_t wz = static_cast<int64_t>(c.cz) * Chunk::CHUNK_DEPTH;
 
 
-	for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
-		for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
-			for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+	m_lightEngine.InitializeSkylightForChunk(c);
 
-				if (c.GetSkyLight(x, y, z) == 15) {
-					task.bfs_queue.push({ wx + x, y, wz + z, 15 });
-				}
 
+	for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
+		for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+
+
+			if (c.GetSkyLight(x, Chunk::CHUNK_HEIGHT-1, z) == 15) {
+				task.bfs_queue.push({ wx + x, Chunk::CHUNK_HEIGHT - 1, wz + z, 15 });
 			}
+
 		}
 	}
+	
+
+
+	c.readyForMesh = false;
 
 
 	m_lightTasks.push_back(task);
@@ -481,6 +529,8 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 
 
 void WorldThread::ProcLightTasks() {
+
+	if (m_lightTasks.empty()) return;
 
 	int budget = MAX_LIGHT_PROPAGATE_BFS_PER_TICK;
 
@@ -518,10 +568,14 @@ void WorldThread::ProcLightTasks() {
 
 				Chunk* c = m_world.GetTargetChunkFromKey(key);
 				c->dirty = true;
+				c->readyForMesh = true;
 
 				if (task.lightType == LightType::BLOCK) {
 					c->urgentUpdateMesh = true;
 				}
+
+
+				std::cout << "aaaaa\n";
 
 			}
 
@@ -535,5 +589,55 @@ void WorldThread::ProcLightTasks() {
 	}
 
 
+
+}
+
+
+
+void WorldThread::DispatchDirtyMeshJobs() {
+
+	auto& chunks = m_world.GetChunks();
+
+	for (auto& [key, chunkPtr] : chunks) {
+		if (!chunkPtr->readyForMesh) continue;
+
+		if (!chunkPtr->dirty) continue;
+
+		//if (chunkPtr->meshJobInFlight) continue;
+
+		EnqueueMeshJob(*chunkPtr);
+
+		chunkPtr->dirty = false;
+		chunkPtr->readyForMesh = false;
+	}
+
+}
+
+
+void WorldThread::Wake() {
+
+	{
+		std::lock_guard<std::mutex> lock(waitMutex);
+		requestedToWake = true;
+	}
+	worldCv.notify_all();
+}
+
+
+bool WorldThread::HasImmediateTask() {
+
+	return !m_lightTasks.empty() || m_streamNeedsUpdate;
+
+}
+
+
+
+RaycastHit WorldThread::RequestRaycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const {
+
+	return m_world.Raycast(
+		origin,
+		dir,
+		distance
+	);
 
 }

@@ -13,9 +13,11 @@
 #include <condition_variable>
 #include <stdint.h>
 #include <memory>
+#include <functional>
 
 using namespace ChunkUtil;
 
+class WorldThread;
 class World;
 
 class ChunkPipeline {
@@ -33,7 +35,10 @@ public:
 	void SetStreamCenter(const int64_t curCx, const int64_t curCz);
 	std::vector<uint64_t> CancelQueuedOutside_ChunkJob();
 
-	//bool cancelPending = false;
+	void SetResultReadyCallback(std::function<void()> callback) {
+
+		m_resultReadyCallback = std::move(callback);
+	}
 private:
 	void StartLoop();
 
@@ -70,6 +75,10 @@ private:
 
 
 	//size_t m_cancelScanedIndex = 0;
+
+private:
+
+	std::function<void()> m_resultReadyCallback;
 
 private:
 
