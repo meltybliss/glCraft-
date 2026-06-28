@@ -78,3 +78,20 @@ void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 	}
 
 }
+
+
+
+void WorldRenderer::DeleteMeshes(WorldThread& wt) {
+
+	uint64_t key;
+
+	while (wt.PopPendingDeleteMeshKey(key)) {
+		auto it = m_chunkMeshes.find(key);
+		if (it == m_chunkMeshes.end()) continue;
+
+		it->second.DeleteGL();
+		m_chunkMeshes.erase(key);
+
+	}
+
+}

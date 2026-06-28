@@ -323,8 +323,15 @@ void WorldThread::UpdateChunksAround() {
 
 
 		if (shouldDestroy) {
+
+
+			std::lock_guard<std::mutex> lock(pendingDeleteMeshMutex);
+
+			m_pendingDeleteMeshKey.push_back(it->first);
+
 			it = chunks.erase(it);
 			destroyBudget--;
+
 		}
 		else {
 			++it;//消したときは要素が自動で詰められるから消してないときだけitを増やして次の要素
@@ -485,6 +492,22 @@ bool WorldThread::PopPendingMeshData(PendingMesh& out) {
 }
 
 
+bool WorldThread::PopPendingDeleteMeshKey(uint64_t& out) {
+
+	std::lock_guard<std::mutex> lock(pendingDeleteMeshMutex);
+
+	if (m_pendingDeleteMeshKey.empty()) {
+		return false;
+	}
+
+	out = std::move(m_pendingDeleteMeshKey.front());
+	m_pendingDeleteMeshKey.pop_front();
+
+	return true;
+
+}
+
+
 void WorldThread::PushPendingMesh(PendingMesh& mesh) {
 	
 	std::lock_guard<std::mutex> lock(pendingMeshMutex);
@@ -507,18 +530,16 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 	m_lightEngine.InitializeSkylightForChunk(c);
 
 
-	for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
-		for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+	m_lightEngine.CreateSkylightLeakSeeds(c, task);
 
-
-			if (c.GetSkyLight(x, Chunk::CHUNK_HEIGHT-1, z) == 15) {
-				task.bfs_queue.push({ wx + x, Chunk::CHUNK_HEIGHT - 1, wz + z, 15 });
-			}
-
-		}
+	// 直射 skylight だけで照明計算が完了。
+	if (task.bfs_queue.empty()) {
+		c.dirty = true;
+		c.readyForMesh = true;
+		return;
 	}
-	
-
+	// BFSありの場合は、元チャンク自身も最後にmesh更新対象にする
+	//task.touchedChunkKeys.insert(Index(c.cx, c.cz));
 
 	c.readyForMesh = false;
 
@@ -549,6 +570,7 @@ void WorldThread::ProcLightTasks() {
 		
 		int usedBudget = normalBudget;
 		auto& task = m_lightTasks[i];
+
 		
 		if (i == 0) {
 			usedBudget = frontBudget;
@@ -556,6 +578,15 @@ void WorldThread::ProcLightTasks() {
 
 		if (task.lightType == LightType::SKY) {
 			m_lightEngine.Propagate_SkyLight(
+				m_world,
+				task,
+				usedBudget
+			);
+
+		}
+		else if (task.lightType == LightType::BLOCK) {
+
+			m_lightEngine.Propagate_BlockLight(
 				m_world,
 				task,
 				usedBudget
@@ -575,7 +606,6 @@ void WorldThread::ProcLightTasks() {
 				}
 
 
-				std::cout << "aaaaa\n";
 
 			}
 

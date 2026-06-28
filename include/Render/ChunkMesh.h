@@ -109,5 +109,17 @@ struct ChunkMesh {
 
 		glBindVertexArray(0);
 	}
+	
+
+	void DeleteGL() {
+		if (ebo != 0) glDeleteBuffers(1, &ebo);
+		if (vao != 0) glDeleteBuffers(1, &vao);
+		if (vbo != 0) glDeleteBuffers(1, &vbo);
+
+
+		vao = 0;
+		vbo = 0;
+		ebo = 0;
+	}
 
 };

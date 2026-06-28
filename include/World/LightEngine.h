@@ -35,6 +35,9 @@ public:
 		const int taskBudget
 	);
 
+
+	static void CreateSkylightLeakSeeds(Chunk& c, LightTask& task);
+
 private:
 
 
