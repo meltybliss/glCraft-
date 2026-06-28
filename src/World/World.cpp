@@ -196,120 +196,134 @@ void World::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 }
 
 
-
 std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
-	std::unique_ptr<ChunkMeshSnapshot> snapshot = std::make_unique<ChunkMeshSnapshot>();
+	std::unique_ptr<ChunkMeshSnapshot> snapshot =
+		std::make_unique<ChunkMeshSnapshot>();
 
 	int32_t cx = c.cx;
 	int32_t cz = c.cz;
 
-	//center
-	
+	// center
 	snapshot->center = c.blocks;
 
-	//center lights
+	// center lights
 	snapshot->centerLights = c.blockLights;
+	snapshot->centerSkyLights = c.skyLights; // これが抜けていた
 
-	
-
-	//left
+	// left
 	{
 		uint64_t key = Index(cx - 1, cz);
 		auto it = chunks.find(key);
-		if (it != chunks.end() && it->second) {
-			Chunk* c = it->second.get();
 
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
 			snapshot->hasLeft = true;
-			
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
-					unsigned int b = c->GetBlock(Chunk::CHUNK_WIDTH - 1, y, z);
-					uint8_t l = c->GetBlockLight(Chunk::CHUNK_WIDTH - 1, y, z);
-					uint8_t sl = c->GetSkyLight(Chunk::CHUNK_WIDTH - 1, y, z);
+					unsigned int b =
+						neighbor->GetBlock(Chunk::CHUNK_WIDTH - 1, y, z);
 
-					snapshot->left[ChunkMeshSnapshot::IndexYZ(y, z)] =
+					uint8_t l =
+						neighbor->GetBlockLight(Chunk::CHUNK_WIDTH - 1, y, z);
+
+					uint8_t sl =
+						neighbor->GetSkyLight(Chunk::CHUNK_WIDTH - 1, y, z);
+
+					const int index = ChunkMeshSnapshot::IndexYZ(y, z);
+
+					snapshot->left[index] =
 						static_cast<BlockType>(b);
 
-					snapshot->leftLights[ChunkMeshSnapshot::IndexYZ(y, z)] = l;
-					snapshot->leftSkyLights[ChunkMeshSnapshot::IndexYZ(y, z)] = sl;
+					snapshot->leftLights[index] = l;
+					snapshot->leftSkyLights[index] = sl;
 				}
 			}
 		}
 	}
 
-	//right
+	// right
 	{
 		uint64_t key = Index(cx + 1, cz);
 		auto it = chunks.find(key);
-		if (it != chunks.end() && it->second) {
-			Chunk* c = it->second.get();
 
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
 			snapshot->hasRight = true;
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
-					unsigned int b = c->GetBlock(0, y, z);
-					uint8_t l = c->GetBlockLight(0, y, z);
-					uint8_t sl = c->GetSkyLight(0, y, z);
+					unsigned int b = neighbor->GetBlock(0, y, z);
+					uint8_t l = neighbor->GetBlockLight(0, y, z);
+					uint8_t sl = neighbor->GetSkyLight(0, y, z);
 
-					snapshot->right[ChunkMeshSnapshot::IndexYZ(y, z)] =
+					const int index = ChunkMeshSnapshot::IndexYZ(y, z);
+
+					snapshot->right[index] =
 						static_cast<BlockType>(b);
 
-					snapshot->rightLights[ChunkMeshSnapshot::IndexYZ(y, z)] = l;
-					snapshot->rightSkyLights[ChunkMeshSnapshot::IndexYZ(y, z)] = sl;
+					snapshot->rightLights[index] = l;
+					snapshot->rightSkyLights[index] = sl;
 				}
 			}
 		}
 	}
 
-	//front
+	// front
 	{
 		uint64_t key = Index(cx, cz + 1);
 		auto it = chunks.find(key);
-		if (it != chunks.end() && it->second) {
-			Chunk* c = it->second.get();
 
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
 			snapshot->hasFront = true;
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
-					unsigned int b = c->GetBlock(x, y, 0);
-					uint8_t l = c->GetBlockLight(x, y, 0);
-					uint8_t sl = c->GetSkyLight(x, y, 0);
+					unsigned int b = neighbor->GetBlock(x, y, 0);
+					uint8_t l = neighbor->GetBlockLight(x, y, 0);
+					uint8_t sl = neighbor->GetSkyLight(x, y, 0);
 
-					snapshot->front[ChunkMeshSnapshot::IndexYX(y, x)] =
+					const int index = ChunkMeshSnapshot::IndexYX(y, x);
+
+					snapshot->front[index] =
 						static_cast<BlockType>(b);
 
-					snapshot->frontLights[ChunkMeshSnapshot::IndexYX(y, x)] = l;
-					snapshot->frontSkyLights[ChunkMeshSnapshot::IndexYX(y, x)] = sl;
+					snapshot->frontLights[index] = l;
+					snapshot->frontSkyLights[index] = sl;
 				}
 			}
 		}
 	}
 
-
-	//back
+	// back
 	{
 		uint64_t key = Index(cx, cz - 1);
 		auto it = chunks.find(key);
-		if (it != chunks.end() && it->second) {
-			Chunk* c = it->second.get();
 
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
 			snapshot->hasBack = true;
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
-					unsigned int b = c->GetBlock(x, y, Chunk::CHUNK_DEPTH - 1);
-					uint8_t l = c->GetBlockLight(x, y, Chunk::CHUNK_DEPTH - 1);
-					uint8_t sl = c->GetSkyLight(x, y, Chunk::CHUNK_DEPTH - 1);
+					unsigned int b =
+						neighbor->GetBlock(x, y, Chunk::CHUNK_DEPTH - 1);
 
-					snapshot->back[ChunkMeshSnapshot::IndexYX(y, x)] =
+					uint8_t l =
+						neighbor->GetBlockLight(x, y, Chunk::CHUNK_DEPTH - 1);
+
+					uint8_t sl =
+						neighbor->GetSkyLight(x, y, Chunk::CHUNK_DEPTH - 1);
+
+					const int index = ChunkMeshSnapshot::IndexYX(y, x);
+
+					snapshot->back[index] =
 						static_cast<BlockType>(b);
 
-					snapshot->backLights[ChunkMeshSnapshot::IndexYX(y, x)] = l;
-					snapshot->backSkyLights[ChunkMeshSnapshot::IndexYX(y, x)] = sl;
+					snapshot->backLights[index] = l;
+					snapshot->backSkyLights[index] = sl;
 				}
 			}
 		}
@@ -317,7 +331,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	return snapshot;
 }
-
 
 std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key) {
 	std::unique_ptr<ChunkMeshSnapshot> snapshot = std::make_unique<ChunkMeshSnapshot>();
@@ -334,6 +347,8 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 	//center lights
 	snapshot->centerLights = c.blockLights;
 
+
+	snapshot->centerSkyLights = c.skyLights;
 
 
 	//left

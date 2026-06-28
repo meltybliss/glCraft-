@@ -47,7 +47,9 @@ void Application::Run() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		baseShader->Use();
+		m_wRenderer.DeleteMeshes(m_worldThread);
 		m_wRenderer.RenderWorld(*baseShader, m_camera);
+		
 
 		RenderOutline();//switch shader
 

@@ -33,6 +33,7 @@ public:
 	);
 
 	bool PopPendingMeshData(PendingMesh& out);
+	bool PopPendingDeleteMeshKey(uint64_t& out);
 
 	static int Get_UNLOAD_DISTANCE() {
 
@@ -69,6 +70,7 @@ private:
 	std::mutex commandMutex;
 	std::mutex pendingMeshMutex;
 	std::mutex waitMutex;
+	std::mutex pendingDeleteMeshMutex;
 
 	std::deque<WorldCommand> m_commands;
 	std::deque<LightTask> m_lightTasks;
@@ -76,7 +78,7 @@ private:
 
 	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
 	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks
-
+	std::deque<uint64_t> m_pendingDeleteMeshKey;
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 3;
