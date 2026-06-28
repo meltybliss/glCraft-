@@ -1,5 +1,5 @@
 #pragma once
-#include "World/Chunk.h"
+#include "MeshData.h"
 
 struct PendingMesh {
 	MeshData meshData;

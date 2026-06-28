@@ -153,10 +153,14 @@
     <ClInclude Include="include\World\ChunkPipeline.h" />
     <ClInclude Include="include\World\ChunkResult.h" />
     <ClInclude Include="include\World\LightEngine.h" />
+    <ClInclude Include="include\World\LightNode.h" />
+    <ClInclude Include="include\World\LightTask.h" />
     <ClInclude Include="include\World\PendingMesh.h" />
     <ClInclude Include="include\World\RaycastHit.h" />
     <ClInclude Include="include\World\TerrainGenerator.h" />
     <ClInclude Include="include\World\World.h" />
+    <ClInclude Include="include\World\WorldCommand.h" />
+    <ClInclude Include="include\World\WorldThread.h" />
     <ClInclude Include="third_party\glad\glad.h" />
     <ClInclude Include="third_party\GLFW\glfw3.h" />
     <ClInclude Include="third_party\GLFW\glfw3native.h" />
@@ -464,6 +468,7 @@
     <ClCompile Include="src\World\LightEngine.cpp" />
     <ClCompile Include="src\World\TerrainGenerator.cpp" />
     <ClCompile Include="src\World\World.cpp" />
+    <ClCompile Include="src\World\WorldThread.cpp" />
     <ClCompile Include="third_party\glad.c" />
     <ClCompile Include="third_party\glm\detail\glm.cpp" />
     <ClCompile Include="third_party\glm\glm.cppm" />

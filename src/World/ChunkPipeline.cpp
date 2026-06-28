@@ -1,7 +1,7 @@
 #include "World/ChunkPipeline.h"
 #include "World/TerrainGenerator.h"
 #include "Render/MeshBuilder.h"
-#include "World/World.h"
+#include "World/WorldThread.h"
 #include "World/LightEngine.h"
 #include <memory>
 
@@ -65,62 +65,59 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 				m_terrainGen.GenerateTerrain(*c);
 
 
-				ChunkJob newJob = std::move(targetJob);
-				newJob.type = JobType::BUILD_MESH;
-				newJob.meshSource = MeshBuildSource::INSTANCE_NEW_CHUNK;
-				
-				newJob.snapshot = m_world->CreateMeshSnapshot(*c);
 
-				EnqueueJob(std::move(newJob));
+				{
+					std::lock_guard<std::mutex> lock(genResultMutex);
+
+					m_genChunkResult.push_back({
+						key,
+						std::move(c)
+
+					});
+				}
+
+
+				m_buildingChunks.erase(it);
+
+				if (m_resultReadyCallback) {
+					m_resultReadyCallback();//wake
+				}
+				
 			}
 
 			break;
 		}
+
+
+		
 		case JobType::BUILD_MESH: {
 			const int32_t& cx = targetJob.cx;
 			const int32_t& cz = targetJob.cz;
 
 			uint64_t key = Index(cx, cz);
 
-			if (targetJob.meshSource == MeshBuildSource::INSTANCE_NEW_CHUNK) {
-				auto it = m_buildingChunks.find(key);
-				if (it != m_buildingChunks.end()) {
-					auto& c = it->second;
-					if (targetJob.snapshot) {
-						MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
-						std::unique_ptr<Chunk> chunk = std::move(it->second);
+			
+			if (targetJob.snapshot) {
+				MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
 
-						m_buildingChunks.erase(it);
+				{
+					std::lock_guard<std::mutex> lock(meshResultMutex);
 
-						{
-							std::lock_guard<std::mutex> lock(resultMutex);
+					m_meshChunkResult.push_back({
+						targetJob.isNewChunk,
+						key,
+						std::move(data)
 
-							m_chunkResult.push_back({
-								key,
-								std::move(data),
-								std::move(chunk)
-
-							});
-						}
-					}
+					});
 				}
-			}
-			else if (targetJob.meshSource == MeshBuildSource::SNAPSHOT) {
-				if (targetJob.snapshot) {
-					MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
 
-					{
-						std::lock_guard<std::mutex> lock(resultMutex);
-
-						m_chunkResult.push_back({
-							key,
-							std::move(data)
-
-						});
-					}
-
+				if (m_resultReadyCallback) {
+					m_resultReadyCallback();//wake
 				}
+
+
 			}
+			
 
 
 			break;
@@ -167,20 +164,39 @@ void ChunkPipeline::StopWorkerThread() {
 }
 
 
-bool ChunkPipeline::PopFrontResult(ChunkResult& out) {
+bool ChunkPipeline::PopFrontMeshResult(MeshChunkResult& out) {
 	
 	{
-		std::lock_guard<std::mutex> lock(resultMutex);
-		if (m_chunkResult.empty()) {
+		std::lock_guard<std::mutex> lock(meshResultMutex);
+		if (m_meshChunkResult.empty()) {
 			return false;
 		}
 
-		out = std::move(m_chunkResult.front());
-		m_chunkResult.pop_front();
+		out = std::move(m_meshChunkResult.front());
+		m_meshChunkResult.pop_front();
 	}
 
 	return true;
 }
+
+
+bool ChunkPipeline::PopFrontGenResult(GeneratedChunkResult& out) {
+
+	{
+		std::lock_guard<std::mutex> lock(genResultMutex);
+
+		if (m_genChunkResult.empty()) {
+			return false;
+		}
+
+		out = std::move(m_genChunkResult.front());
+		m_genChunkResult.pop_front();
+	}
+
+	return true;
+
+}
+
 
 void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
 	{
@@ -224,8 +240,8 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 			const int32_t dz = std::abs(m_curStreamCz.load() - cz);
 
 			bool willCancel =
-				dx >= World::Get_UNLOAD_DISTANCE() ||
-				dz >= World::Get_UNLOAD_DISTANCE();
+				dx >= WorldThread::Get_UNLOAD_DISTANCE() ||
+				dz >= WorldThread::Get_UNLOAD_DISTANCE();
 		
 			if (willCancel) {
 				canceledKey.push_back(Index(cx, cz));

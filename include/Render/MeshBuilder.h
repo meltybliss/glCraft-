@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "World/Chunk.h"
+#include "MeshData.h"
 #include "World/World.h"
 #include "World/ChunkMeshSnapshot.h"
 #include "BlockFace.h"

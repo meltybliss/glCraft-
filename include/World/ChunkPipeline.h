@@ -13,9 +13,11 @@
 #include <condition_variable>
 #include <stdint.h>
 #include <memory>
+#include <functional>
 
 using namespace ChunkUtil;
 
+class WorldThread;
 class World;
 
 class ChunkPipeline {
@@ -27,12 +29,16 @@ public:
 
 	void EnqueueJob(ChunkJob&& job);
 
-	bool PopFrontResult(ChunkResult& out);
+	bool PopFrontMeshResult(MeshChunkResult& out);
+	bool PopFrontGenResult(GeneratedChunkResult& out);
 
 	void SetStreamCenter(const int64_t curCx, const int64_t curCz);
 	std::vector<uint64_t> CancelQueuedOutside_ChunkJob();
 
-	//bool cancelPending = false;
+	void SetResultReadyCallback(std::function<void()> callback) {
+
+		m_resultReadyCallback = std::move(callback);
+	}
 private:
 	void StartLoop();
 
@@ -54,12 +60,14 @@ private:
 	std::atomic<bool> runningWorker = false;
 
 	std::mutex jobsMutex;
-	std::mutex resultMutex;
+	std::mutex meshResultMutex;
+	std::mutex genResultMutex;
 
 	std::condition_variable workerCv;
 
 	std::deque<ChunkJob> m_jobQueue;
-	std::deque<ChunkResult> m_chunkResult;
+	std::deque<MeshChunkResult> m_meshChunkResult;
+	std::deque<GeneratedChunkResult> m_genChunkResult;
 	std::unordered_map<uint64_t, std::unique_ptr<Chunk>> m_buildingChunks;
 
 	std::atomic<int32_t> m_curStreamCx = 0;
@@ -67,6 +75,10 @@ private:
 
 
 	//size_t m_cancelScanedIndex = 0;
+
+private:
+
+	std::function<void()> m_resultReadyCallback;
 
 private:
 

@@ -1,24 +1,24 @@
 #include "Render/WorldRenderer.h"
-#include "World/World.h"
+#include "World/WorldThread.h"
 #include "Render/MeshBuilder.h"
 #include "Core/ChunkJob.h"
 
-void WorldRenderer::RebuildDrityChunkMesh(World& w) {
+/*void WorldRenderer::RebuildDrityChunkMesh(World& w) {
 	for (auto& [key, c] : w.GetChunks()) {
 		if (c->dirty) {
 
 
-			w.EnqueueMeshJobFrom_Outside(*c);
+			w.EnqueueLightJobFrom_Outside(*c);
 
 			c->dirty = false;
 		}
 
 	}
 
-}
+}*/
 
 
-void WorldRenderer::RenderWorld(const World& w, Shader& shader, const Camera& cam) {
+void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam) {
 	shader.Use();
 
 	glm::mat4 view = cam.GetViewMatrix();
@@ -37,40 +37,44 @@ void WorldRenderer::RenderWorld(const World& w, Shader& shader, const Camera& ca
 	shader.SetMat4("view", view);
 	shader.SetMat4("projection", projection);
 	
-	for (auto& [key, c] : w.GetChunks()) {
+	for (auto& [key, mesh] : m_chunkMeshes) {
 
 		glm::mat4 model(1.0f);//identity matrix ’PˆÊs—ñ
 
+		int32_t cx = RestoreCxFromKey(key);
+		int32_t cz = RestoreCzFromKey(key);
+
 		model = glm::translate(model,
 			glm::vec3(
-				c->cx * Chunk::CHUNK_WIDTH,
+				cx * Chunk::CHUNK_WIDTH,
 				0,
-				c->cz * Chunk::CHUNK_DEPTH
+				cz * Chunk::CHUNK_DEPTH
 			)
 
 		);
 
 		shader.SetMat4("model", model);
 
+		auto it = m_chunkMeshes.find(key);
+		if (it == m_chunkMeshes.end()) continue;
 
-		c->mesh.Draw();
+		it->second.Draw();
+
 	}
 
 }
 
 
-void WorldRenderer::UploadPendingMeshData(World& w) {
+void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 	PendingMesh out;
 
 	
-	while (w.PopPendingMeshData(out)) {
+	while (wt.PopPendingMeshData(out)) {
+		auto [it, inserted] = m_chunkMeshes.try_emplace(out.key);
 
-		Chunk* c = w.GetTargetChunkFromKey(out.key);
-		if (!c) continue;
 
-		c->mesh.Upload(out.meshData);
-
-		c->dirty = false;
+		it->second.Upload(out.meshData);
+		
 	}
 
 }

@@ -1,18 +1,14 @@
 #pragma once
 #include "ChunkUtil.h"
+#include "LightNode.h"
+#include "LightTask.h"
 #include <stdint.h>
 
 using namespace ChunkUtil;
 
-struct LightNode {
-	int64_t x = 0;
-	int64_t y = 0;
-	int64_t z = 0;
-	uint8_t lightLevel = 0;
-};
-
 
 class World;
+class Chunk;
 class LightEngine {
 public:
 
@@ -21,14 +17,22 @@ public:
 		int64_t worldX,
 		int64_t worldY,
 		int64_t worldZ,
-		uint8_t level
+		uint8_t level,
+		LightTask& task
+	);
+
+	static void Propagate_BlockLight(
+		World& w,
+		LightTask& task,
+		const int taskBudget
 	);
 
 	static void InitializeSkylightForChunk(Chunk& c);
 
 	static void Propagate_SkyLight(
 		World& w,
-		Chunk& c
+		LightTask& task,
+		const int taskBudget
 	);
 
 private:

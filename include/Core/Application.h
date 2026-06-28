@@ -11,6 +11,7 @@
 #include <optional>
 #include <memory>
 #include "World/RaycastHit.h"
+#include "World/WorldThread.h"
 
 class Application {
 public:
@@ -28,13 +29,16 @@ private:
 	void UpdateRayHit();
 	void RenderOutline();
 
+	void UpdateStreamCenter();
+
 private:
 	GLFWwindow* m_window = nullptr;
+
 	bool m_firstMouse = true;
 	float m_lastMouseX = 400.0f;
 	float m_lastMouseY = 300.0f;
 
-	World m_world;
+	WorldThread m_worldThread;
 	WorldRenderer m_wRenderer;
 	SelectionOutlineRenderer m_outlineRenderer;
 

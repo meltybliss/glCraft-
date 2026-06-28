@@ -2,10 +2,9 @@
 #include "World/Chunk.h"
 #include "World/ChunkUtil.h"
 #include "World/ChunkResult.h"
-#include "World/ChunkPipeline.h"
 #include "Render/PendingMesh.h"
 #include "World/RaycastHit.h"
-#include "World/LightEngine.h"
+#include "World/ChunkMeshSnapshot.h"
 #include <unordered_map>
 #include <memory>
 #include <unordered_set>
@@ -23,8 +22,8 @@ class ChunkPipeline;
 
 class World {
 public:
-	World();
-	~World();
+	
+	World() = default;
 
 	using ChunkMap = std::unordered_map<ChunkMapKey, std::unique_ptr<Chunk>>;
 
@@ -83,55 +82,27 @@ public:
 
 	[[nodiscard]] RaycastHit Raycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const;
 	
-	void Tick(float dt, const Camera& cam);
-	void UpdateChunksAround(const Camera& cam);
-
-
 	void DebugChunkInfo();
 
-	bool PopPendingMeshData(PendingMesh& out);
-	void EnqueuePendingChunkKey(uint64_t key) {
-	
-		m_pendingChunkKeys.insert(key);
-	}
-	void EnqueueMeshJobFrom_Outside(Chunk& c);
-	
-	static int Get_UNLOAD_DISTANCE() {
-		return UNLOAD_CHUNKS_DISTANCE;
-	}
-
-	static int Get_LOAD_DISTANCE() {
-		return LOAD_CHUNKS_DISTANCE;
-	}
 
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshot(Chunk& c);
+
+	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(uint64_t key);
+
+
+	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
+	void MarkChunkDirty(Chunk& c) {
+		c.dirty = true;
+	}
+	void MarkChunkUrgentDirty(Chunk& c) {
+		c.dirty = true;
+		c.urgentUpdateMesh = true;
+	}
+
 private:
-
-	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
-	static constexpr int UNLOAD_CHUNKS_DISTANCE = 14;
-
-	static constexpr int MAX_CHUNK_CREATE_PER_TICK = 8;
-	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 10;
 
 private:
 
 	ChunkMap chunks;
-	ChunkPipeline m_chunkPipeline;
-	LightEngine m_lightEngine;
-
-	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
-	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks
-
-	int32_t m_lastStreamCx = std::numeric_limits<int32_t>::max();
-	int32_t m_lastStreamCz = std::numeric_limits<int32_t>::max();
-
-	int32_t curCx = 0;
-	int32_t curCz = 0;
-
-private:
-
-	void ProcessChunkResult();
-
-	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
-
+	
 };

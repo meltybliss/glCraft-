@@ -1,12 +1,30 @@
 #include "Core/Application.h"
 #include <iostream>
 
+
+void Application::UpdateStreamCenter() {
+
+	int32_t centerCx = static_cast<int32_t>(
+		floorDiv(m_camera.position.x, Chunk::CHUNK_WIDTH)
+	);
+
+	int32_t centerCz = static_cast<int32_t>(
+		floorDiv(m_camera.position.z, Chunk::CHUNK_DEPTH)
+	);
+
+
+	m_worldThread.SetDesiredStreamCenter(centerCx, centerCz);
+}
+
 void Application::Run() {
 	
 	float lastTime = (float)glfwGetTime();
 
 	float fpsTimer = 0.f;
 	int frameCount = 0;
+
+
+	m_worldThread.StartLoop();
 
 	while (!glfwWindowShouldClose(m_window)) {
 		float curTime = (float)glfwGetTime();
@@ -18,18 +36,18 @@ void Application::Run() {
 		ProcessInput(dt);
 
 		UpdateRayHit();//raycast
+		UpdateStreamCenter();
 
-		m_world.Tick(dt, m_camera);
 
 		blockAtlas->Bind(0);
 
-		m_wRenderer.RebuildDrityChunkMesh(m_world);
-		m_wRenderer.UploadPendingMeshData(m_world);
+		//m_wRenderer.RebuildDrityChunkMesh(m_world);
+		m_wRenderer.UploadPendingMeshData(m_worldThread);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		baseShader->Use();
-		m_wRenderer.RenderWorld(m_world, *baseShader, m_camera);
+		m_wRenderer.RenderWorld(*baseShader, m_camera);
 
 		RenderOutline();//switch shader
 
@@ -53,6 +71,8 @@ void Application::Run() {
 		}
 
 	}
+
+	m_worldThread.StopLoop();
 
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
@@ -162,7 +182,7 @@ void Application::ProcessInput(float dt) {
 
 
 	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
-		m_world.DebugChunkInfo();
+		//m_world.DebugChunkInfo();
 	}
 }
 
@@ -173,10 +193,23 @@ void Application::OnMouseButton(int button, int action) {
 	}
 
 	if (button == GLFW_MOUSE_BUTTON_LEFT && lastHit.isHit) {
-		m_world.SetBlockGlobal_User(lastHit.hitX, lastHit.hitY, lastHit.hitZ, BlockType::AIR);
+
+		m_worldThread.SubmitEditBlock(
+			lastHit.hitX,
+			lastHit.hitY,
+			lastHit.hitZ,
+			BlockType::AIR
+		);
+
 	}
 	if (button == GLFW_MOUSE_BUTTON_RIGHT && lastHit.isHit) {
-		m_world.SetBlockGlobal_User(lastHit.previousX, lastHit.previousY, lastHit.previousZ, BlockType::STONE);
+
+		m_worldThread.SubmitEditBlock(
+			lastHit.previousX,
+			lastHit.previousY,
+			lastHit.previousZ,
+			BlockType::STONE
+		);
 	}
 }
 
@@ -220,7 +253,7 @@ void Application::UpdateRayHit() {
 
 	float distance = 4.0f;
 
-	lastHit = m_world.Raycast(origin, rayDir, distance);
+	lastHit = m_worldThread.RequestRaycast(origin, rayDir, distance);
 
 }
 

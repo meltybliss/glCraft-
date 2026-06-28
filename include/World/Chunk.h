@@ -3,7 +3,7 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "World/BlockData.h"
-#include "Render/ChunkMesh.h"
+
 #include <array>
 
 
@@ -17,10 +17,12 @@ struct Chunk {
 	int32_t cx = 0;
 	int32_t cz = 0;
 
-	ChunkMesh mesh;
 
-	bool dirty = true;
+	bool dirty = false;
 	bool urgentUpdateMesh = false;
+
+	bool readyForMesh = false;
+	bool meshJobInFlight = false;
 
 	constexpr static int CHUNK_WIDTH = 16;
 	constexpr static int CHUNK_DEPTH = 16;
