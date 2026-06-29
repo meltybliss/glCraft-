@@ -456,7 +456,7 @@ bool LightEngine::Propagate_RemoveSkylight(
 					ny,
 					nz,
 					neighborLight
-					});
+				});
 
 				const int32_t cx = floorDiv(nx, Chunk::CHUNK_WIDTH);
 				const int32_t cz = floorDiv(nz, Chunk::CHUNK_DEPTH);
