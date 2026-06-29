@@ -145,14 +145,145 @@ void WorldThread::ApplyEditBlock(
 	Chunk* c = m_world.GetTargetChunk(cx, cz);
 	if (!c) return;
 
+	const BlockType oldBlock = static_cast<BlockType>(m_world.GetBlockGlobal(x, y, z));
+	const uint8_t oldLight = m_world.GetBlockLightGlobal(x, y, z);
+
+	const bool oldIsAir = (oldBlock == BlockType::AIR);
+	const bool newIsAir = (b == BlockType::AIR);
+
 	m_world.SetBlockGlobal_User(x, y, z, b);
 
-	Start_BlockLightTask(x, y, z, 14);
 
-	//m_world.MarkChunkUrgentDirty(*c);
+	if (oldIsAir && !newIsAir) {
+		Start_RemoveBlockLightTask(
+			x,
+			y,
+			z
+		);
+
+		Start_RemoveSkyLightTask(
+			x,
+			y,
+			z
+		);
+	}
+	else if (!oldIsAir && newIsAir) {
+		Start_BlockLightTaskFromNeighbors(
+			x,
+			y,
+			z
+		);
+
+		Add_SkylightTask(x, y, z);
+	}
+
+
+	m_world.MarkChunkUrgentDirty(*c);
 
 }
 
+
+void WorldThread::Start_BlockLightTaskFromNeighbors(
+	int64_t x,
+	int64_t y,
+	int64_t z
+) {
+
+	static constexpr int dirs[6][3] = {
+		{ 1, 0, 0 },
+		{-1, 0, 0 },
+		{ 0, 1, 0 },
+		{ 0,-1, 0 },
+		{ 0, 0, 1 },
+		{ 0, 0,-1 }
+	};
+
+	uint8_t strongest = 0;
+
+	for (const auto& dir : dirs) {
+		int64_t nx = x + dir[0];
+		int64_t ny = y + dir[1];
+		int64_t nz = z + dir[2];
+
+		if (ny < 0 || ny >= Chunk::CHUNK_HEIGHT) {
+			continue;
+		}
+
+		uint8_t light = m_world.GetBlockLightGlobal(nx, ny, nz);
+
+		if (light <= 0) continue;
+
+		if (strongest < light) {
+			strongest = light;
+		}
+	}
+
+	if (strongest <= 0) return;
+
+	Start_BlockLightTask(
+		x,
+		y,
+		z,
+		strongest - 1
+	);
+
+}
+
+
+void WorldThread::Start_RemoveBlockLightTask(
+	int64_t x,
+	int64_t y,
+	int64_t z
+) {
+	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
+	
+
+	LightTask task;
+
+	task.lightType = LightType::BLOCK;
+	task.phase = Phase::REMOVE;
+
+	m_lightEngine.StartRemoveBlockLightTask(
+		m_world,
+		x,
+		y,
+		z,
+		task
+	);
+
+	if (!task.remove_queue.empty()) {
+		m_lightTasks.push_back(std::move(task));
+	}
+
+}
+
+
+void WorldThread::Start_RemoveSkyLightTask(
+	int64_t x,
+	int64_t y,
+	int64_t z
+
+) {
+
+	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
+
+	LightTask task;
+	task.lightType = LightType::SKY;
+	task.phase = Phase::REMOVE;
+
+	m_lightEngine.StartRemoveSkyLightTask(
+		m_world,
+		x,
+		y,
+		z,
+		task
+	);
+
+	if (!task.remove_queue.empty()) {
+		m_lightTasks.push_back(std::move(task));
+	}
+
+}
 
 void WorldThread::Start_BlockLightTask(
 	int64_t x,
@@ -187,8 +318,95 @@ void WorldThread::Start_BlockLightTask(
 		task
 	);
 
-	m_lightTasks.push_back(task);
+	m_lightTasks.push_back(std::move(task));
 
+}
+
+
+void WorldThread::Start_SkyLightTask(
+	int64_t x,
+	int64_t y,
+	int64_t z,
+	uint8_t level
+) {
+	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) return;
+	if (level == 0) return;
+
+	LightTask task;
+	task.lightType = LightType::SKY;
+
+	m_lightEngine.AddSkyLightLevel(
+		m_world,
+		x,
+		y,
+		z,
+		level,
+		task
+	);
+
+	if (!task.bfs_queue.empty()) {
+		m_lightTasks.push_back(std::move(task));
+	}
+}
+
+
+void WorldThread::Add_SkylightTask(
+	int64_t x,
+	int64_t y,
+	int64_t z
+) {
+
+	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) {
+		return;
+	}
+
+	static constexpr int dirs[6][3] = {
+		{ 1, 0, 0 },
+		{-1, 0, 0 },
+		{ 0, 1, 0 },
+		{ 0,-1, 0 },
+		{ 0, 0, 1 },
+		{ 0, 0,-1 }
+	};
+
+	bool directSky = (y == Chunk::CHUNK_HEIGHT - 1);
+
+	if (!directSky) {
+		const bool aboveIsAir =
+			m_world.GetBlockGlobal(x, y + 1, z) == 0;
+
+		const uint8_t aboveSky =
+			m_world.GetSkyLightGlobal(x, y + 1, z);
+
+		if (aboveIsAir && aboveSky == 15) {
+			// 真上から直射光が来ている。
+			// AddSkyLight 側で「下方向だけ15維持」のルールで流す。
+			Start_SkyLightTask(x, y, z, 15);
+			return;
+		}
+
+	}
+
+	uint8_t strongest = 0;
+
+	for (const auto& dir : dirs) {
+		const int64_t nx = x + dir[0];
+		const int64_t ny = y + dir[1];
+		const int64_t nz = z + dir[2];
+
+		if (ny < 0 || ny >= Chunk::CHUNK_HEIGHT) {
+			continue;
+		}
+
+		strongest = std::max(
+			strongest,
+			m_world.GetSkyLightGlobal(nx, ny, nz)
+		);
+	}
+
+	if (strongest > 1) {
+		Start_SkyLightTask(x, y, z, strongest - 1);
+	}
 }
 
 
@@ -538,8 +756,7 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 		c.readyForMesh = true;
 		return;
 	}
-	// BFSありの場合は、元チャンク自身も最後にmesh更新対象にする
-	//task.touchedChunkKeys.insert(Index(c.cx, c.cz));
+	
 
 	c.readyForMesh = false;
 
@@ -577,24 +794,67 @@ void WorldThread::ProcLightTasks() {
 		}
 
 		if (task.lightType == LightType::SKY) {
-			m_lightEngine.Propagate_SkyLight(
-				m_world,
-				task,
-				usedBudget
-			);
+			if (task.phase == Phase::ADD) {
+				m_lightEngine.Propagate_SkyLight(
+					m_world,
+					task,
+					usedBudget
+				);
+			}
+			else if (task.phase == Phase::REMOVE) {
+				bool ok = m_lightEngine.Propagate_RemoveSkylight(
+					m_world,
+					task,
+					usedBudget
+				);
+
+				if (ok) {
+					m_lightEngine.Propagate_SkyLight(
+						m_world,
+						task,
+						usedBudget
+					);
+				}
+			}
 
 		}
 		else if (task.lightType == LightType::BLOCK) {
 
-			m_lightEngine.Propagate_BlockLight(
-				m_world,
-				task,
-				usedBudget
-			);
+			if (task.phase == Phase::ADD) {
+				m_lightEngine.Propagate_BlockLight(
+					m_world,
+					task,
+					usedBudget
+				);
+			}
+			else if (task.phase == Phase::REMOVE) {
+				bool ok = m_lightEngine.Propagate_RemoveBlockLight(
+					m_world,
+					task,
+					usedBudget
+				);
+
+				if (ok) {
+					m_lightEngine.Propagate_BlockLight(
+						m_world,
+						task,
+						usedBudget
+					);
+				}
+			}
 		}
 
 
-		if (task.bfs_queue.empty()) {
+		bool finished = false;
+
+		if (task.phase == Phase::ADD) {
+			finished = task.bfs_queue.empty();
+		}
+		else if (task.phase == Phase::REMOVE) {
+			finished = task.remove_queue.empty();
+		}
+
+		if (finished) {
 			for (auto& key : task.touchedChunkKeys) {
 
 				Chunk* c = m_world.GetTargetChunkFromKey(key);

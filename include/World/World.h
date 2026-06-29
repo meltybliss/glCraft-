@@ -97,6 +97,8 @@ public:
 	void MarkChunkUrgentDirty(Chunk& c) {
 		c.dirty = true;
 		c.urgentUpdateMesh = true;
+		
+		c.readyForMesh = true;
 	}
 
 private:
