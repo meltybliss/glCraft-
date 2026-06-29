@@ -9,10 +9,32 @@ enum class LightType {
 	BLOCK
 };
 
+enum class Phase {
+	REMOVE,
+	ADD
+};
+
+
+struct RemoveNode {
+
+	int64_t worldX;
+	int64_t worldY;
+	int64_t worldZ;
+
+	uint8_t oldLight;
+
+};
+
 struct LightTask {
 
 	LightType lightType;
 
 	std::queue<LightNode> bfs_queue;
+	std::queue<RemoveNode> remove_queue;
 	std::unordered_set<uint64_t> touchedChunkKeys;
+
+
+
+	Phase phase = Phase::ADD;
+
 };

@@ -117,7 +117,39 @@ private:
 		int64_t y,
 		int64_t z,
 		uint8_t level);
+	void Start_RemoveBlockLightTask(
+		int64_t x,
+		int64_t y,
+		int64_t z
+	);
+
+	void Start_RemoveSkyLightTask(
+		int64_t x,
+		int64_t y,
+		int64_t z
+
+	);
+
 	void Start_SkyLightTaskForNewChunk(Chunk& c);
+	void Start_BlockLightTaskFromNeighbors(
+		int64_t x,
+		int64_t y,
+		int64_t z
+	);
+
+	void Start_SkyLightTask(
+		int64_t x,
+		int64_t y,
+		int64_t z,
+		uint8_t level
+	);
+
+	void Add_SkylightTask(
+		int64_t x,
+		int64_t y,
+		int64_t z
+	);
+
 	void ProcLightTasks();
 
 	void DispatchDirtyMeshJobs();

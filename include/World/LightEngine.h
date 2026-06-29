@@ -21,6 +21,15 @@ public:
 		LightTask& task
 	);
 
+	static void AddSkyLightLevel(
+		World& w,
+		int64_t worldX,
+		int64_t worldY,
+		int64_t worldZ,
+		uint8_t level,
+		LightTask& task
+	);
+
 	static void Propagate_BlockLight(
 		World& w,
 		LightTask& task,
@@ -35,8 +44,36 @@ public:
 		const int taskBudget
 	);
 
+	static bool Propagate_RemoveBlockLight(
+		World& w,
+		LightTask& task,
+		const int taskBudget
+	);
+
+	static bool Propagate_RemoveSkylight(
+		World& w,
+		LightTask& task,
+		const int taskBudget
+	);
 
 	static void CreateSkylightLeakSeeds(Chunk& c, LightTask& task);
+
+	static void StartRemoveBlockLightTask(
+		World& w,
+		int64_t worldX,
+		int64_t worldY,
+		int64_t worldZ,
+		LightTask& task
+
+	);
+
+	static void StartRemoveSkyLightTask(
+		World& w,
+		int64_t worldX,
+		int64_t worldY,
+		int64_t worldZ,
+		LightTask& task
+	);
 
 private:
 
