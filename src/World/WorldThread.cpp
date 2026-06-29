@@ -865,7 +865,7 @@ void WorldThread::ProcLightTasks() {
 					c->urgentUpdateMesh = true;
 				}
 
-
+				m_world.MarkNeighborChunksDirty(c->cx, c->cz);
 
 			}
 
