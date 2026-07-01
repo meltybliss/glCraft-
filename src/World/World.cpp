@@ -211,7 +211,84 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	// center lights
 	snapshot->centerLights = c.blockLights;
-	snapshot->centerSkyLights = c.skyLights; // これが抜けていた
+	snapshot->centerSkyLights = c.skyLights; 
+
+	//leftFront
+	{
+		uint64_t key = Index(cx - 1, cz + 1);
+
+		auto it = chunks.find(key);
+
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
+			snapshot->hasLeftFront = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				unsigned int b =
+					neighbor->GetBlock(Chunk::CHUNK_WIDTH, y, 0);
+
+				snapshot->leftFrontCorner[y] = (BlockType)b;
+			}
+
+		}
+	}
+
+	//leftBack
+	{
+		uint64_t key = Index(cx - 1, cz - 1);
+		auto it = chunks.find(key);
+
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
+			snapshot->hasLeftBack = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				unsigned int b =
+					neighbor->GetBlock(Chunk::CHUNK_WIDTH, y, Chunk::CHUNK_DEPTH);
+
+				snapshot->leftBackCorner[y] = (BlockType)b;
+			}
+
+		}
+	}
+
+	//rightFront
+	{
+		uint64_t key = Index(cx + 1, cz + 1);
+		auto it = chunks.find(key);
+
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
+			snapshot->hasRightFront = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				unsigned int b =
+					neighbor->GetBlock(0, y, 0);
+
+				snapshot->rightFrontCorner[y] = (BlockType)b;
+			}
+
+		}
+	}
+
+	//rightBack
+	{
+		uint64_t key = Index(cx + 1, cz - 1);
+		auto it = chunks.find(key);
+
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
+			snapshot->hasRightBack = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				unsigned int b =
+					neighbor->GetBlock(0, y, Chunk::CHUNK_DEPTH);
+
+				snapshot->rightBackCorner[y] = (BlockType)b;
+			}
+
+		}
+	}
 
 	// left
 	{
@@ -352,6 +429,82 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	snapshot->centerSkyLights = c.skyLights;
 
+	//leftFront
+	{
+		uint64_t key = Index(cx - 1, cz + 1);
+
+		auto it = chunks.find(key);
+
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
+			snapshot->hasLeftFront = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				unsigned int b =
+					neighbor->GetBlock(Chunk::CHUNK_WIDTH, y, 0);
+
+				snapshot->leftFrontCorner[y] = (BlockType)b;
+			}
+
+		}
+	}
+
+	//leftBack
+	{
+		uint64_t key = Index(cx - 1, cz - 1);
+		auto it = chunks.find(key);
+
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
+			snapshot->hasLeftBack = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				unsigned int b =
+					neighbor->GetBlock(Chunk::CHUNK_WIDTH, y, Chunk::CHUNK_DEPTH);
+
+				snapshot->leftBackCorner[y] = (BlockType)b;
+			}
+
+		}
+	}
+
+	//rightFront
+	{
+		uint64_t key = Index(cx + 1, cz + 1);
+		auto it = chunks.find(key);
+
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
+			snapshot->hasRightFront = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				unsigned int b =
+					neighbor->GetBlock(0, y, 0);
+
+				snapshot->rightFrontCorner[y] = (BlockType)b;
+			}
+
+		}
+	}
+
+	//rightBack
+	{
+		uint64_t key = Index(cx + 1, cz - 1);
+		auto it = chunks.find(key);
+
+		if (it != chunks.end() && it->second) {
+			Chunk* neighbor = it->second.get();
+			snapshot->hasRightBack = true;
+
+			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+				unsigned int b =
+					neighbor->GetBlock(0, y, Chunk::CHUNK_DEPTH);
+
+				snapshot->rightBackCorner[y] = (BlockType)b;
+			}
+
+		}
+	}
 
 	//left
 	{

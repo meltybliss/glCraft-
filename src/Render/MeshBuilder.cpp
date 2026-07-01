@@ -1,4 +1,5 @@
 #include "Render/MeshBuilder.h"
+#include <iostream>
 
 MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 	MeshData result;
@@ -260,6 +261,161 @@ void MeshBuilder::AddFace(
 }
 
 
+
+BlockType MeshBuilder::GetBlockForAO(int x, int y, int z, ChunkMeshSnapshot& snapShot) {
+
+	if (y >= Chunk::CHUNK_HEIGHT || y < 0) {
+		return BlockType::AIR;
+	}
+
+	if (x < Chunk::CHUNK_WIDTH && x >= 0 &&
+		z < Chunk::CHUNK_DEPTH && z >= 0) {
+
+		return snapShot.GetBlockFromCenter(x, y, z);
+
+	}
+
+	if (x >= Chunk::CHUNK_WIDTH &&
+		z >= Chunk::CHUNK_DEPTH) {
+
+		return snapShot.GetBlockFromCorner(y, true, true);
+	}
+	else if (x >= Chunk::CHUNK_WIDTH &&
+			 z < 0) {
+		return snapShot.GetBlockFromCorner(y, true, false);
+	}
+	else if (x >= Chunk::CHUNK_WIDTH) {
+		return snapShot.GetBlockFromYZArray(y, z, true);
+	}
+
+	if (x < 0 &&
+		z >= Chunk::CHUNK_DEPTH) {
+
+		return snapShot.GetBlockFromCorner(y, false, true);
+
+	}
+	else if (x < 0 &&
+		z < 0) {
+
+		return snapShot.GetBlockFromCorner(y, false, false);
+
+	}
+	else if (x < 0) {
+		return snapShot.GetBlockFromYZArray(y, z, false);
+	}
+
+	if (z >= Chunk::CHUNK_DEPTH) {
+		return snapShot.GetBlockFromYXArray(y, x, true);
+	}
+	else if (z < 0) {
+		return snapShot.GetBlockFromYXArray(y, x, false);
+	}
+
+
+	return BlockType::AIR;
+}
+
+
+float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot, const BlockFace face, AoPoint point) {
+	
+	int sx = 0;
+	int sy = 0;
+	int sz = 0;
+
+	switch (point) {
+	case AoPoint::LeftFrontBottom:
+		sx = -1; sy = -1; sz = -1;
+		break;
+
+	case AoPoint::LeftFrontTop:
+		sx = -1; sy = +1; sz = -1;
+		break;
+
+	case AoPoint::RightFrontBottom:
+		sx = +1; sy = -1; sz = -1;
+		break;
+
+	case AoPoint::RightFrontTop:
+		sx = +1; sy = +1; sz = -1;
+		break;
+
+	case AoPoint::LeftBackBottom:
+		sx = -1; sy = -1; sz = +1;
+		break;
+
+	case AoPoint::LeftBackTop:
+		sx = -1; sy = +1; sz = +1;
+		break;
+
+	case AoPoint::RightBackBottom:
+		sx = +1; sy = -1; sz = +1;
+		break;
+
+	case AoPoint::RightBackTop:
+		sx = +1; sy = +1; sz = +1;
+		break;
+	}
+
+	auto opaqueAt = [&](int dx, int dy, int dz) {
+		return isOpaque(GetBlockForAO(
+			x + dx,
+			y + dy,
+			z + dz,
+			snapShot
+		));
+	};
+
+	bool side1 = false;
+	bool side2 = false;
+	bool corner = false;
+
+	switch (face) {
+	case BlockFace::TOP:
+		side1 = opaqueAt(sx, +1, 0);
+		side2 = opaqueAt(0, +1, sz);
+		corner = opaqueAt(sx, +1, sz);
+		break;
+
+	case BlockFace::BOTTOM:
+		side1 = opaqueAt(sx, -1, 0);
+		side2 = opaqueAt(0, -1, sz);
+		corner = opaqueAt(sx, -1, sz);
+		break;
+
+	case BlockFace::LEFT:
+		side1 = opaqueAt(-1, sy, 0);
+		side2 = opaqueAt(-1, 0, sz);
+		corner = opaqueAt(-1, sy, sz);
+		break;
+
+	case BlockFace::RIGHT:
+		side1 = opaqueAt(+1, sy, 0);
+		side2 = opaqueAt(+1, 0, sz);
+		corner = opaqueAt(+1, sy, sz);
+		break;
+
+	case BlockFace::FRONT:
+		side1 = opaqueAt(sx, 0, -1);
+		side2 = opaqueAt(0, sy, -1);
+		corner = opaqueAt(sx, sy, -1);
+		break;
+
+	case BlockFace::BACK:
+		side1 = opaqueAt(sx, 0, +1);
+		side2 = opaqueAt(0, sy, +1);
+		corner = opaqueAt(sx, sy, +1);
+		break;
+	}
+
+	
+
+	float value = GetAOBrightness(side1, side2, corner);
+
+	return value;
+
+}
+
+
 void MeshBuilder::AddLightToVertex(
 	int x, 
 	int y, 
@@ -272,11 +428,12 @@ void MeshBuilder::AddLightToVertex(
 
 
 
-	unsigned int base = static_cast<unsigned int>(v.size() / 7);
+	unsigned int base = static_cast<unsigned int>(v.size() / 8);
 
 
 	const auto& centerLights = snapShot.centerLights;
 	const auto& centerSkyLights = snapShot.centerSkyLights;
+
 
 	uint8_t next_lightLevel = 0;
 	uint8_t next_skyLightLevel = 0;
@@ -285,11 +442,22 @@ void MeshBuilder::AddLightToVertex(
 	int ty = y;
 	int tz = z;
 
+	
+
+	std::array<float, 4> AO{};
+
 	switch (face) {
 		case BlockFace::RIGHT: {
 			tx = x + 1;//target x
 			ty = y;
 			tz = z;
+
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::RIGHT, AoPoint::RightBackTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::RIGHT, AoPoint::RightBackBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::RIGHT, AoPoint::RightFrontBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::RIGHT, AoPoint::RightFrontTop);
+
+			
 
 			break;
 
@@ -298,6 +466,11 @@ void MeshBuilder::AddLightToVertex(
 			tx = x - 1;
 			ty = y;
 			tz = z;
+
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::LEFT, AoPoint::LeftFrontTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::LEFT, AoPoint::LeftFrontBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::LEFT, AoPoint::LeftBackBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::LEFT, AoPoint::LeftBackTop);
 
 		
 			break;
@@ -308,6 +481,11 @@ void MeshBuilder::AddLightToVertex(
 			ty = y;
 			tz = z - 1;
 
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::FRONT, AoPoint::RightFrontTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::FRONT, AoPoint::RightFrontBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::FRONT, AoPoint::LeftFrontBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::FRONT, AoPoint::LeftFrontTop);
+
 			break;
 		}
 		case BlockFace::BACK: {
@@ -315,6 +493,11 @@ void MeshBuilder::AddLightToVertex(
 			ty = y;
 			tz = z + 1;
 
+
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::BACK, AoPoint::LeftBackTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::BACK, AoPoint::LeftBackBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::BACK, AoPoint::RightBackBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::BACK, AoPoint::RightBackTop);
 
 			break;
 
@@ -324,6 +507,10 @@ void MeshBuilder::AddLightToVertex(
 			ty = y + 1;
 			tz = z;
 
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::TOP, AoPoint::LeftBackTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::TOP, AoPoint::RightBackTop);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::TOP, AoPoint::RightFrontTop);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::TOP, AoPoint::LeftFrontTop);
 			
 			break;
 
@@ -332,6 +519,11 @@ void MeshBuilder::AddLightToVertex(
 			tx = x;
 			ty = y - 1;
 			tz = z;
+
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::BOTTOM, AoPoint::LeftFrontBottom);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::BOTTOM, AoPoint::RightFrontBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::BOTTOM, AoPoint::RightBackBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::BOTTOM, AoPoint::LeftBackBottom);
 
 			
 			break;
@@ -372,7 +564,8 @@ void MeshBuilder::AddLightToVertex(
 			buffer.begin() + point,
 			{
 				static_cast<float>(next_lightLevel),
-				static_cast<float>(next_skyLightLevel)
+				static_cast<float>(next_skyLightLevel),
+				AO[i-1]
 			}
 		);
 
@@ -385,4 +578,43 @@ void MeshBuilder::AddLightToVertex(
 		{ base + 1, base + 2, base + 3,
 		 base + 0, base + 1, base + 3 }
 	);
+}
+
+
+int MeshBuilder::GetAOLevel(
+	bool side1Opaque,
+	bool side2Opaque,
+	bool cornerOpaque
+) {
+
+	if (side1Opaque && side2Opaque) {
+		return 3;
+	}
+
+	return
+		static_cast<int>(side1Opaque) +
+		static_cast<int>(side2Opaque) +
+		static_cast<int>(cornerOpaque);
+
+}
+
+
+float MeshBuilder::GetAOBrightness(
+	bool side1Opaque,
+	bool side2Opaque,
+	bool cornerOpaque
+) {
+
+	int level = GetAOLevel(
+		side1Opaque,
+		side2Opaque,
+		cornerOpaque
+	);
+
+
+	float occlusion = static_cast<float>(level) / 3.0f;
+
+	constexpr float AO_STRENGTH = 0.42f;
+
+	return 1.0f - occlusion * AO_STRENGTH;
 }
