@@ -1,4 +1,5 @@
 #include "Render/MeshBuilder.h"
+#include <iostream>
 
 MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 	MeshData result;
@@ -406,7 +407,11 @@ float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot
 		break;
 	}
 
-	return GetAOBrightness(side1, side2, corner);
+	
+
+	float value = GetAOBrightness(side1, side2, corner);
+
+	return value;
 
 }
 
@@ -609,7 +614,7 @@ float MeshBuilder::GetAOBrightness(
 
 	float occlusion = static_cast<float>(level) / 3.0f;
 
-	constexpr float AO_STRENGTH = 0.32f;
+	constexpr float AO_STRENGTH = 0.42f;
 
 	return 1.0f - occlusion * AO_STRENGTH;
 }

@@ -54,7 +54,7 @@ private:
 	static UV GetTileVertexUV(uint8_t index, int tileX, int tileY);
 	
 	static bool isOpaque(BlockType b) {
-		return b == BlockType::AIR;
+		return b != BlockType::AIR;
 	}
 
 	static int GetAOLevel(
