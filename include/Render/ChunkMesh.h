@@ -76,7 +76,7 @@ struct ChunkMesh {
 		);
 		glEnableVertexAttribArray(2);
 
-
+		//sky light level
 		glVertexAttribPointer(
 			3,
 			1,
@@ -86,6 +86,18 @@ struct ChunkMesh {
 			(void*)(6 * sizeof(float))
 		);
 		glEnableVertexAttribArray(3);
+
+
+		//AO
+		/*glVertexAttribPointer(
+			4,
+			1,
+			GL_FLOAT,
+			GL_FALSE,
+			stribe,
+			(void*)(7 * sizeof(float))
+		);
+		glEnableVertexAttribArray(4);*/
 
 
 		glBindVertexArray(0);//unbind

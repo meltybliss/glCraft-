@@ -2,6 +2,7 @@
 #include "World/Chunk.h"
 #include <array>
 #include <cassert>
+#include <type_traits>
 
 struct ChunkMeshSnapshot {
 	ChunkMeshSnapshot() {
@@ -53,28 +54,97 @@ struct ChunkMeshSnapshot {
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> front;
 	std::array<BlockType, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> back;
 
+	std::array<BlockType, Chunk::CHUNK_HEIGHT> rightFrontCorner;
+	std::array<BlockType, Chunk::CHUNK_HEIGHT> rightBackCorner;
+	std::array<BlockType, Chunk::CHUNK_HEIGHT> leftFrontCorner;
+	std::array<BlockType, Chunk::CHUNK_HEIGHT> leftBackCorner;
+
+
 	// block light
 	std::array<uint8_t, Chunk::CHUNK_SIZE> centerLights{};
 
-	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> leftLights{};
-	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> rightLights{};
-	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> frontLights{};
-	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> backLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_DEPTH> leftLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_DEPTH> rightLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> frontLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> backLights{};
 
 	// sky light
 	std::array<uint8_t, Chunk::CHUNK_SIZE> centerSkyLights{};
 
-	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> leftSkyLights{};
-	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> rightSkyLights{};
-	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> frontSkyLights{};
-	std::array<uint8_t, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> backSkyLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_DEPTH> leftSkyLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_DEPTH> rightSkyLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> frontSkyLights{};
+	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> backSkyLights{};
 
 
 	bool hasLeft = false;
 	bool hasRight = false;
 	bool hasFront = false;
 	bool hasBack = false;
+
+	bool hasLeftFront = false;
+	bool hasLeftBack = false;
+	bool hasRightFront = false;
+	bool hasRightBack = false;
 	
+	BlockType GetBlockFromCenter(int x, int y, int z) {
+
+		return center[IndexXYZ(x, y, z)];
+	}
+
+
+	BlockType GetBlockFromCorner(int y, bool isRight, bool isFront) {
+
+		if (y >= Chunk::CHUNK_HEIGHT || y < 0) {
+			return BlockType::AIR;
+		}
+
+		if (isRight) {
+			if (isFront) {
+				if (!hasRightFront) return BlockType::AIR;
+				return rightFrontCorner[y];
+			}
+			else {
+				if (!hasRightBack) return BlockType::AIR;
+				return rightBackCorner[y];
+			}
+		}
+		else {
+			if (isFront) {
+				if (!hasLeftFront) return BlockType::AIR;
+				return leftFrontCorner[y];
+			}
+			else {
+				if (!hasLeftBack) return BlockType::AIR;
+				return leftBackCorner[y];
+			}
+		}
+
+	}
+
+	BlockType GetBlockFromYXArray(int y, int x, bool isFront) {
+
+		if (isFront) {
+
+			return front[IndexYX(y, x)];
+		}
+		else {
+			return back[IndexYX(y, x)];
+		}
+
+
+	}
+
+	BlockType GetBlockFromYZArray(int y, int z, bool isRight) {
+
+		if (isRight) {
+			return right[IndexYZ(y, z)];
+		}
+		else {
+			return left[IndexYZ(y, z)];
+		}
+	}
+
 
 	unsigned int GetBoundaryBlock(int x, int y, int z, bool did_X_exceed) {
 		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
@@ -197,4 +267,7 @@ struct ChunkMeshSnapshot {
 		return x + Chunk::CHUNK_WIDTH * y;
 	}
 
+	static int IndexXYZ(int x, int y, int z) {
+		return x + Chunk::CHUNK_WIDTH * z + y * Chunk::CHUNK_WIDTH * Chunk::CHUNK_DEPTH;
+	}
 };

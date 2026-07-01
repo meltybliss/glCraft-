@@ -20,6 +20,19 @@ enum class UVPoint {
 	RightTop
 };
 
+
+enum class AoPoint {
+	LeftFrontBottom,
+	LeftFrontTop,
+	LeftBackTop,
+	LeftBackBottom,
+
+	RightFrontBottom,
+	RightFrontTop,
+	RightBackTop,
+	RightBackBottom
+};
+
 class MeshBuilder {
 public:
 
@@ -34,11 +47,29 @@ private:
 	static constexpr int atlasPixelHeight = 256;
 private:
 	
+	static BlockType GetBlockForAO(int x, int y, int z, ChunkMeshSnapshot& snapShot);
 
 	static UV GetUV(const BlockType b, uint8_t index, BlockFace face);
 	static UV GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face);
 	static UV GetTileVertexUV(uint8_t index, int tileX, int tileY);
+	
+	static bool isOpaque(BlockType b) {
+		return b == BlockType::AIR;
+	}
+
+	static int GetAOLevel(
+		bool side1Opaque,
+		bool side2Opaque,
+		bool cornerOpaque
+	);
+
+	static float GetAOBrightness(
+		bool side1Opaque,
+		bool side2Opaque,
+		bool cornerOpaque
+	);
 
 	static void AddFace(std::array<std::array<float, 3>, 4>& pointsSet, const BlockType b, const BlockFace face, std::vector<float>& buffer);
+	static float BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot, AoPoint point);
 	static void AddLightToVertex(int x, int y, int z, const BlockFace face, std::vector<float>& buffer, std::vector<float>& v, std::vector<unsigned int>& indices, ChunkMeshSnapshot& snapShot);
 };
