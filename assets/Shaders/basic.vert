@@ -4,10 +4,12 @@ layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec2 aTexCoord;
 layout (location = 2) in float aBlockLightLevel;
 layout (location = 3) in float aSkyLightLevel;
+layout (location = 4) in float aAO;
 
 out vec2 TexCoord;
 out float vBlockLightLevel;
 out float vSkyLightLevel;
+out float vAO;
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -19,4 +21,5 @@ void main() {
 	TexCoord = aTexCoord;
 	vBlockLightLevel = aBlockLightLevel;
 	vSkyLightLevel = aSkyLightLevel;
+	vAO = aAO;
 }

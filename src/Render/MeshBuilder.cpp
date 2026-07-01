@@ -315,85 +315,99 @@ BlockType MeshBuilder::GetBlockForAO(int x, int y, int z, ChunkMeshSnapshot& sna
 }
 
 
-float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot, AoPoint point) {
+float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot, const BlockFace face, AoPoint point) {
 	
-	const auto& left = snapShot.left;
-	const auto& right = snapShot.right;
-	const auto& front = snapShot.front;
-	const auto& back = snapShot.back;
+	int sx = 0;
+	int sy = 0;
+	int sz = 0;
 
-	int leftNx = x - 1;
-	int rightNx = x + 1;
-	int frontNz = z + 1;
-	int backNz = z - 1;
-	
+	switch (point) {
+	case AoPoint::LeftFrontBottom:
+		sx = -1; sy = -1; sz = -1;
+		break;
+
+	case AoPoint::LeftFrontTop:
+		sx = -1; sy = +1; sz = -1;
+		break;
+
+	case AoPoint::RightFrontBottom:
+		sx = +1; sy = -1; sz = -1;
+		break;
+
+	case AoPoint::RightFrontTop:
+		sx = +1; sy = +1; sz = -1;
+		break;
+
+	case AoPoint::LeftBackBottom:
+		sx = -1; sy = -1; sz = +1;
+		break;
+
+	case AoPoint::LeftBackTop:
+		sx = -1; sy = +1; sz = +1;
+		break;
+
+	case AoPoint::RightBackBottom:
+		sx = +1; sy = -1; sz = +1;
+		break;
+
+	case AoPoint::RightBackTop:
+		sx = +1; sy = +1; sz = +1;
+		break;
+	}
+
+	auto opaqueAt = [&](int dx, int dy, int dz) {
+		return isOpaque(GetBlockForAO(
+			x + dx,
+			y + dy,
+			z + dz,
+			snapShot
+		));
+	};
+
 	bool side1 = false;
 	bool side2 = false;
 	bool corner = false;
-	switch (point) {
-		case AoPoint::LeftFrontBottom: {
-			side1 = isOpaque(GetBlockForAO(x - 1, y - 1, z, snapShot));//leftBottom
-			side2 = isOpaque(GetBlockForAO(x, y - 1, z + 1, snapShot));//frontBottom
-			corner = isOpaque(GetBlockForAO(x - 1, y - 1, z + 1, snapShot));//leftfrontBottom
 
-			break;
-		}
-		case AoPoint::LeftFrontTop: {
-			side1 = isOpaque(GetBlockForAO(x - 1, y + 1, z, snapShot));//leftTop
-			side2 = isOpaque(GetBlockForAO(x, y + 1, z + 1, snapShot));//frontTop
-			corner = isOpaque(GetBlockForAO(x - 1, y + 1, z + 1, snapShot));//leftFrontTop
+	switch (face) {
+	case BlockFace::TOP:
+		side1 = opaqueAt(sx, +1, 0);
+		side2 = opaqueAt(0, +1, sz);
+		corner = opaqueAt(sx, +1, sz);
+		break;
 
-			break;
+	case BlockFace::BOTTOM:
+		side1 = opaqueAt(sx, -1, 0);
+		side2 = opaqueAt(0, -1, sz);
+		corner = opaqueAt(sx, -1, sz);
+		break;
 
-		}
-		case AoPoint::RightFrontBottom: {
-			side1 = isOpaque(GetBlockForAO(x + 1, y - 1, z, snapShot));//rightBottom
-			side2 = isOpaque(GetBlockForAO(x, y - 1, z + 1, snapShot));//frontBottom
-			corner = isOpaque(GetBlockForAO(x + 1, y - 1, z + 1, snapShot));//rightFrontBottom
+	case BlockFace::LEFT:
+		side1 = opaqueAt(-1, sy, 0);
+		side2 = opaqueAt(-1, 0, sz);
+		corner = opaqueAt(-1, sy, sz);
+		break;
 
-			break;
-		}
-		case AoPoint::RightFrontTop: {
-			side1 = isOpaque(GetBlockForAO(x + 1, y + 1, z, snapShot));//rightTop
-			side2 = isOpaque(GetBlockForAO(x, y + 1, z + 1, snapShot));//frontTop
-			corner = isOpaque(GetBlockForAO(x + 1, y + 1, z + 1, snapShot));//rightFrontTop
+	case BlockFace::RIGHT:
+		side1 = opaqueAt(+1, sy, 0);
+		side2 = opaqueAt(+1, 0, sz);
+		corner = opaqueAt(+1, sy, sz);
+		break;
 
-			break;
+	case BlockFace::FRONT:
+		side1 = opaqueAt(sx, 0, -1);
+		side2 = opaqueAt(0, sy, -1);
+		corner = opaqueAt(sx, sy, -1);
+		break;
 
-		}
-		case AoPoint::LeftBackBottom: {
-			side1 = isOpaque(GetBlockForAO(x - 1, y - 1, z, snapShot));//leftBottom
-			side2 = isOpaque(GetBlockForAO(x, y - 1, z - 1, snapShot));//backBottom
-			corner = isOpaque(GetBlockForAO(x - 1, y - 1, z - 1, snapShot));//leftBackBottom
-
-			break;
-		}
-		case AoPoint::LeftBackTop: {
-			side1 = isOpaque(GetBlockForAO(x - 1, y + 1, z, snapShot));//leftTop
-			side2 = isOpaque(GetBlockForAO(x, y + 1, z - 1, snapShot));//backTop
-			corner = isOpaque(GetBlockForAO(x - 1, y + 1, z - 1, snapShot));//leftBackTop
-
-			break;
-		}
-		case AoPoint::RightBackBottom: {
-			side1 = isOpaque(GetBlockForAO(x + 1, y - 1, z, snapShot));//rightBottom
-			side2 = isOpaque(GetBlockForAO(x, y - 1, z - 1, snapShot));//backBottom
-			corner = isOpaque(GetBlockForAO(x + 1, y - 1, z - 1, snapShot));//rightBackBottom
-
-			break;
-		}
-
-		case AoPoint::RightBackTop: {
-			side1 = isOpaque(GetBlockForAO(x + 1, y + 1, z, snapShot));//rightTop
-			side2 = isOpaque(GetBlockForAO(x, y + 1, z - 1, snapShot));//backTop
-			corner = isOpaque(GetBlockForAO(x + 1, y + 1, z - 1, snapShot));//rightBackTop
-
-			break;
-		}
+	case BlockFace::BACK:
+		side1 = opaqueAt(sx, 0, +1);
+		side2 = opaqueAt(0, sy, +1);
+		corner = opaqueAt(sx, sy, +1);
+		break;
 	}
 
-
 	return GetAOBrightness(side1, side2, corner);
+
 }
 
 
@@ -409,7 +423,7 @@ void MeshBuilder::AddLightToVertex(
 
 
 
-	unsigned int base = static_cast<unsigned int>(v.size() / 7);
+	unsigned int base = static_cast<unsigned int>(v.size() / 8);
 
 
 	const auto& centerLights = snapShot.centerLights;
@@ -423,11 +437,22 @@ void MeshBuilder::AddLightToVertex(
 	int ty = y;
 	int tz = z;
 
+	
+
+	std::array<float, 4> AO{};
+
 	switch (face) {
 		case BlockFace::RIGHT: {
 			tx = x + 1;//target x
 			ty = y;
 			tz = z;
+
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::RIGHT, AoPoint::RightBackTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::RIGHT, AoPoint::RightBackBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::RIGHT, AoPoint::RightFrontBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::RIGHT, AoPoint::RightFrontTop);
+
+			
 
 			break;
 
@@ -436,6 +461,11 @@ void MeshBuilder::AddLightToVertex(
 			tx = x - 1;
 			ty = y;
 			tz = z;
+
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::LEFT, AoPoint::LeftFrontTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::LEFT, AoPoint::LeftFrontBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::LEFT, AoPoint::LeftBackBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::LEFT, AoPoint::LeftBackTop);
 
 		
 			break;
@@ -446,6 +476,11 @@ void MeshBuilder::AddLightToVertex(
 			ty = y;
 			tz = z - 1;
 
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::FRONT, AoPoint::RightFrontTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::FRONT, AoPoint::RightFrontBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::FRONT, AoPoint::LeftFrontBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::FRONT, AoPoint::LeftFrontTop);
+
 			break;
 		}
 		case BlockFace::BACK: {
@@ -453,6 +488,11 @@ void MeshBuilder::AddLightToVertex(
 			ty = y;
 			tz = z + 1;
 
+
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::BACK, AoPoint::LeftBackTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::BACK, AoPoint::LeftBackBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::BACK, AoPoint::RightBackBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::BACK, AoPoint::RightBackTop);
 
 			break;
 
@@ -462,6 +502,10 @@ void MeshBuilder::AddLightToVertex(
 			ty = y + 1;
 			tz = z;
 
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::TOP, AoPoint::LeftBackTop);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::TOP, AoPoint::RightBackTop);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::TOP, AoPoint::RightFrontTop);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::TOP, AoPoint::LeftFrontTop);
 			
 			break;
 
@@ -470,6 +514,11 @@ void MeshBuilder::AddLightToVertex(
 			tx = x;
 			ty = y - 1;
 			tz = z;
+
+			AO[0] = BuildAOLight(x, y, z, snapShot, BlockFace::BOTTOM, AoPoint::LeftFrontBottom);
+			AO[1] = BuildAOLight(x, y, z, snapShot, BlockFace::BOTTOM, AoPoint::RightFrontBottom);
+			AO[2] = BuildAOLight(x, y, z, snapShot, BlockFace::BOTTOM, AoPoint::RightBackBottom);
+			AO[3] = BuildAOLight(x, y, z, snapShot, BlockFace::BOTTOM, AoPoint::LeftBackBottom);
 
 			
 			break;
@@ -510,7 +559,8 @@ void MeshBuilder::AddLightToVertex(
 			buffer.begin() + point,
 			{
 				static_cast<float>(next_lightLevel),
-				static_cast<float>(next_skyLightLevel)
+				static_cast<float>(next_skyLightLevel),
+				AO[i-1]
 			}
 		);
 
@@ -559,7 +609,7 @@ float MeshBuilder::GetAOBrightness(
 
 	float occlusion = static_cast<float>(level) / 3.0f;
 
-	constexpr float AO_STRENGTH = 0.45f;
+	constexpr float AO_STRENGTH = 0.32f;
 
 	return 1.0f - occlusion * AO_STRENGTH;
 }

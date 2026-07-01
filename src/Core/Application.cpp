@@ -178,7 +178,7 @@ void Application::ProcessInput(float dt) {
 	if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
 		m_camera.position += m_camera.worldUp * velocity;
 	}
-	if (glfwGetKey(m_window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+	if (glfwGetKey(m_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
 		m_camera.position -= m_camera.worldUp * velocity;
 	}
 

@@ -81,8 +81,8 @@ private:
 	std::deque<uint64_t> m_pendingDeleteMeshKey;
 private:
 
-	static constexpr int LOAD_CHUNKS_DISTANCE = 3;
-	static constexpr int UNLOAD_CHUNKS_DISTANCE = 5;
+	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
+	static constexpr int UNLOAD_CHUNKS_DISTANCE = 14;
 
 	static constexpr int MAX_CHUNK_CREATE_PER_TICK = 8;
 	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 10;
