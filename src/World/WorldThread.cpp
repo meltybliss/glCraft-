@@ -155,10 +155,13 @@ void WorldThread::ApplyEditBlock(
 
 
 	if (oldIsAir && !newIsAir) {
-		Start_RemoveBlockLightTask(
+
+
+		Start_RemoveBlockLightTask_WithEmissionTask(
 			x,
 			y,
-			z
+			z,
+			GetEmission(b)
 		);
 
 		Start_RemoveSkyLightTask(
@@ -166,15 +169,30 @@ void WorldThread::ApplyEditBlock(
 			y,
 			z
 		);
+
 	}
 	else if (!oldIsAir && newIsAir) {
-		Start_BlockLightTaskFromNeighbors(
-			x,
-			y,
-			z
-		);
+
+		if (isLightSourceBlock(oldBlock)) {
+			Start_RemoveBlockLightTask(
+				x,
+				y,
+				z
+			);
+		}
+		else {
+
+			Start_BlockLightTaskFromNeighbors(
+				x,
+				y,
+				z
+			);
+		}
+
 
 		Add_SkylightTask(x, y, z);
+
+		
 	}
 
 
@@ -242,6 +260,36 @@ void WorldThread::Start_RemoveBlockLightTask(
 
 	task.lightType = LightType::BLOCK;
 	task.phase = Phase::REMOVE;
+
+	m_lightEngine.StartRemoveBlockLightTask(
+		m_world,
+		x,
+		y,
+		z,
+		task
+	);
+
+	if (!task.remove_queue.empty()) {
+		m_lightTasks.push_back(std::move(task));
+	}
+
+}
+
+
+void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
+	int64_t x,
+	int64_t y,
+	int64_t z,
+	uint8_t emissionAfterRemove
+) {
+	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
+
+
+	LightTask task;
+
+	task.lightType = LightType::BLOCK;
+	task.phase = Phase::REMOVE;
+	task.emissionAfterRemove = emissionAfterRemove;
 
 	m_lightEngine.StartRemoveBlockLightTask(
 		m_world,
@@ -840,6 +888,7 @@ void WorldThread::ProcLightTasks() {
 						task,
 						usedBudget
 					);
+
 				}
 			}
 		}
