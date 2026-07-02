@@ -5,6 +5,7 @@
 #include <queue>
 #include <unordered_set>
 #include <iostream>
+#include <string>
 
 void LightEngine::AddLightLevel(
 	World& w,
@@ -121,6 +122,7 @@ void LightEngine::Propagate_BlockLight(
 		int64_t x = baseNode.x;
 		int64_t y = baseNode.y;
 		int64_t z = baseNode.z;
+
 
 
 		for (const auto& dir : dirs) {
@@ -348,20 +350,24 @@ void LightEngine::StartRemoveBlockLightTask(
 
 	);
 
-	if (oldLight == 0) return;
 
-	w.SetBlockLightGlobal(worldX, worldY, worldZ, 0);
+	if (oldLight > 0) {
+		w.SetBlockLightGlobal(worldX, worldY, worldZ, 0);
 
-	task.remove_queue.push({
-		worldX,
-		worldY,
-		worldZ,
-		oldLight
+		task.remove_queue.push({
+			worldX,
+			worldY,
+			worldZ,
+			oldLight
 
-	});
+		});
+	}
 
 
 	if (task.emissionAfterRemove > 0) {
+
+		w.SetBlockLightGlobal(worldX, worldY, worldZ, task.emissionAfterRemove);
+
 		task.bfs_queue.push({
 			worldX,
 			worldY,
@@ -369,10 +375,17 @@ void LightEngine::StartRemoveBlockLightTask(
 			task.emissionAfterRemove
 
 		});
+
 	}
 
 	task.lightType = LightType::BLOCK;
-	task.phase = Phase::REMOVE;
+
+	if (!task.remove_queue.empty()) {
+		task.phase = Phase::REMOVE;
+	}
+	else if (task.emissionAfterRemove > 0) {
+		task.phase = Phase::ADD;
+	}
 }
 
 
@@ -583,11 +596,10 @@ bool LightEngine::Propagate_RemoveBlockLight(
 		}
 	}
 
-
 	if (!task.remove_queue.empty()) {
 		return false;
 	}
-
+	
 	task.phase = Phase::ADD;
 	return true;
 

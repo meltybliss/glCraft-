@@ -260,6 +260,7 @@ void WorldThread::Start_RemoveBlockLightTask(
 
 	task.lightType = LightType::BLOCK;
 	task.phase = Phase::REMOVE;
+	task.emissionAfterRemove = 0;
 
 	m_lightEngine.StartRemoveBlockLightTask(
 		m_world,
@@ -287,6 +288,7 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 
 	LightTask task;
 
+
 	task.lightType = LightType::BLOCK;
 	task.phase = Phase::REMOVE;
 	task.emissionAfterRemove = emissionAfterRemove;
@@ -299,7 +301,7 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 		task
 	);
 
-	if (!task.remove_queue.empty()) {
+	if (!task.remove_queue.empty() || !task.bfs_queue.empty()) {
 		m_lightTasks.push_back(std::move(task));
 	}
 
@@ -427,8 +429,7 @@ void WorldThread::Add_SkylightTask(
 			m_world.GetSkyLightGlobal(x, y + 1, z);
 
 		if (aboveIsAir && aboveSky == 15) {
-			// 真上から直射光が来ている。
-			// AddSkyLight 側で「下方向だけ15維持」のルールで流す。
+			
 			Start_SkyLightTask(x, y, z, 15);
 			return;
 		}
@@ -883,6 +884,7 @@ void WorldThread::ProcLightTasks() {
 				);
 
 				if (ok) {
+					
 					m_lightEngine.Propagate_BlockLight(
 						m_world,
 						task,

@@ -130,7 +130,7 @@ bool Application::InitGL() {
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	blockAtlas = std::make_unique<Texture>("assets/textures/block_atlas.png");
+	blockAtlas = std::make_unique<Texture>("assets/textures/block_atlas2.png");
 	
 
 	//Initialise shaders that require Init
