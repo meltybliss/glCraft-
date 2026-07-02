@@ -48,7 +48,9 @@ private:
 	std::optional<Shader> selectionOutlineShader;
 
 	std::unique_ptr<Texture> blockAtlas;
-
+	std::unique_ptr<Texture> torch_top;
+	std::unique_ptr<Texture> torch_bottom;
+	std::unique_ptr<Texture> torch_side;
 
 	RaycastHit lastHit;
 };
