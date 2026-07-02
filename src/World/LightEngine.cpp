@@ -360,6 +360,17 @@ void LightEngine::StartRemoveBlockLightTask(
 
 	});
 
+
+	if (task.emissionAfterRemove > 0) {
+		task.bfs_queue.push({
+			worldX,
+			worldY,
+			worldZ,
+			task.emissionAfterRemove
+
+		});
+	}
+
 	task.lightType = LightType::BLOCK;
 	task.phase = Phase::REMOVE;
 }
@@ -434,11 +445,14 @@ bool LightEngine::Propagate_RemoveSkylight(
 
 			if (ny < 0 || ny >= Chunk::CHUNK_HEIGHT) continue;
 
-			if (w.GetBlockGlobal(nx, ny, nz) != 0) continue;
+			unsigned int neighborBlock = w.GetBlockGlobal(nx, ny, nz);
+			if (neighborBlock != 0) continue;
 
 			const uint8_t neighborLight =
 				w.GetSkyLightGlobal(nx, ny, nz);
 
+
+			
 			if (neighborLight == 0) continue;
 
 			const bool isDirectSkyBelow =
@@ -516,10 +530,25 @@ bool LightEngine::Propagate_RemoveBlockLight(
 
 			if (ny < 0 || ny >= Chunk::CHUNK_HEIGHT) continue;
 
-			if (w.GetBlockGlobal(nx, ny, nz) != 0) continue;
+			unsigned int neighborBlock = w.GetBlockGlobal(nx, ny, nz);
 
 			const uint8_t neighborLight =
 				w.GetBlockLightGlobal(nx, ny, nz);
+
+			if (GetEmission((BlockType)neighborBlock) != 0) {
+				task.bfs_queue.push({
+					nx,
+					ny,
+					nz,
+					neighborLight
+				});
+
+				continue;
+			}
+
+
+			if (neighborBlock != 0) continue;
+
 
 			if (neighborLight == 0) continue;
 

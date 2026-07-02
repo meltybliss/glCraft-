@@ -47,15 +47,14 @@ private:
 	static constexpr int atlasPixelHeight = 256;
 private:
 	
+	static void BuildTorchMesh(int x, int y, int z, std::vector<float>& v, std::vector<unsigned int>& indices, ChunkMeshSnapshot& snapShot);
+
 	static BlockType GetBlockForAO(int x, int y, int z, ChunkMeshSnapshot& snapShot);
 
 	static UV GetUV(const BlockType b, uint8_t index, BlockFace face);
 	static UV GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face);
 	static UV GetTileVertexUV(uint8_t index, int tileX, int tileY);
 	
-	static bool isOpaque(BlockType b) {
-		return b != BlockType::AIR;
-	}
 
 	static int GetAOLevel(
 		bool side1Opaque,
@@ -71,5 +70,5 @@ private:
 
 	static void AddFace(std::array<std::array<float, 3>, 4>& pointsSet, const BlockType b, const BlockFace face, std::vector<float>& buffer);
 	static float BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot, const BlockFace face, AoPoint point);
-	static void AddLightToVertex(int x, int y, int z, const BlockFace face, std::vector<float>& buffer, std::vector<float>& v, std::vector<unsigned int>& indices, ChunkMeshSnapshot& snapShot);
+	static void AddLightToVertex(int x, int y, int z, const BlockFace face, const BlockType type, std::vector<float>& buffer, std::vector<float>& v, std::vector<unsigned int>& indices, ChunkMeshSnapshot& snapShot);
 };

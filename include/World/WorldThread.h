@@ -123,6 +123,13 @@ private:
 		int64_t z
 	);
 
+	void Start_RemoveBlockLightTask_WithEmissionTask(
+		int64_t x,
+		int64_t y,
+		int64_t z,
+		uint8_t emissionAfterRemove
+	);
+
 	void Start_RemoveSkyLightTask(
 		int64_t x,
 		int64_t y,
