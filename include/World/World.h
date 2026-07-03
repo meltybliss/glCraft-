@@ -91,6 +91,8 @@ public:
 
 
 	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
+	void MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz);
+
 	void MarkChunkDirty(Chunk& c) {
 		c.dirty = true;
 	}

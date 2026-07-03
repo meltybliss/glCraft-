@@ -210,7 +210,7 @@ void Application::OnMouseButton(int button, int action) {
 			lastHit.previousX,
 			lastHit.previousY,
 			lastHit.previousZ,
-			BlockType::GLOWSTONE
+			BlockType::TORCH
 		);
 	}
 }
