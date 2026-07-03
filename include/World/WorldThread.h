@@ -73,7 +73,9 @@ private:
 	std::mutex pendingDeleteMeshMutex;
 
 	std::deque<WorldCommand> m_commands;
+
 	std::deque<LightTask> m_lightTasks;
+	std::deque<LightTask> m_urgentLightTasks;
 
 
 	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
@@ -116,48 +118,57 @@ private:
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		uint8_t level);
+		uint8_t level,
+		bool urgent = false
+	);
 	void Start_RemoveBlockLightTask(
 		int64_t x,
 		int64_t y,
-		int64_t z
+		int64_t z,
+		bool urgent = false
 	);
 
 	void Start_RemoveBlockLightTask_WithEmissionTask(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		uint8_t emissionAfterRemove
+		uint8_t emissionAfterRemove,
+		bool urgent = false
 	);
 
 	void Start_RemoveSkyLightTask(
 		int64_t x,
 		int64_t y,
-		int64_t z
-
+		int64_t z,
+		bool urgent = false
 	);
 
 	void Start_SkyLightTaskForNewChunk(Chunk& c);
 	void Start_BlockLightTaskFromNeighbors(
 		int64_t x,
 		int64_t y,
-		int64_t z
+		int64_t z,
+		bool urgent = false
 	);
 
 	void Start_SkyLightTask(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		uint8_t level
+		uint8_t level,
+		bool urgent
 	);
 
 	void Add_SkylightTask(
 		int64_t x,
 		int64_t y,
-		int64_t z
+		int64_t z,
+		bool urgent
 	);
 
 	void ProcLightTasks();
+	void ProcessLightTask(LightTask& task, int& budget);
+	void FinishLightTask(LightTask& task);
 
 	void DispatchDirtyMeshJobs();
 
