@@ -72,7 +72,6 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 					m_genChunkResult.push_back({
 						key,
 						std::move(c)
-
 					});
 				}
 

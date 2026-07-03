@@ -33,7 +33,7 @@ public:
 	static void Propagate_BlockLight(
 		World& w,
 		LightTask& task,
-		const int taskBudget
+		int& taskBudget
 	);
 
 	static void InitializeSkylightForChunk(Chunk& c);
@@ -41,19 +41,19 @@ public:
 	static void Propagate_SkyLight(
 		World& w,
 		LightTask& task,
-		const int taskBudget
+		int& taskBudget
 	);
 
 	static bool Propagate_RemoveBlockLight(
 		World& w,
 		LightTask& task,
-		const int taskBudget
+		int& taskBudget
 	);
 
 	static bool Propagate_RemoveSkylight(
 		World& w,
 		LightTask& task,
-		const int taskBudget
+		int& taskBudget
 	);
 
 	static void CreateSkylightLeakSeeds(Chunk& c, LightTask& task);

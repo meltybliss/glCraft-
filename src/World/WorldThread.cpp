@@ -161,13 +161,15 @@ void WorldThread::ApplyEditBlock(
 			x,
 			y,
 			z,
-			GetEmission(b)
+			GetEmission(b),
+			true
 		);
 
 		Start_RemoveSkyLightTask(
 			x,
 			y,
-			z
+			z,
+			true
 		);
 
 	}
@@ -177,7 +179,8 @@ void WorldThread::ApplyEditBlock(
 			Start_RemoveBlockLightTask(
 				x,
 				y,
-				z
+				z,
+				true
 			);
 		}
 		else {
@@ -185,12 +188,13 @@ void WorldThread::ApplyEditBlock(
 			Start_BlockLightTaskFromNeighbors(
 				x,
 				y,
-				z
+				z,
+				true
 			);
 		}
 
 
-		Add_SkylightTask(x, y, z);
+		Add_SkylightTask(x, y, z, true);
 
 		
 	}
@@ -204,7 +208,8 @@ void WorldThread::ApplyEditBlock(
 void WorldThread::Start_BlockLightTaskFromNeighbors(
 	int64_t x,
 	int64_t y,
-	int64_t z
+	int64_t z,
+	bool urgent
 ) {
 
 	static constexpr int dirs[6][3] = {
@@ -242,7 +247,8 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 		x,
 		y,
 		z,
-		strongest - 1
+		strongest - 1,
+		urgent
 	);
 
 }
@@ -251,7 +257,8 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 void WorldThread::Start_RemoveBlockLightTask(
 	int64_t x,
 	int64_t y,
-	int64_t z
+	int64_t z,
+	bool urgent
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 	
@@ -270,8 +277,17 @@ void WorldThread::Start_RemoveBlockLightTask(
 		task
 	);
 
-	if (!task.remove_queue.empty()) {
+	if (task.remove_queue.empty()) return;
+
+	if (!urgent) {
+		
 		m_lightTasks.push_back(std::move(task));
+		
+	}
+	else {
+		
+		m_urgentLightTasks.push_back(std::move(task));
+		
 	}
 
 }
@@ -281,7 +297,8 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	uint8_t emissionAfterRemove
+	uint8_t emissionAfterRemove,
+	bool urgent
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
@@ -302,7 +319,12 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 	);
 
 	if (!task.remove_queue.empty() || !task.bfs_queue.empty()) {
-		m_lightTasks.push_back(std::move(task));
+		if (urgent) {
+			m_urgentLightTasks.push_back(std::move(task));
+		}
+		else {
+			m_lightTasks.push_back(std::move(task));
+		}
 	}
 
 }
@@ -311,7 +333,8 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 void WorldThread::Start_RemoveSkyLightTask(
 	int64_t x,
 	int64_t y,
-	int64_t z
+	int64_t z,
+	bool urgent
 
 ) {
 
@@ -329,8 +352,12 @@ void WorldThread::Start_RemoveSkyLightTask(
 		task
 	);
 
-	if (!task.remove_queue.empty()) {
+	if (task.remove_queue.empty()) return;
+	if (!urgent) {
 		m_lightTasks.push_back(std::move(task));
+	}
+	else {
+		m_urgentLightTasks.push_back(std::move(task));
 	}
 
 }
@@ -339,7 +366,8 @@ void WorldThread::Start_BlockLightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	uint8_t level
+	uint8_t level,
+	bool urgent
 
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
@@ -368,7 +396,12 @@ void WorldThread::Start_BlockLightTask(
 		task
 	);
 
-	m_lightTasks.push_back(std::move(task));
+	if (urgent) {
+		m_urgentLightTasks.push_back(std::move(task));
+	}
+	else {
+		m_lightTasks.push_back(std::move(task));
+	}
 
 }
 
@@ -377,7 +410,8 @@ void WorldThread::Start_SkyLightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	uint8_t level
+	uint8_t level,
+	bool urgent
 ) {
 	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) return;
 	if (level == 0) return;
@@ -394,7 +428,12 @@ void WorldThread::Start_SkyLightTask(
 		task
 	);
 
-	if (!task.bfs_queue.empty()) {
+	if (task.bfs_queue.empty()) return;
+	
+	if (urgent) {
+		m_urgentLightTasks.push_back(std::move(task));
+	}
+	else {
 		m_lightTasks.push_back(std::move(task));
 	}
 }
@@ -403,7 +442,8 @@ void WorldThread::Start_SkyLightTask(
 void WorldThread::Add_SkylightTask(
 	int64_t x,
 	int64_t y,
-	int64_t z
+	int64_t z,
+	bool urgent
 ) {
 
 	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) {
@@ -430,7 +470,7 @@ void WorldThread::Add_SkylightTask(
 
 		if (aboveIsAir && aboveSky == 15) {
 			
-			Start_SkyLightTask(x, y, z, 15);
+			Start_SkyLightTask(x, y, z, 15, urgent);
 			return;
 		}
 
@@ -454,7 +494,7 @@ void WorldThread::Add_SkylightTask(
 	}
 
 	if (strongest > 1) {
-		Start_SkyLightTask(x, y, z, strongest - 1);
+		Start_SkyLightTask(x, y, z, strongest - 1, urgent);
 	}
 }
 
@@ -790,6 +830,7 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 	LightTask task;
 	task.lightType = LightType::SKY;
 
+
 	int64_t wx = static_cast<int64_t>(c.cx) * Chunk::CHUNK_WIDTH;
 	int64_t wz = static_cast<int64_t>(c.cz) * Chunk::CHUNK_DEPTH;
 
@@ -809,25 +850,150 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 
 	c.readyForMesh = false;
 
-
+	
 	m_lightTasks.push_back(task);
+	
 }
 
 
 
+void WorldThread::ProcessLightTask(LightTask& task, int& budget) {
+	if (task.lightType == LightType::SKY) {
+		if (task.phase == Phase::ADD) {
+			m_lightEngine.Propagate_SkyLight(
+				m_world,
+				task,
+				budget
+			);
+		}
+		else if (task.phase == Phase::REMOVE) {
+			bool ok = m_lightEngine.Propagate_RemoveSkylight(
+				m_world,
+				task,
+				budget
+			);
+
+			if (ok) {
+				m_lightEngine.Propagate_SkyLight(
+					m_world,
+					task,
+					budget
+				);
+			}
+		}
+
+	}
+	else if (task.lightType == LightType::BLOCK) {
+
+		if (task.phase == Phase::ADD) {
+			m_lightEngine.Propagate_BlockLight(
+				m_world,
+				task,
+				budget
+			);
+		}
+		else if (task.phase == Phase::REMOVE) {
+			bool ok = m_lightEngine.Propagate_RemoveBlockLight(
+				m_world,
+				task,
+				budget
+			);
+
+			if (ok) {
+
+				m_lightEngine.Propagate_BlockLight(
+					m_world,
+					task,
+					budget
+				);
+
+			}
+		}
+	}
+
+
+}
+
+
+
+void WorldThread::FinishLightTask(LightTask& task) {
+	for (auto& key : task.touchedChunkKeys) {
+
+		Chunk* c = m_world.GetTargetChunkFromKey(key);
+		c->dirty = true;
+		c->readyForMesh = true;
+
+		if (task.lightType == LightType::BLOCK) {
+			c->urgentUpdateMesh = true;
+		}
+
+		m_world.MarkNeighborChunksUrgentDirty(c->cx, c->cz);
+
+	}
+
+
+}
+
+
 void WorldThread::ProcLightTasks() {
 
-	if (m_lightTasks.empty()) return;
+	if (m_lightTasks.empty() && m_urgentLightTasks.empty()) return;
 
 	int budget = MAX_LIGHT_PROPAGATE_BFS_PER_TICK;
 
-	const size_t taskCount = m_lightTasks.size();
+	const size_t taskCount = m_lightTasks.size() + m_urgentLightTasks.size();
 	const int weightSum = 2 + (taskCount - 1);
 	const int normalBudget = budget / weightSum;
 	int frontBudget = normalBudget * 2;
 
 	int remainder = budget - normalBudget * (taskCount + 1);
 	frontBudget += remainder;
+
+	bool frontBudgetUsed = false;
+
+	{
+		size_t i = 0;
+
+		while (i < m_urgentLightTasks.size() &&
+			budget > 0 &&
+			!m_urgentLightTasks.empty()) {
+
+			int usedBudget = normalBudget;
+			auto& task = m_urgentLightTasks[i];
+
+			if (i == 0) {
+				if (!frontBudgetUsed) {
+					usedBudget = frontBudget;
+					frontBudgetUsed = true;
+				}
+			}
+
+			ProcessLightTask(task, usedBudget);
+
+
+			bool finished = false;
+
+			if (task.phase == Phase::ADD) {
+				finished = task.bfs_queue.empty();
+			}
+			else if (task.phase == Phase::REMOVE) {
+				finished = task.remove_queue.empty();
+			}
+
+			if (finished) {
+				
+				FinishLightTask(task);
+
+				m_urgentLightTasks.erase(m_urgentLightTasks.begin() + i);
+				continue;//erase‚µ‚Ä‚é‚Ì‚Å‹l‚ß‚é‚Ì‚Å++i”ò‚Î‚·
+			}
+
+
+			++i;
+
+		}
+
+	}
 
 	size_t i = 0;
 	while (i < m_lightTasks.size() &&
@@ -839,61 +1005,15 @@ void WorldThread::ProcLightTasks() {
 
 		
 		if (i == 0) {
-			usedBudget = frontBudget;
-		}
-
-		if (task.lightType == LightType::SKY) {
-			if (task.phase == Phase::ADD) {
-				m_lightEngine.Propagate_SkyLight(
-					m_world,
-					task,
-					usedBudget
-				);
-			}
-			else if (task.phase == Phase::REMOVE) {
-				bool ok = m_lightEngine.Propagate_RemoveSkylight(
-					m_world,
-					task,
-					usedBudget
-				);
-
-				if (ok) {
-					m_lightEngine.Propagate_SkyLight(
-						m_world,
-						task,
-						usedBudget
-					);
-				}
-			}
-
-		}
-		else if (task.lightType == LightType::BLOCK) {
-
-			if (task.phase == Phase::ADD) {
-				m_lightEngine.Propagate_BlockLight(
-					m_world,
-					task,
-					usedBudget
-				);
-			}
-			else if (task.phase == Phase::REMOVE) {
-				bool ok = m_lightEngine.Propagate_RemoveBlockLight(
-					m_world,
-					task,
-					usedBudget
-				);
-
-				if (ok) {
-					
-					m_lightEngine.Propagate_BlockLight(
-						m_world,
-						task,
-						usedBudget
-					);
-
-				}
+			if (!frontBudgetUsed) {
+				usedBudget = frontBudget;
+				frontBudgetUsed = true;
 			}
 		}
+
+
+		ProcessLightTask(task, usedBudget);
+
 
 
 		bool finished = false;
@@ -906,19 +1026,8 @@ void WorldThread::ProcLightTasks() {
 		}
 
 		if (finished) {
-			for (auto& key : task.touchedChunkKeys) {
-
-				Chunk* c = m_world.GetTargetChunkFromKey(key);
-				c->dirty = true;
-				c->readyForMesh = true;
-
-				if (task.lightType == LightType::BLOCK) {
-					c->urgentUpdateMesh = true;
-				}
-
-				m_world.MarkNeighborChunksUrgentDirty(c->cx, c->cz);
-
-			}
+			
+			FinishLightTask(task);
 
 			m_lightTasks.erase(m_lightTasks.begin() + i);
 			continue;//erase‚µ‚Ä‚é‚Ì‚Å‹l‚ß‚é‚Ì‚Å++i”ò‚Î‚·

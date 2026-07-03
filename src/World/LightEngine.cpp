@@ -86,12 +86,11 @@ void LightEngine::AddSkyLightLevel(
 void LightEngine::Propagate_BlockLight(
 	World& w,
 	LightTask& task,
-	const int taskBudget
+	int& taskBudget
 ) {
 
 	//
 
-	int curBudget = taskBudget;
 
 	auto& touchedChunkKey = task.touchedChunkKeys;
 	auto& bfs_queue = task.bfs_queue;
@@ -107,12 +106,12 @@ void LightEngine::Propagate_BlockLight(
 		{0, 0, -1}
 	};
 
-	while (!bfs_queue.empty() && curBudget > 0) {
+	while (!bfs_queue.empty() && taskBudget > 0) {
 		LightNode baseNode = bfs_queue.front();
 
 		bfs_queue.pop();
 
-		curBudget--;
+		taskBudget--;
 
 		if (baseNode.lightLevel <= 1) {
 			continue;
@@ -249,10 +248,9 @@ void LightEngine::CreateSkylightLeakSeeds(Chunk& c, LightTask& task) {
 void LightEngine::Propagate_SkyLight(
 	World& w,
 	LightTask& task,
-	const int taskBudget
+	int& taskBudget
 ) {
 
-	int curBudget = taskBudget;
 
 	auto& bfs_queue = task.bfs_queue;
 	auto& touchedChunkKeys = task.touchedChunkKeys;
@@ -268,7 +266,7 @@ void LightEngine::Propagate_SkyLight(
 	};
 
 
-	while (!bfs_queue.empty() && curBudget > 0) {
+	while (!bfs_queue.empty() && taskBudget > 0) {
 		LightNode targetNode = bfs_queue.front();
 		uint8_t oldLightLevel = targetNode.lightLevel;
 		
@@ -276,7 +274,7 @@ void LightEngine::Propagate_SkyLight(
 
 
 
-		curBudget--;
+		taskBudget--;
 
 
 		if (oldLightLevel <= 1) {
@@ -429,10 +427,9 @@ void LightEngine::StartRemoveSkyLightTask(
 bool LightEngine::Propagate_RemoveSkylight(
 	World& w,
 	LightTask& task,
-	const int taskBudget
+	int& taskBudget
 ) {
 
-	int budget = taskBudget;
 	auto& bfs = task.remove_queue;
 
 
@@ -445,8 +442,8 @@ bool LightEngine::Propagate_RemoveSkylight(
 		{ 0, 0,-1 }
 	};
 
-	while (!bfs.empty() && budget > 0) {
-		budget--;
+	while (!bfs.empty() && taskBudget > 0) {
+		taskBudget--;
 
 		const RemoveNode removeNode = bfs.front();
 		bfs.pop();
@@ -514,10 +511,10 @@ bool LightEngine::Propagate_RemoveSkylight(
 bool LightEngine::Propagate_RemoveBlockLight(
 	World& w,
 	LightTask& task,
-	const int taskBudget
+	int& taskBudget
 ) {
 
-	int budget = taskBudget;
+	
 	auto& bfs = task.remove_queue;
 
 	static constexpr int dirs[6][3] = {
@@ -530,8 +527,8 @@ bool LightEngine::Propagate_RemoveBlockLight(
 	};
 
 
-	while (!bfs.empty() && budget > 0) {
-		budget--;
+	while (!bfs.empty() && taskBudget > 0) {
+		taskBudget--;
 
 		const RemoveNode removeNode = bfs.front();
 		bfs.pop();
