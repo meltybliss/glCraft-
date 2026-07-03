@@ -1076,7 +1076,7 @@ void WorldThread::Wake() {
 
 bool WorldThread::HasImmediateTask() {
 
-	return !m_lightTasks.empty() || m_streamNeedsUpdate;
+	return !m_lightTasks.empty() || !m_urgentLightTasks.empty() || m_streamNeedsUpdate;
 
 }
 
