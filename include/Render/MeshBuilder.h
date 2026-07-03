@@ -54,7 +54,7 @@ private:
 	static UV GetUV(const BlockType b, uint8_t index, BlockFace face);
 	static UV GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face);
 	static UV GetTileVertexUV(uint8_t index, int tileX, int tileY);
-	
+	static UV GetTileVertexUVForTorch(uint8_t index, int tileX, int tileY);
 
 	static int GetAOLevel(
 		bool side1Opaque,

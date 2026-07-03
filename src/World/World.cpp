@@ -197,6 +197,39 @@ void World::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 	}
 }
 
+void World::MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz) {
+	for (int32_t x = cx - 1; x <= cx + 1; ++x) {
+		if (x == cx) continue;
+
+		uint64_t key = Index(x, cz);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
+
+		it->second->urgentUpdateMesh = true;
+		it->second->dirty = true;
+		it->second->readyForMesh = true;
+	}
+
+	for (int32_t z = cz - 1; z <= cz + 1; ++z) {
+		if (z == cz) continue;
+
+		uint64_t key = Index(cx, z);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
+
+		it->second->urgentUpdateMesh = true;
+		it->second->dirty = true;
+		it->second->readyForMesh = true;
+	}
+
+}
+
 
 std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 

@@ -2,7 +2,7 @@
 #include <iostream>
 
 
-/*void MeshBuilder::BuildTorchMesh(
+void MeshBuilder::BuildTorchMesh(
 	int x,
 	int y,
 	int z,
@@ -10,23 +10,23 @@
 	std::vector<unsigned int>& indices,
 	ChunkMeshSnapshot& snapShot) {
 
-	constexpr float minX = 0.38f;
-	constexpr float maxX = 0.62f;
-	constexpr float minZ = 0.38f;
-	//constexpr float maxZ = 0.62f;
+	constexpr float halfWidthX = BLOCK_SIZE / 16.0f;
+	constexpr float halfWidthZ = BLOCK_SIZE / 16.0f;
 
 	constexpr float minY = 0.0f;
 	constexpr float maxY = 0.75f;
 
+	float centerX = (float)x + 0.5f;
+	float centerZ = (float)z + 0.5f;
 	{
 		//left
-		std::array<std::array<float, 3>, 4> pointsSet{
-			{x - minX, y + maxY, z - minZ},
-			{x - minX, y, z - minZ},
-			{x - minX, y, z + minZ},
-			{x - minX, y + maxY, z + minZ}
+		std::array<std::array<float, 3>, 4> pointsSet{ {
+			{centerX - halfWidthX, (float)y + maxY, centerZ - halfWidthZ},
+			{centerX - halfWidthX, (float)y, centerZ - halfWidthZ},
+			{centerX - halfWidthX, (float)y, centerZ + halfWidthZ},
+			{centerX - halfWidthX, (float)y + maxY, centerZ + halfWidthZ}
 
-		};
+		} };
 
 		std::vector<float> vertices_buffer;
 		AddFace(pointsSet, BlockType::TORCH, BlockFace::LEFT, vertices_buffer);
@@ -36,13 +36,13 @@
 	//right
 	{
 
-		std::array<std::array<float, 3>, 4> pointsSet{
-			{x + minX, y + maxY, z + minZ},
-			{x + minX, y, z + minZ},
-			{x + minX, y, z - minZ},
-			{x + minX, y + maxY, z - minZ}
+		std::array<std::array<float, 3>, 4> pointsSet{ {
+			{centerX + halfWidthX, (float)y + maxY, centerZ + halfWidthZ},
+			{centerX + halfWidthX, (float)y, centerZ + halfWidthZ},
+			{centerX + halfWidthX, (float)y, centerZ - halfWidthZ},
+			{centerX + halfWidthX, (float)y + maxY, centerZ - halfWidthZ}
 
-		};
+		} };
 
 		std::vector<float> vertices_buffer;
 		AddFace(pointsSet, BlockType::TORCH, BlockFace::RIGHT, vertices_buffer);
@@ -53,12 +53,12 @@
 
 	//front
 	{
-		std::array<std::array<float, 3>, 4> pointsSet{
-			{x - minX, y + maxY, z + minZ},
-			{x - minX, y, z + minZ},
-			{x + minX, y, z + minZ},
-			{x + minX, y + maxY, z + minZ}
-		};
+		std::array<std::array<float, 3>, 4> pointsSet{ {
+			{ centerX + halfWidthX, (float)y + maxY, centerZ - halfWidthZ },
+			{ centerX + halfWidthX, (float)y,        centerZ - halfWidthZ },
+			{ centerX - halfWidthX, (float)y,        centerZ - halfWidthZ },
+			{ centerX - halfWidthX, (float)y + maxY, centerZ - halfWidthZ }
+		} };
 
 		std::vector<float> vertices_buffer;
 		AddFace(pointsSet, BlockType::TORCH, BlockFace::FRONT, vertices_buffer);
@@ -70,13 +70,12 @@
 	//back
 
 	{
-		std::array<std::array<float, 3>, 4> pointsSet{
-			{x - minX, y + maxY, z - minZ},
-			{x - minX, y, z - minZ},
-			{x + minX, y, z - minZ},
-			{x + minX, y + maxY, z - minZ}
-
-		};
+		std::array<std::array<float, 3>, 4> pointsSet{ {
+			{ centerX - halfWidthX, (float)y + maxY, centerZ + halfWidthZ },
+			{ centerX - halfWidthX, (float)y,        centerZ + halfWidthZ },
+			{ centerX + halfWidthX, (float)y,        centerZ + halfWidthZ },
+			{ centerX + halfWidthX, (float)y + maxY, centerZ + halfWidthZ }
+		} };
 
 		std::vector<float> vertices_buffer;
 		AddFace(pointsSet, BlockType::TORCH, BlockFace::BACK, vertices_buffer);
@@ -86,13 +85,12 @@
 
 	//top
 	{
-		std::array<std::array<float, 3>, 4> pointsSet{
-			{x - minX, y + maxY, z + minZ},
-			{x - minX, y + maxY, z - minZ},
-			{x + minX, y + maxY, z - minZ},
-			{x + minX, y + maxY, z + minZ}
-
-		};
+		std::array<std::array<float, 3>, 4> pointsSet{ {
+			{ centerX - halfWidthX, (float)y + maxY, centerZ - halfWidthZ },
+			{ centerX - halfWidthX, (float)y + maxY, centerZ + halfWidthZ },
+			{ centerX + halfWidthX, (float)y + maxY, centerZ + halfWidthZ },
+			{ centerX + halfWidthX, (float)y + maxY, centerZ - halfWidthZ }
+		} };
 
 		std::vector<float> vertices_buffer;
 		AddFace(pointsSet, BlockType::TORCH, BlockFace::TOP, vertices_buffer);
@@ -102,24 +100,23 @@
 
 
 	//bottom
-	{
-		std::array<std::array<float, 3>, 4> pointsSet{
-			{x - minX, y, z + minZ},
-			{x - minX, y, z - minZ},
-			{x + minX, y, z - minZ},
-			{x + minX, y, z + minZ}
+	/*{
+		std::array<std::array<float, 3>, 4> pointsSet{ {
+			{centerX - halfWidthX, (float)y, centerZ + halfWidthZ},
+			{centerX - halfWidthX, (float)y, centerZ - halfWidthZ},
+			{centerX + halfWidthX, (float)y, centerZ - halfWidthZ},
+			{centerX + halfWidthX, (float)y, centerZ + halfWidthZ}
 
-		};
+		} };
 
 		std::vector<float> vertices_buffer;
 		AddFace(pointsSet, BlockType::TORCH, BlockFace::BOTTOM, vertices_buffer);
 		AddLightToVertex(x, y, z, BlockFace::BOTTOM, BlockType::TORCH, vertices_buffer, v, indices, snapShot);
 
 
-	}
+	}*/
 
-}*/
-
+}
 
 MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 	MeshData result;
@@ -152,6 +149,28 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 		return true;
 	};
 
+	auto CheckNeighborTorch = [&](int x, int y, int z) -> bool {
+		if (y < 0 || y >= Chunk::CHUNK_HEIGHT) {
+			return true;
+		}
+
+		if (Chunk::InBounds(x, y, z)) {
+
+			return center[Chunk::Index(x, y, z)] == BlockType::TORCH;
+		}
+
+		if (x < 0 || x >= Chunk::CHUNK_WIDTH) {
+			return snapshot.GetBoundaryBlock(x, y, z, true) == static_cast<unsigned int>(BlockType::TORCH);
+		}
+		else if (z < 0 || z >= Chunk::CHUNK_DEPTH) {
+			return snapshot.GetBoundaryBlock(x, y, z, false) == static_cast<unsigned int>(BlockType::TORCH);
+		}
+
+
+		return false;
+	};
+
+
 	for (int y = 0; y < Chunk::CHUNK_HEIGHT; y++) {
 		for (int x = 0; x < Chunk::CHUNK_WIDTH; x++) {
 			for (int z = 0; z < Chunk::CHUNK_DEPTH; z++) {
@@ -168,7 +187,8 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 				//1----2
 
 				if ((BlockType)b != BlockType::TORCH) {
-					if (CheckNeighborAir(x - 1, y, z)) {
+
+					{
 						std::array<std::array<float, 3>, 4> pointsSet = { {
 							{ (float)x, (float)y + s, (float)z     }, // 0: LeftTop
 							{ (float)x, (float)y,     (float)z     }, // 1: LeftBottom
@@ -178,10 +198,21 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 						std::vector<float> vertices_buffer;
 
-						AddFace(pointsSet, (BlockType)b, BlockFace::LEFT, vertices_buffer);
-						AddLightToVertex(x, y, z, BlockFace::LEFT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+						if (!CheckNeighborTorch(x - 1, y, z)) {
+							if (CheckNeighborAir(x - 1, y, z)) {
+								AddFace(pointsSet, (BlockType)b, BlockFace::LEFT, vertices_buffer);
+								AddLightToVertex(x, y, z, BlockFace::LEFT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+							}
+						}
+						else {
+							AddFace(pointsSet, (BlockType)b, BlockFace::LEFT, vertices_buffer);
+							AddLightToVertex(x, y, z, BlockFace::LEFT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+						
+						}
+
 					}
-					if (CheckNeighborAir(x + 1, y, z)) {
+
+					{
 						std::array<std::array<float, 3>, 4> pointsSet = { {
 							{ (float)x + s, (float)y + s, (float)z + s }, // 0: LeftTop
 							{ (float)x + s, (float)y,     (float)z + s }, // 1: LeftBottom
@@ -191,11 +222,24 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 						std::vector<float> vertices_buffer;
 
-						AddFace(pointsSet, (BlockType)b, BlockFace::RIGHT, vertices_buffer);
-						AddLightToVertex(x, y, z, BlockFace::RIGHT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+
+						if (!CheckNeighborTorch(x + 1, y, z)) {
+							if (CheckNeighborAir(x + 1, y, z)) {
+
+								AddFace(pointsSet, (BlockType)b, BlockFace::RIGHT, vertices_buffer);
+								AddLightToVertex(x, y, z, BlockFace::RIGHT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+							}
+						}
+						else {
+							AddFace(pointsSet, (BlockType)b, BlockFace::RIGHT, vertices_buffer);
+							AddLightToVertex(x, y, z, BlockFace::RIGHT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+						
+						}
 					}
 
-					if (CheckNeighborAir(x, y - 1, z)) {
+
+					{
+
 						std::array<std::array<float, 3>, 4> pointsSet = { {
 							{ (float)x,     (float)y, (float)z     },
 							{ (float)x + s, (float)y, (float)z     },
@@ -205,28 +249,48 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 
 						std::vector<float> vertices_buffer;
+					
 
-						AddFace(pointsSet, (BlockType)b, BlockFace::BOTTOM, vertices_buffer);
-						AddLightToVertex(x, y, z, BlockFace::BOTTOM, (BlockType)b, vertices_buffer, v, indices, snapshot);
+						if (!CheckNeighborTorch(x, y - 1, z)) {
+							if (CheckNeighborAir(x, y - 1, z)) {
 
+								AddFace(pointsSet, (BlockType)b, BlockFace::BOTTOM, vertices_buffer);
+								AddLightToVertex(x, y, z, BlockFace::BOTTOM, (BlockType)b, vertices_buffer, v, indices, snapshot);
+							}
+						}
+						else {
+							AddFace(pointsSet, (BlockType)b, BlockFace::BOTTOM, vertices_buffer);
+							AddLightToVertex(x, y, z, BlockFace::BOTTOM, (BlockType)b, vertices_buffer, v, indices, snapshot);
+						}
 					}
 
-					if (CheckNeighborAir(x, y + 1, z)) {
+					{
 						std::array<std::array<float, 3>, 4> pointsSet = { {
 							{ (float)x,     (float)y + s, (float)z + s },
 							{ (float)x + s, (float)y + s, (float)z + s },
 							{ (float)x + s, (float)y + s, (float)z     },
 							{ (float)x,     (float)y + s, (float)z     }
 						} };
+						
 
 						std::vector<float> vertices_buffer;
 
-						AddFace(pointsSet, (BlockType)b, BlockFace::TOP, vertices_buffer);
-						AddLightToVertex(x, y, z, BlockFace::TOP, (BlockType)b, vertices_buffer, v, indices, snapshot);
+						if (!CheckNeighborTorch(x, y + 1, z)) {
+							if (CheckNeighborAir(x, y + 1, z)) {
+								
+								AddFace(pointsSet, (BlockType)b, BlockFace::TOP, vertices_buffer);
+								AddLightToVertex(x, y, z, BlockFace::TOP, (BlockType)b, vertices_buffer, v, indices, snapshot);
+							}
+						}
+						else {
+							
+							AddFace(pointsSet, (BlockType)b, BlockFace::TOP, vertices_buffer);
+							AddLightToVertex(x, y, z, BlockFace::TOP, (BlockType)b, vertices_buffer, v, indices, snapshot);
+						}
 					}
 
 
-					if (CheckNeighborAir(x, y, z - 1)) {
+					{
 						std::array<std::array<float, 3>, 4> pointsSet = { {
 							{ (float)x + s, (float)y + s, (float)z }, // 0: LeftTop
 							{ (float)x + s, (float)y,     (float)z }, // 1: LeftBottom
@@ -237,11 +301,23 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 						std::vector<float> vertices_buffer;
 
-						AddFace(pointsSet, (BlockType)b, BlockFace::FRONT, vertices_buffer);
-						AddLightToVertex(x, y, z, BlockFace::FRONT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+
+						if (!CheckNeighborTorch(x, y, z - 1)) {
+							if (CheckNeighborAir(x, y, z - 1)) {
+
+								AddFace(pointsSet, (BlockType)b, BlockFace::FRONT, vertices_buffer);
+								AddLightToVertex(x, y, z, BlockFace::FRONT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+							}
+						}
+						else {
+							AddFace(pointsSet, (BlockType)b, BlockFace::FRONT, vertices_buffer);
+							AddLightToVertex(x, y, z, BlockFace::FRONT, (BlockType)b, vertices_buffer, v, indices, snapshot);
+						}
 					}
 
-					if (CheckNeighborAir(x, y, z + 1)) {
+
+					{
+
 						std::array<std::array<float, 3>, 4> pointsSet = { {
 							{ (float)x,     (float)y + s, (float)z + s }, // 0: LeftTop
 							{ (float)x,     (float)y,     (float)z + s }, // 1: LeftBottom
@@ -252,13 +328,25 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 						std::vector<float> vertices_buffer;
 
-						AddFace(pointsSet, (BlockType)b, BlockFace::BACK, vertices_buffer);
-						AddLightToVertex(x, y, z, BlockFace::BACK, (BlockType)b, vertices_buffer, v, indices, snapshot);
+
+						if (!CheckNeighborTorch(x, y, z + 1)) {
+							if (CheckNeighborAir(x, y, z + 1)) {
+
+								AddFace(pointsSet, (BlockType)b, BlockFace::BACK, vertices_buffer);
+								AddLightToVertex(x, y, z, BlockFace::BACK, (BlockType)b, vertices_buffer, v, indices, snapshot);
+
+							}
+						}
+						else {
+							AddFace(pointsSet, (BlockType)b, BlockFace::BACK, vertices_buffer);
+							AddLightToVertex(x, y, z, BlockFace::BACK, (BlockType)b, vertices_buffer, v, indices, snapshot);
+
+						}
 					}
 				}
 				else {
 
-
+					BuildTorchMesh(x, y, z, v, indices, snapshot);
 				}
 			}
 
@@ -315,6 +403,18 @@ UV MeshBuilder::GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face)
 			return GetTileVertexUV(index, 19, 0);
 		}
 
+		case BlockType::TORCH: {
+			if (face == BlockFace::TOP) {
+				return GetTileVertexUVForTorch(index, 6, 14);
+			}
+			if (face == BlockFace::BOTTOM) {
+				return GetTileVertexUVForTorch(index, 4, 14);
+			}
+			
+
+			return GetTileVertexUVForTorch(index, 5, 14);
+		}
+
 		case BlockType::GLOWSTONE: {
 
 			return GetTileVertexUV(index, 5, 7);
@@ -327,6 +427,42 @@ UV MeshBuilder::GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face)
 
 
 }
+
+
+
+UV MeshBuilder::GetTileVertexUVForTorch(uint8_t index, int tileX, int tileY) {
+
+	//indexはuvの4ポイントのどれかを表す
+	UVPoint p = (UVPoint)index;
+
+	float tileUV_X = 1.0f / atlasTilesX;
+	float tileUV_Y = 1.0f / atlasTilesY;
+
+	float torchSideUV_X = tileUV_X / 4.0f;//松明はtexture内に4つ入ってるから
+
+	float u0 = tileUV_X * tileX;
+	float v1 = 1.0f - (tileUV_Y * tileY);
+
+	float u1 = u0 + torchSideUV_X;
+	float v0 = v1 - tileUV_Y;
+
+
+	if (p == UVPoint::LeftTop) {
+		return { u0, v1 };
+	}
+	if (p == UVPoint::LeftBottom) {
+		return { u0, v0 };
+	}
+	if (p == UVPoint::RightBottom) {
+		return { u1, v0 };
+	}
+	if (p == UVPoint::RightTop) {
+		return { u1, v1 };
+	}
+
+	return { 0.f, 0.f };
+}
+
 
 UV MeshBuilder::GetTileVertexUV(uint8_t index, int tileX, int tileY) {
 	//indexはuvの4ポイントのどれかを表す

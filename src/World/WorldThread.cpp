@@ -799,7 +799,7 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 
 	m_lightEngine.CreateSkylightLeakSeeds(c, task);
 
-	// ’¼ŽË skylight ‚¾‚¯‚ÅÆ–¾ŒvŽZ‚ªŠ®—¹B
+	
 	if (task.bfs_queue.empty()) {
 		c.dirty = true;
 		c.readyForMesh = true;
@@ -916,7 +916,7 @@ void WorldThread::ProcLightTasks() {
 					c->urgentUpdateMesh = true;
 				}
 
-				m_world.MarkNeighborChunksDirty(c->cx, c->cz);
+				m_world.MarkNeighborChunksUrgentDirty(c->cx, c->cz);
 
 			}
 
