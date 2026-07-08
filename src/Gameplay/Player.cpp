@@ -15,40 +15,40 @@ void Player::Tick(float dt, World& w) {
 	velocity.y = std::max(velocity.y, MAX_FALL_SPEED);
 
 
-	position.y + velocity.y * dt;
-	if (velocity.y >= 1.f) {
+	position.y += velocity.y * dt;
+	if (velocity.y > 0.f) {
 		AABB box = GetPlrBox();
 
 		MovePositiveY({ box.min.x, box.max.x }, box.max.y, { box.min.z, box.max.z }, w);
 	}
-	else if (velocity.y < 0) {
+	else {
 		AABB box = GetPlrBox();
 
 		MoveNegativeY({ box.min.x, box.max.x }, box.min.y, { box.min.z, box.max.z }, w);
 	}
 
 
-	position.x + velocity.x * dt;
-	if (velocity.x >= 1.f) {
+	position.x += velocity.x * dt;
+	if (velocity.x > 0.f) {
 		AABB box = GetPlrBox();
 
 		MovePositiveX(box.max.x, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
 
 	}
-	else if (velocity.x < 0) {
+	else {
 		AABB box = GetPlrBox();
 
 		MoveNegativeX(box.min.x, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
 	}
 
-	position.z + velocity.z * dt;
-	if (velocity.z >= 1.f) {
+	position.z += velocity.z * dt;
+	if (velocity.z > 0.f) {
 		AABB box = GetPlrBox();
 
 		MovePositiveZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, box.max.z, w);
 
 	}
-	else if (velocity.z < 0) {
+	else {
 		AABB box = GetPlrBox();
 
 		MoveNegativeZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, box.min.z, w);
@@ -215,5 +215,29 @@ AABB Player::GetPlrBox() const {
 		glm::vec3{position.x - (width/2.f), position.y + feetHeight, position.z - (depth/2.0f)},
 		glm::vec3{position.x + (width/2.f), position.y + height, position.z + (depth/2.0f)}
 	};
+
+}
+
+
+glm::vec3 Player::GetPos() const {
+
+	return position;
+}
+
+
+float Player::GetSpeed() const {
+	return speed;
+}
+
+
+void Player::UpdateVectors() {
+	glm::vec3 f;
+	f.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	f.y = sin(glm::radians(pitch));
+	f.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+
+	front = glm::normalize(f);
+	right = glm::normalize(glm::cross(front, worldUp));
+	up = glm::normalize(glm::cross(right, front));
 
 }

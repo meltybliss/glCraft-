@@ -2,6 +2,8 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 
+#include "Gameplay/PlayerInput.h"
+#include "Gameplay/Player.h"
 #include "Render/Camera.h"
 #include "World/World.h"
 #include "Render/WorldRenderer.h"
@@ -23,7 +25,7 @@ public:
 private:
 
 	void OnMouseMove(double xpos, double ypos);
-	void ProcessInput(float dt);
+	void ProcessInput();
 	void OnMouseButton(int button, int action);
 
 	void UpdateRayHit();
@@ -31,6 +33,7 @@ private:
 
 	void UpdateStreamCenter();
 
+	void ApplyCameraStatus();
 private:
 	GLFWwindow* m_window = nullptr;
 
@@ -43,6 +46,7 @@ private:
 	SelectionOutlineRenderer m_outlineRenderer;
 
 	Camera m_camera;
+
 
 	std::optional<Shader> baseShader;
 	std::optional<Shader> selectionOutlineShader;

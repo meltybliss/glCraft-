@@ -134,6 +134,8 @@
     <ClInclude Include="include\Core\Application.h" />
     <ClInclude Include="include\Core\ChunkJob.h" />
     <ClInclude Include="include\Gameplay\Player.h" />
+    <ClInclude Include="include\Gameplay\PlayerInput.h" />
+    <ClInclude Include="include\Gameplay\PlayerSnapshot.h" />
     <ClInclude Include="include\Math\AABB.h" />
     <ClInclude Include="include\Math\PerlinNoise2D.h" />
     <ClInclude Include="include\Math\UV.h" />

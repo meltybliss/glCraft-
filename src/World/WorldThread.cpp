@@ -18,22 +18,35 @@ void WorldThread::StartLoop() {
 	);
 	m_chunkPipeline.StartWorkerThread();
 
+
+
 	worldThread = std::thread([this]() {
+
+
+		float lastTime = (float)glfwGetTime();
 		while (runningWorldThread.load()) {
 
-			Tick();
+			float curTime = (float)glfwGetTime();
+			float dt = curTime - lastTime;
+
+			lastTime = curTime;
+
+			Tick(dt);
 
 
 			if (HasImmediateTask()) {
 				continue;//skip "wait"
 			}
 
-			std::unique_lock<std::mutex> lock(waitMutex);
+			{
+				std::unique_lock<std::mutex> lock(waitMutex);
 
-			worldCv.wait(lock, [this]() {
+				worldCv.wait(lock, [this]() {
 
-				return !runningWorldThread.load() || requestedToWake;
-			});
+					return !runningWorldThread.load() || requestedToWake;
+				});
+			}
+
 
 			requestedToWake = false;
 
@@ -499,13 +512,29 @@ void WorldThread::Add_SkylightTask(
 }
 
 
-void WorldThread::Tick() {
+void WorldThread::Tick(float dt) {
 
 	ApplyStreamCenter();
+
+	ApplyPlayerStatus(dt);
+	
+
+	m_plr.Tick(dt, m_world);
+
+
+	if (m_hasMovedMouse.load()) {
+		ApplyMouseMovement();
+	}
+
+
+	UpdatePlrSnapshot();
+
 
 	if (m_streamNeedsUpdate) {
 		UpdateChunksAround();
 	}
+
+
 
 	ProcCommands();
 	ProcChunkResults();
@@ -513,6 +542,7 @@ void WorldThread::Tick() {
 	ProcLightTasks();
 
 	DispatchDirtyMeshJobs();
+
 }
 
 
@@ -661,11 +691,14 @@ void WorldThread::SetDesiredStreamCenter(
 	int32_t cz
 ) {
 
-	std::lock_guard<std::mutex> lock(streamCenterMutex);
+	{
+		std::lock_guard<std::mutex> lock(streamCenterMutex);
 
-	m_streamCx = cx;
-	m_streamCz = cz;
+		m_streamCx = cx;
+		m_streamCz = cz;
+	}
 
+	m_hasSettedDesireStreamC.store(true);
 
 	Wake();
 }
@@ -704,6 +737,9 @@ void WorldThread::ApplyStreamCenter() {
 		m_streamNeedsUpdate = true;
 
 	}
+
+
+	m_hasSettedDesireStreamC.store(false);
 
 }
 
@@ -1076,7 +1112,9 @@ void WorldThread::Wake() {
 
 bool WorldThread::HasImmediateTask() {
 
-	return !m_lightTasks.empty() || !m_urgentLightTasks.empty() || m_streamNeedsUpdate;
+	return !m_lightTasks.empty() || !m_urgentLightTasks.empty() || 
+		    m_streamNeedsUpdate  ||  m_hasSettedDesireStreamC.load() ||
+		    m_hasSettedInput.load() || m_hasMovedMouse.load();
 
 }
 
@@ -1089,5 +1127,141 @@ RaycastHit WorldThread::RequestRaycast(const glm::vec3& origin, const glm::vec3&
 		dir,
 		distance
 	);
+
+}
+
+
+void WorldThread::ApplyPlayerStatus(float dt) {
+
+	float velocity = m_plr.GetSpeed() * dt;
+	glm::vec3 pos = m_plr.GetPos();
+
+	PlayerInput input;
+
+	{
+		std::lock_guard<std::mutex> lock(inputMutex);
+
+		input = m_inputBuffer;
+
+		m_inputBuffer = PlayerInput{};
+	}
+
+	if (input.forward) {
+
+		glm::vec3 newPos = pos + m_plr.GetFront() * velocity;
+
+		m_plr.SetPosition(newPos);
+	}
+
+	if (input.back) {
+		glm::vec3 newPos = pos - m_plr.GetFront() * velocity;
+
+		m_plr.SetPosition(newPos);
+
+	}
+	if (input.left) {
+		glm::vec3 newPos = pos - m_plr.GetRight() * velocity;
+
+		m_plr.SetPosition(newPos);
+	}
+
+	if (input.right) {
+		glm::vec3 newPos = pos + m_plr.GetRight() * velocity;
+		m_plr.SetPosition(newPos);
+	}
+
+	if (input.up) {
+		glm::vec3 newPos = pos + m_plr.GetWorldUp() * velocity;
+		m_plr.SetPosition(newPos);
+	}
+
+	if (input.down) {
+
+		glm::vec3 newPos = pos - m_plr.GetWorldUp() * velocity;
+		m_plr.SetPosition(newPos);
+	}
+
+
+	m_hasSettedInput.store(false);
+}
+
+
+
+void WorldThread::AddMouseDelta(float xoffset, float yoffset) {
+
+
+	{
+		std::lock_guard<std::mutex> lock(offsetMutex);
+
+		m_xoffsetBuffer = xoffset;
+		m_yoffsetBuffer = yoffset;
+		
+	}
+
+	m_hasMovedMouse.store(true);
+
+	Wake();
+
+
+}
+
+
+
+void WorldThread::ApplyMouseMovement() {
+
+	float yaw = m_plr.GetYaw();
+	float pitch = m_plr.GetPitch();
+
+	float xoffset = 0.f;
+	float yoffset = 0.f;
+
+	{
+		std::lock_guard<std::mutex> lock(offsetMutex);
+
+		xoffset = m_xoffsetBuffer;
+		yoffset = m_yoffsetBuffer;
+
+		m_xoffsetBuffer = 0.f;
+		m_yoffsetBuffer = 0.f;
+	}
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	m_plr.SetYaw(yaw);
+	m_plr.SetPitch(pitch);
+
+	if (m_plr.GetPitch() > 89.0f) {
+		m_plr.SetPitch(89.0f);
+	}
+
+	if (m_plr.GetPitch() < -89.0f) {
+		m_plr.SetPitch(-89.0f);
+	}
+
+
+	m_plr.UpdateVectors();
+
+}
+
+
+
+
+void WorldThread::UpdatePlrSnapshot() {
+
+	PlayerSnapshot snap;
+
+	snap.front = m_plr.GetFront();
+	snap.pos = m_plr.GetPos();
+	snap.right = m_plr.GetRight();
+	snap.up = m_plr.GetUp();
+
+	std::cout << std::to_string(snap.pos.x) << "," << snap.pos.y <<  "," << snap.pos.z << "\n";
+
+	{
+		std::lock_guard<std::mutex> lock(snapshotMutex);
+
+		m_plrSnapshot = std::move(snap);
+	}
 
 }

@@ -5,6 +5,9 @@
 #include "LightTask.h"
 #include "LightEngine.h"
 #include "ChunkPipeline.h"
+#include "Gameplay/Player.h"
+#include "Gameplay/PlayerInput.h"
+#include "Gameplay/PlayerSnapshot.h"
 
 #include <thread>
 #include <atomic>
@@ -44,12 +47,40 @@ public:
 		return LOAD_CHUNKS_DISTANCE;
 	}
 
+	void SetInput(PlayerInput&& input) {
+		{
+			std::lock_guard<std::mutex> lock(inputMutex);
+
+			m_inputBuffer = input;
+		}
+
+		m_hasSettedInput.store(true);
+
+		Wake();
+	}
+
+
+	void AddMouseDelta(float xoffset, float yoffset);
+
 	RaycastHit RequestRaycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const;
 
+
+	[[nodiscard]] PlayerSnapshot GetPlrSnapshot() {
+		std::lock_guard<std::mutex> lock(snapshotMutex);
+
+		return m_plrSnapshot;
+	}
 private:
 	World m_world;
 	ChunkPipeline m_chunkPipeline;
 	LightEngine m_lightEngine;
+
+	PlayerInput m_inputBuffer{};
+
+
+	PlayerSnapshot m_plrSnapshot{};
+
+	Player m_plr;
 
 	std::thread worldThread;
 	std::condition_variable worldCv;
@@ -66,11 +97,21 @@ private:
 
 	bool m_streamNeedsUpdate = false;
 
+	std::atomic<bool> m_hasSettedDesireStreamC = false;
+	std::atomic<bool> m_hasSettedInput = false;
+	std::atomic<bool> m_hasMovedMouse = false;
+
+	float m_xoffsetBuffer = 0.f;
+	float m_yoffsetBuffer = 0.f;
+
+	std::mutex snapshotMutex;
 	std::mutex streamCenterMutex;
 	std::mutex commandMutex;
 	std::mutex pendingMeshMutex;
 	std::mutex waitMutex;
 	std::mutex pendingDeleteMeshMutex;
+	std::mutex inputMutex;
+	std::mutex offsetMutex;
 
 	std::deque<WorldCommand> m_commands;
 
@@ -106,11 +147,17 @@ private:
 
 	void ApplyStreamCenter();
 
+	void ApplyPlayerStatus(float dt);
+
+	void ApplyMouseMovement();
+
 	void UpdateChunksAround();
-	void Tick();
+	void Tick(float dt);
 
 	void EnqueueMeshJob(Chunk& c);
 
+
+	void UpdatePlrSnapshot();
 
 	void PushPendingMesh(PendingMesh& mesh);
 	

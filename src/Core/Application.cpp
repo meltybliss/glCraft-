@@ -33,13 +33,17 @@ void Application::Run() {
 
 		glfwPollEvents();
 
-		ProcessInput(dt);
+		ProcessInput();
+
+
+		ApplyCameraStatus();
 
 		UpdateRayHit();//raycast
 		UpdateStreamCenter();
 
 
 		blockAtlas->Bind(0);
+
 
 		//m_wRenderer.RebuildDrityChunkMesh(m_world);
 		m_wRenderer.UploadPendingMeshData(m_worldThread);
@@ -160,32 +164,48 @@ bool Application::InitGL() {
 
 
 
-void Application::ProcessInput(float dt) {
-	float velocity = m_camera.moveSpeed * dt;
+void Application::ProcessInput() {
+	
+	PlayerInput input;
+
 
 	if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS) {
-		m_camera.position += m_camera.front * velocity;
+	
+	
+		input.forward = true;
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_S) == GLFW_PRESS) {
-		m_camera.position -= m_camera.front * velocity;
+
+	
+		input.back = true;
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_A) == GLFW_PRESS) {
-		m_camera.position -= m_camera.right * velocity;
+		
+		
+		input.left = true;
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_D) == GLFW_PRESS) {
-		m_camera.position += m_camera.right * velocity;
+	
+		input.right = true;
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
-		m_camera.position += m_camera.worldUp * velocity;
+
+		input.up = true;
 	}
 	if (glfwGetKey(m_window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
-		m_camera.position -= m_camera.worldUp * velocity;
+		
+		input.down = true;
 	}
 
 
 	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
 		//m_world.DebugChunkInfo();
 	}
+
+
+	m_worldThread.SetInput(std::move(input));
+
+
 }
 
 
@@ -226,24 +246,14 @@ void Application::OnMouseMove(double xpos, double ypos) {
 	float xoffset = static_cast<float>(xpos) - m_lastMouseX;
 	float yoffset = m_lastMouseY - static_cast<float>(ypos);
 
+
 	m_lastMouseX = static_cast<float>(xpos);
 	m_lastMouseY = static_cast<float>(ypos);
 
 	xoffset *= m_camera.mouseSensitivity;
 	yoffset *= m_camera.mouseSensitivity;
 
-	m_camera.yaw += xoffset;
-	m_camera.pitch += yoffset;
-
-	if (m_camera.pitch > 89.0f) {
-		m_camera.pitch = 89.0f;
-	}
-
-	if (m_camera.pitch < -89.0f) {
-		m_camera.pitch = -89.0f;
-	}
-
-	m_camera.UpdateVectors();
+	m_worldThread.AddMouseDelta(xoffset, yoffset);
 }
 
 
@@ -273,5 +283,18 @@ void Application::RenderOutline() {
 		);
 
 	}
+
+}
+
+
+void Application::ApplyCameraStatus() {
+
+	PlayerSnapshot snap = m_worldThread.GetPlrSnapshot();
+
+	m_camera.position = snap.pos;
+	m_camera.front = snap.front;
+	m_camera.right = snap.right;
+	m_camera.up = snap.up;
+
 
 }
