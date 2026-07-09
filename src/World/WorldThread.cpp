@@ -2,6 +2,7 @@
 #include <iostream>
 
 
+
 void WorldThread::StartLoop() {
 
 	if (runningWorldThread.load()) {
@@ -18,22 +19,46 @@ void WorldThread::StartLoop() {
 	);
 	m_chunkPipeline.StartWorkerThread();
 
+
+	BuildLoadOffsets();
+
+
 	worldThread = std::thread([this]() {
+
+
+		using clock = std::chrono::steady_clock;
+
+		constexpr float FIXED_DT = 1.0f / 60.0f;
+		constexpr auto SIM_INTERVAL = std::chrono::duration<float>(FIXED_DT);
+
+		auto nextSimTime = clock::now();
+
 		while (runningWorldThread.load()) {
 
-			Tick();
+			auto now = clock::now();
+
+			if (now >= nextSimTime) {
+				TickSimulation(FIXED_DT);
+
+				nextSimTime += std::chrono::duration_cast<clock::duration>(SIM_INTERVAL);
+			}
+
+			TickBackground(nextSimTime);
 
 
 			if (HasImmediateTask()) {
 				continue;//skip "wait"
 			}
 
-			std::unique_lock<std::mutex> lock(waitMutex);
+			{
+				std::unique_lock<std::mutex> lock(waitMutex);
 
-			worldCv.wait(lock, [this]() {
+				worldCv.wait_until(lock, nextSimTime, [this]() {
 
-				return !runningWorldThread.load() || requestedToWake;
-			});
+					return !runningWorldThread.load() || requestedToWake;
+				});
+			}
+
 
 			requestedToWake = false;
 
@@ -86,6 +111,27 @@ void WorldThread::SubmitEditBlock(
 
 }
 
+
+
+void WorldThread::ProcOneCommand() {
+
+	WorldCommand cmd;
+
+	{
+		std::lock_guard<std::mutex> lock(commandMutex);
+
+		if (m_commands.empty()) {
+			return;
+		}
+
+		cmd = std::move(m_commands.front());
+		m_commands.pop_front();
+
+
+	}
+	ApplyCommand(cmd);
+
+}
 
 void WorldThread::ProcCommands() {
 	std::deque<WorldCommand> commands;
@@ -499,20 +545,234 @@ void WorldThread::Add_SkylightTask(
 }
 
 
-void WorldThread::Tick() {
+
+
+void WorldThread::TickSimulation(float dt) {
 
 	ApplyStreamCenter();
 
-	if (m_streamNeedsUpdate) {
-		UpdateChunksAround();
+
+	if (m_hasMovedMouse.load()) {
+		ApplyMouseMovement();
 	}
 
-	ProcCommands();
-	ProcChunkResults();
+	ApplyPlayerStatus(dt);
 
-	ProcLightTasks();
 
-	DispatchDirtyMeshJobs();
+	m_plr.Tick(dt, m_world);
+
+	UpdatePlrSnapshot();
+
+
+}
+
+
+void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline) {
+
+	using clock = std::chrono::steady_clock;
+
+	while (clock::now() < deadline) {
+		if (m_streamNeedsUpdate) {
+			UpdateChunksAround_step();
+		}
+		if (clock::now() >= deadline) break;
+
+		ProcOneCommand();
+		if (clock::now() >= deadline) break;
+
+		ProcOneChunkResult();
+		if (clock::now() >= deadline) break;
+
+		ProcLightTasks();
+		if (clock::now() >= deadline) break;
+
+		DispatchOneDirtyMeshJob();
+		if (clock::now() >= deadline) break;
+	}
+
+}
+
+
+
+void WorldThread::BuildLoadOffsets() {
+
+	m_loadOffsets.clear();
+	m_nextLoadOffset = 0;
+
+	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE; ++r) {//これいい自分の周囲からloadするアルゴリズム
+		for (int32_t dx = -r; dx <= r; ++dx) {
+			for (int32_t dz = -r; dz <= r; ++dz) {
+				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//内側は処理済みなので外周だけ
+					continue;
+				}
+
+
+				m_loadOffsets.push_back({ dx, dz });
+			}
+		}
+	}
+
+}
+
+
+
+bool WorldThread::RequestOneMissingChunkAround() {
+
+
+	auto& chunks = m_world.GetChunks();
+
+	while (m_nextLoadOffset < m_loadOffsets.size()) {
+
+		auto& offset = m_loadOffsets[m_nextLoadOffset];
+		auto& dx = offset.dx;
+		auto& dz = offset.dz;
+
+
+
+		int32_t cx = m_lastStreamCx + dx;
+		int32_t cz = m_lastStreamCz + dz;
+
+		m_nextLoadOffset++;
+
+
+		uint64_t key = Index(cx, cz);
+
+
+		if (chunks.find(key) != chunks.end()) {
+			continue;
+		}
+
+
+		if (m_pendingChunkKeys.find(key) != m_pendingChunkKeys.end()) {
+
+			continue;
+
+		}
+
+		ChunkJob job;
+		job.cx = cx;
+		job.cz = cz;
+		job.type = JobType::CREATE_CHUNK;
+
+
+		m_pendingChunkKeys.insert(key);
+		m_chunkPipeline.EnqueueJob(std::move(job));
+
+		return true;
+	}
+
+	return false;
+}
+
+
+bool WorldThread::HasChunkToErase() {
+	auto& chunks = m_world.GetChunks();
+
+	for (auto& [key, c] : chunks) {
+
+		if (!c) return true;
+
+		int32_t dx = c->cx - m_lastStreamCx;
+		int32_t dz = c->cz - m_lastStreamCz;
+
+		if (std::abs(dx) >= UNLOAD_CHUNKS_DISTANCE ||
+			std::abs(dz) >= UNLOAD_CHUNKS_DISTANCE) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
+
+bool WorldThread::HasChunkToCreate() {
+
+	auto& chunks = m_world.GetChunks();
+
+	for (const auto& offset : m_loadOffsets) {
+
+		int32_t cx = m_lastStreamCx + offset.dx;
+		int32_t cz = m_lastStreamCz + offset.dz;
+
+		uint64_t key = Index(cx, cz);
+
+		bool alreadyLoaded =
+			chunks.find(key) != chunks.end();
+
+		bool alreadyPending =
+			m_pendingChunkKeys.find(key) != m_pendingChunkKeys.end();
+
+		if (!alreadyLoaded && !alreadyPending) {
+			return true;
+		}
+
+	}
+
+
+	return false;
+}
+
+
+bool WorldThread::RequestEraseOneChunkAround() {
+	auto& chunks = m_world.GetChunks();
+
+	for (auto it = chunks.begin(); it != chunks.end(); ++it) {
+		const auto& c = it->second;
+
+		bool shouldDestroy = false;
+
+		if (!c) {
+			shouldDestroy = true;
+		}
+		else {
+			int32_t dx = c->cx - m_lastStreamCx;
+			int32_t dz = c->cz - m_lastStreamCz;
+
+			if (std::abs(dx) >= UNLOAD_CHUNKS_DISTANCE ||
+				std::abs(dz) >= UNLOAD_CHUNKS_DISTANCE) {
+				shouldDestroy = true;
+			}
+		}
+
+		if (!shouldDestroy) {
+			continue;
+		}
+
+		{
+			std::lock_guard<std::mutex> lock(pendingDeleteMeshMutex);
+			m_pendingDeleteMeshKey.push_back(it->first);
+		}
+
+		chunks.erase(it);
+
+		return true; 
+	}
+
+	return false; 
+}
+
+void WorldThread::UpdateChunksAround_step() {
+
+
+	bool hasChunksToCreate = true;
+	bool hasChunksToErase = true;
+
+	RequestOneMissingChunkAround();
+
+	hasChunksToCreate = HasChunkToCreate();
+
+	RequestEraseOneChunkAround();
+
+	hasChunksToErase = HasChunkToErase();
+
+	if (!hasChunksToCreate) {
+		m_nextLoadOffset = 0;
+	}
+
+	if (!hasChunksToCreate && !hasChunksToErase) {
+		m_streamNeedsUpdate = false;//もうchunk移動によって生じるload, unloadが全部処理済み
+	}
 }
 
 
@@ -528,7 +788,7 @@ void WorldThread::UpdateChunksAround() {
 
 	auto& chunks = m_world.GetChunks();
 
-	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {//これ頭いい自分の周囲からloadするアルゴリズムだわ
+	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {//これいい自分の周囲からloadするアルゴリズム
 		for (int32_t dx = -r; dx <= r && !createDone; ++dx) {
 			for (int32_t dz = -r; dz <= r; ++dz) {
 				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//内側は処理済みなので外周だけ
@@ -661,11 +921,14 @@ void WorldThread::SetDesiredStreamCenter(
 	int32_t cz
 ) {
 
-	std::lock_guard<std::mutex> lock(streamCenterMutex);
+	{
+		std::lock_guard<std::mutex> lock(streamCenterMutex);
 
-	m_streamCx = cx;
-	m_streamCz = cz;
+		m_streamCx = cx;
+		m_streamCz = cz;
+	}
 
+	m_hasSettedDesireStreamC.store(true);
 
 	Wake();
 }
@@ -702,6 +965,64 @@ void WorldThread::ApplyStreamCenter() {
 		}
 
 		m_streamNeedsUpdate = true;
+
+	}
+
+
+	m_hasSettedDesireStreamC.store(false);
+
+}
+
+
+void WorldThread::ProcOneChunkResult() {
+	MeshChunkResult meshResult;
+	GeneratedChunkResult genResult;
+
+	auto& chunks = m_world.GetChunks();
+
+	if (m_chunkPipeline.PopFrontMeshResult(meshResult)) {
+		const auto& key = meshResult.key;
+
+		int32_t cx = 0;
+		int32_t cz = 0;
+
+
+		if (meshResult.meshData) {
+			PendingMesh mesh;
+			mesh.meshData = std::move(*meshResult.meshData);
+			mesh.key = key;
+
+			PushPendingMesh(mesh);
+		}
+
+		if (meshResult.wasNewChunk) {
+			m_world.MarkNeighborChunksDirty(cx, cz);
+		}
+	}
+
+	if (m_chunkPipeline.PopFrontGenResult(genResult)) {
+
+		const auto& key = genResult.key;
+
+		int32_t cx = 0;
+		int32_t cz = 0;
+
+
+		m_pendingChunkKeys.erase(key);
+
+
+
+		if (!genResult.chunk) {
+
+			assert(false && "GenerateChunkResult doesnt have Chunk pointer");
+
+		}
+
+
+		chunks[key] = std::move(genResult.chunk);
+
+
+		Start_SkyLightTaskForNewChunk(*chunks[key]);
 
 	}
 
@@ -1064,6 +1385,28 @@ void WorldThread::DispatchDirtyMeshJobs() {
 }
 
 
+void WorldThread::DispatchOneDirtyMeshJob() {//TODO: 仕組みをunordered_setを使うやり方に変える後で
+
+	auto& chunks = m_world.GetChunks();
+
+	for (auto& [key, chunkPtr] : chunks) {
+		if (!chunkPtr->readyForMesh) continue;
+
+		if (!chunkPtr->dirty) continue;
+
+		//if (chunkPtr->meshJobInFlight) continue;
+
+		EnqueueMeshJob(*chunkPtr);
+
+		chunkPtr->dirty = false;
+		chunkPtr->readyForMesh = false;
+
+		return;
+	}
+
+}
+
+
 void WorldThread::Wake() {
 
 	{
@@ -1076,7 +1419,9 @@ void WorldThread::Wake() {
 
 bool WorldThread::HasImmediateTask() {
 
-	return !m_lightTasks.empty() || !m_urgentLightTasks.empty() || m_streamNeedsUpdate;
+	return !m_lightTasks.empty() || !m_urgentLightTasks.empty() || 
+		    m_streamNeedsUpdate  ||  m_hasSettedDesireStreamC.load() ||
+		    m_hasSettedInput.load() || m_hasMovedMouse.load();
 
 }
 
@@ -1089,5 +1434,136 @@ RaycastHit WorldThread::RequestRaycast(const glm::vec3& origin, const glm::vec3&
 		dir,
 		distance
 	);
+
+}
+
+
+void WorldThread::ApplyPlayerStatus(float dt) {
+
+	glm::vec3 pos = m_plr.GetPos();
+	PlayerInput input;
+
+	{
+		std::lock_guard<std::mutex> lock(inputMutex);
+
+		input = m_inputBuffer;
+
+	}
+
+	glm::vec3 front = m_plr.GetFront();
+	glm::vec3 right = m_plr.GetRight();
+
+	front.y = 0.0f;
+	right.y = 0.0f;
+
+	if (glm::length(front) > 0.0f) {
+		front = glm::normalize(front);
+	}
+
+	if (glm::length(right) > 0.0f) {
+		right = glm::normalize(right);
+	}
+
+	glm::vec3 moveDir{ 0.0f };
+
+	if (input.forward) moveDir += front;
+	if (input.back)    moveDir -= front;
+	if (input.left)    moveDir -= right;
+	if (input.right)   moveDir += right;
+
+	if (input.up) {
+		m_plr.Jump();
+	}
+
+	if (glm::length(moveDir) > 0.0f) {
+		moveDir = glm::normalize(moveDir);
+	}
+
+	float speed = m_plr.GetSpeed();
+
+	m_plr.SetVelX(moveDir.x * speed);
+	m_plr.SetVelZ(moveDir.z * speed);
+
+
+	m_hasSettedInput.store(false);
+}
+
+
+
+void WorldThread::AddMouseDelta(float xoffset, float yoffset) {
+
+
+	{
+		std::lock_guard<std::mutex> lock(offsetMutex);
+
+		m_xoffsetBuffer += xoffset;
+		m_yoffsetBuffer += yoffset;
+		
+	}
+
+	m_hasMovedMouse.store(true);
+
+	Wake();
+
+
+}
+
+
+
+void WorldThread::ApplyMouseMovement() {
+
+	float yaw = m_plr.GetYaw();
+	float pitch = m_plr.GetPitch();
+
+	float xoffset = 0.f;
+	float yoffset = 0.f;
+
+	{
+		std::lock_guard<std::mutex> lock(offsetMutex);
+
+		xoffset = m_xoffsetBuffer;
+		yoffset = m_yoffsetBuffer;
+
+		m_xoffsetBuffer = 0.f;
+		m_yoffsetBuffer = 0.f;
+	}
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	m_plr.SetYaw(yaw);
+	m_plr.SetPitch(pitch);
+
+	if (m_plr.GetPitch() > 89.0f) {
+		m_plr.SetPitch(89.0f);
+	}
+
+	if (m_plr.GetPitch() < -89.0f) {
+		m_plr.SetPitch(-89.0f);
+	}
+
+
+	m_hasMovedMouse.store(false);
+	m_plr.UpdateVectors();
+
+}
+
+
+
+
+void WorldThread::UpdatePlrSnapshot() {
+
+	PlayerSnapshot snap;
+
+	snap.front = m_plr.GetFront();
+	snap.pos = m_plr.GetEyePos();
+	snap.right = m_plr.GetRight();
+	snap.up = m_plr.GetUp();
+
+	{
+		std::lock_guard<std::mutex> lock(snapshotMutex);
+
+		m_plrSnapshot = std::move(snap);
+	}
 
 }

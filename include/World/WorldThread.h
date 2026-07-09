@@ -5,12 +5,23 @@
 #include "LightTask.h"
 #include "LightEngine.h"
 #include "ChunkPipeline.h"
-
+#include "Gameplay/Player.h"
+#include "Gameplay/PlayerInput.h"
+#include "Gameplay/PlayerSnapshot.h"
+#include <chrono>
 #include <thread>
 #include <atomic>
 #include <mutex>
 #include <deque>
 #include <condition_variable>
+
+
+struct ChunkOffset {
+	int32_t dx = 0;
+	int32_t dz = 0;
+};
+
+
 class WorldThread {
 public:
 
@@ -44,12 +55,40 @@ public:
 		return LOAD_CHUNKS_DISTANCE;
 	}
 
+	void SetInput(PlayerInput&& input) {
+		{
+			std::lock_guard<std::mutex> lock(inputMutex);
+
+			m_inputBuffer = input;
+		}
+
+		m_hasSettedInput.store(true);
+
+		Wake();
+	}
+
+
+	void AddMouseDelta(float xoffset, float yoffset);
+
 	RaycastHit RequestRaycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const;
 
+
+	[[nodiscard]] PlayerSnapshot GetPlrSnapshot() {
+		std::lock_guard<std::mutex> lock(snapshotMutex);
+
+		return m_plrSnapshot;
+	}
 private:
 	World m_world;
 	ChunkPipeline m_chunkPipeline;
 	LightEngine m_lightEngine;
+
+	PlayerInput m_inputBuffer{};
+
+
+	PlayerSnapshot m_plrSnapshot{};
+
+	Player m_plr;
 
 	std::thread worldThread;
 	std::condition_variable worldCv;
@@ -66,11 +105,21 @@ private:
 
 	bool m_streamNeedsUpdate = false;
 
+	std::atomic<bool> m_hasSettedDesireStreamC = false;
+	std::atomic<bool> m_hasSettedInput = false;
+	std::atomic<bool> m_hasMovedMouse = false;
+
+	float m_xoffsetBuffer = 0.f;
+	float m_yoffsetBuffer = 0.f;
+
+	std::mutex snapshotMutex;
 	std::mutex streamCenterMutex;
 	std::mutex commandMutex;
 	std::mutex pendingMeshMutex;
 	std::mutex waitMutex;
 	std::mutex pendingDeleteMeshMutex;
+	std::mutex inputMutex;
+	std::mutex offsetMutex;
 
 	std::deque<WorldCommand> m_commands;
 
@@ -81,6 +130,10 @@ private:
 	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
 	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks
 	std::deque<uint64_t> m_pendingDeleteMeshKey;
+
+
+	std::vector<ChunkOffset> m_loadOffsets;
+	size_t m_nextLoadOffset = 0;
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -90,11 +143,14 @@ private:
 	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 10;
 
 
-	static constexpr int MAX_LIGHT_PROPAGATE_BFS_PER_TICK = 5000;
+	static constexpr int MAX_LIGHT_PROPAGATE_BFS_PER_TICK = 2000;
 private:
 
 	void ProcCommands();
+	void ProcOneCommand();
+
 	void ProcChunkResults();
+	void ProcOneChunkResult();
 
 	void ApplyCommand(WorldCommand& cmd);
 	void ApplyEditBlock(
@@ -106,11 +162,29 @@ private:
 
 	void ApplyStreamCenter();
 
+	void ApplyPlayerStatus(float dt);
+
+	
+	void ApplyMouseMovement();
+
+	void BuildLoadOffsets();
+	void UpdateChunksAround_step();
+	bool RequestOneMissingChunkAround();
+	bool RequestEraseOneChunkAround();
+
+	bool HasChunkToErase();
+	bool HasChunkToCreate();
+
 	void UpdateChunksAround();
-	void Tick();
+	
+	void TickSimulation(float dt);
+	void TickBackground(std::chrono::steady_clock::time_point deadline);
+
 
 	void EnqueueMeshJob(Chunk& c);
 
+
+	void UpdatePlrSnapshot();
 
 	void PushPendingMesh(PendingMesh& mesh);
 	
@@ -171,6 +245,7 @@ private:
 	void FinishLightTask(LightTask& task);
 
 	void DispatchDirtyMeshJobs();
+	void DispatchOneDirtyMeshJob();
 
 	bool HasImmediateTask();
 	void Wake();

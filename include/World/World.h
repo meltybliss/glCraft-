@@ -103,6 +103,16 @@ public:
 		c.readyForMesh = true;
 	}
 
+
+	bool CanCollideBlock(int64_t x, int64_t y, int64_t z) const {
+		BlockType block = static_cast<BlockType>(
+			GetBlockGlobal(x, y, z)
+		);
+
+
+		return block != BlockType::AIR && block != BlockType::TORCH;
+	}
+
 private:
 
 private:

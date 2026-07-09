@@ -133,6 +133,10 @@
   <ItemGroup>
     <ClInclude Include="include\Core\Application.h" />
     <ClInclude Include="include\Core\ChunkJob.h" />
+    <ClInclude Include="include\Gameplay\Player.h" />
+    <ClInclude Include="include\Gameplay\PlayerInput.h" />
+    <ClInclude Include="include\Gameplay\PlayerSnapshot.h" />
+    <ClInclude Include="include\Math\AABB.h" />
     <ClInclude Include="include\Math\PerlinNoise2D.h" />
     <ClInclude Include="include\Math\UV.h" />
     <ClInclude Include="include\Math\Vec2.h" />
@@ -459,6 +463,7 @@
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\main.cpp" />
+    <ClCompile Include="src\Gameplay\Player.cpp" />
     <ClCompile Include="src\Render\MeshBuilder.cpp" />
     <ClCompile Include="src\Render\SelectionOutlineRenderer.cpp" />
     <ClCompile Include="src\Render\Shader.cpp" />
