@@ -13,6 +13,9 @@ void Player::Tick(float dt, World& w) {
 
 	constexpr float EPS = 0.0001f;
 
+
+	onGround = false;
+
 	velocity.y += GRAVITY * dt;
 	velocity.y = std::max(velocity.y, MAX_FALL_SPEED);
 
@@ -156,6 +159,8 @@ void Player::MoveNegativeY(glm::vec2 xSet, int64_t y, glm::vec2 zSet, World& w) 
 		velocity.y = 0.f;
 		position.y = y + BLOCK_SIZE;
 
+
+		onGround = true;
 	}
 
 }
@@ -246,5 +251,14 @@ void Player::UpdateVectors() {
 	front = glm::normalize(f);
 	right = glm::normalize(glm::cross(front, worldUp));
 	up = glm::normalize(glm::cross(right, front));
+
+}
+
+
+void Player::Jump() {
+
+	if (!onGround) return;
+
+	velocity.y = jumpPower;
 
 }

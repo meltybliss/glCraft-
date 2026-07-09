@@ -1471,6 +1471,10 @@ void WorldThread::ApplyPlayerStatus(float dt) {
 	if (input.left)    moveDir -= right;
 	if (input.right)   moveDir += right;
 
+	if (input.up) {
+		m_plr.Jump();
+	}
+
 	if (glm::length(moveDir) > 0.0f) {
 		moveDir = glm::normalize(moveDir);
 	}

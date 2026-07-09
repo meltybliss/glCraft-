@@ -38,6 +38,9 @@ public:
 
 	void UpdateVectors();
 
+	void Jump();
+
+
 	[[nodiscard]] AABB GetPlrBox() const;
 	[[nodiscard]] glm::vec3 GetPos() const;
 	[[nodiscard]] glm::vec3 GetEyePos() const {
@@ -96,4 +99,7 @@ private:
 
 
 	float speed = 10.f;
+	float jumpPower = 8.0f;
+
+	bool onGround = false;
 };
