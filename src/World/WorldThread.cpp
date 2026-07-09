@@ -556,10 +556,8 @@ void WorldThread::TickSimulation(float dt) {
 		ApplyMouseMovement();
 	}
 
-	ApplyPlayerStatus(dt);
+	ApplyPlayerStatus(dt);//include Player tick inside
 
-
-	m_plr.Tick(dt, m_world);
 
 	UpdatePlrSnapshot();
 
@@ -1471,9 +1469,6 @@ void WorldThread::ApplyPlayerStatus(float dt) {
 	if (input.left)    moveDir -= right;
 	if (input.right)   moveDir += right;
 
-	if (input.up) {
-		m_plr.Jump();
-	}
 
 	if (glm::length(moveDir) > 0.0f) {
 		moveDir = glm::normalize(moveDir);
@@ -1483,6 +1478,9 @@ void WorldThread::ApplyPlayerStatus(float dt) {
 
 	m_plr.SetVelX(moveDir.x * speed);
 	m_plr.SetVelZ(moveDir.z * speed);
+
+
+	m_plr.Tick(dt, m_world, input);//player tick
 
 
 	m_hasSettedInput.store(false);
