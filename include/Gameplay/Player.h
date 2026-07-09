@@ -1,4 +1,5 @@
 #pragma once
+#include "Gameplay/PlayerInput.h"
 #include "Math/AABB.h"
 
 #include <glm/glm.hpp>
@@ -25,7 +26,7 @@ public:
 	void SetYaw(const float yaw) { this->yaw = yaw; }
 	void SetPitch(const float pitch) { this->pitch = pitch; }
 
- 	void Tick(float dt, World& w);
+ 	void Tick(float dt, World& w, PlayerInput& input);
 	
 	void MovePositiveX(int64_t x, glm::vec2 ySet, glm::vec2 zSet, World& w);
 	void MoveNegativeX(int64_t x, glm::vec2 ySet, glm::vec2 zSet, World& w);
@@ -37,9 +38,7 @@ public:
 	void MoveNegativeZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w);
 
 	void UpdateVectors();
-
-	void Jump();
-
+	
 
 	[[nodiscard]] AABB GetPlrBox() const;
 	[[nodiscard]] glm::vec3 GetPos() const;

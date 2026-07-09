@@ -8,13 +8,18 @@ void Player::SetVelocity(uint8_t xDir, uint8_t yDir, uint8_t zDir) {//0 or 1
 }
 
 
-void Player::Tick(float dt, World& w) {
+void Player::Tick(float dt, World& w, PlayerInput& input) {
 
 
 	constexpr float EPS = 0.0001f;
 
-
+	bool wasOnGround = onGround;
 	onGround = false;
+
+	if (input.up && wasOnGround) {
+		
+		velocity.y = jumpPower;
+	}
 
 	velocity.y += GRAVITY * dt;
 	velocity.y = std::max(velocity.y, MAX_FALL_SPEED);
@@ -254,11 +259,3 @@ void Player::UpdateVectors() {
 
 }
 
-
-void Player::Jump() {
-
-	if (!onGround) return;
-
-	velocity.y = jumpPower;
-
-}
