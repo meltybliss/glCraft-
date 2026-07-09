@@ -8,12 +8,20 @@
 #include "Gameplay/Player.h"
 #include "Gameplay/PlayerInput.h"
 #include "Gameplay/PlayerSnapshot.h"
-
+#include <chrono>
 #include <thread>
 #include <atomic>
 #include <mutex>
 #include <deque>
 #include <condition_variable>
+
+
+struct ChunkOffset {
+	int32_t dx = 0;
+	int32_t dz = 0;
+};
+
+
 class WorldThread {
 public:
 
@@ -122,6 +130,10 @@ private:
 	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
 	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks
 	std::deque<uint64_t> m_pendingDeleteMeshKey;
+
+
+	std::vector<ChunkOffset> m_loadOffsets;
+	size_t m_nextLoadOffset = 0;
 private:
 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -131,11 +143,14 @@ private:
 	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 10;
 
 
-	static constexpr int MAX_LIGHT_PROPAGATE_BFS_PER_TICK = 5000;
+	static constexpr int MAX_LIGHT_PROPAGATE_BFS_PER_TICK = 2000;
 private:
 
 	void ProcCommands();
+	void ProcOneCommand();
+
 	void ProcChunkResults();
+	void ProcOneChunkResult();
 
 	void ApplyCommand(WorldCommand& cmd);
 	void ApplyEditBlock(
@@ -149,10 +164,22 @@ private:
 
 	void ApplyPlayerStatus(float dt);
 
+	
 	void ApplyMouseMovement();
 
+	void BuildLoadOffsets();
+	void UpdateChunksAround_step();
+	bool RequestOneMissingChunkAround();
+	bool RequestEraseOneChunkAround();
+
+	bool HasChunkToErase();
+	bool HasChunkToCreate();
+
 	void UpdateChunksAround();
-	void Tick(float dt);
+	
+	void TickSimulation(float dt);
+	void TickBackground(std::chrono::steady_clock::time_point deadline);
+
 
 	void EnqueueMeshJob(Chunk& c);
 
@@ -218,6 +245,7 @@ private:
 	void FinishLightTask(LightTask& task);
 
 	void DispatchDirtyMeshJobs();
+	void DispatchOneDirtyMeshJob();
 
 	bool HasImmediateTask();
 	void Wake();

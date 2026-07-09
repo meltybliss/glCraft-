@@ -9,6 +9,18 @@ class Player {
 public:
 
 	void SetVelocity(uint8_t xDir, uint8_t yDir, uint8_t zDir);//0 or 1
+	void SetVelX(float velX) {
+		velocity.x = velX;
+	}
+
+	void SetVelY(float velY) {
+		velocity.y = velY;
+	}
+
+	void SetVelZ(float velZ) {
+		velocity.z = velZ;
+	}
+
 	void SetPosition(const glm::vec3& pos) { position = pos; }
 	void SetYaw(const float yaw) { this->yaw = yaw; }
 	void SetPitch(const float pitch) { this->pitch = pitch; }
@@ -28,6 +40,10 @@ public:
 
 	[[nodiscard]] AABB GetPlrBox() const;
 	[[nodiscard]] glm::vec3 GetPos() const;
+	[[nodiscard]] glm::vec3 GetEyePos() const {
+
+		return position + glm::vec3(0, eyeHeight, 0);
+	}
 	[[nodiscard]] float GetSpeed() const;
 	[[nodiscard]] glm::vec3 GetFront() const {
 		return front;
@@ -69,16 +85,15 @@ private:
 	float pitch = 0.f;
 	//
 
-	const float GRAVITY = -0.0f;//-25
+	const float GRAVITY = -25.0f;//-25
 	const float MAX_FALL_SPEED = -50.0f;
 
 	float width = 0.6f;
 	float depth = 0.6f;
 
-	float eyeHeight = 1.4f;
-	float height = 1.6f;
+	float eyeHeight = 1.8f;
+	float height = 2.f;
 
-	float feetHeight = -height / 2.f;
 
-	float speed = 100.f;
+	float speed = 10.f;
 };

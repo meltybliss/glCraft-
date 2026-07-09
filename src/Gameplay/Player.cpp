@@ -11,20 +11,22 @@ void Player::SetVelocity(uint8_t xDir, uint8_t yDir, uint8_t zDir) {//0 or 1
 void Player::Tick(float dt, World& w) {
 
 
-	velocity += GRAVITY * dt;
+	constexpr float EPS = 0.0001f;
+
+	velocity.y += GRAVITY * dt;
 	velocity.y = std::max(velocity.y, MAX_FALL_SPEED);
 
 
 	position.y += velocity.y * dt;
 	if (velocity.y > 0.f) {
 		AABB box = GetPlrBox();
-
-		MovePositiveY({ box.min.x, box.max.x }, box.max.y, { box.min.z, box.max.z }, w);
+		int64_t hitY = static_cast<int64_t>(std::floor(box.max.y));
+		MovePositiveY({ box.min.x, box.max.x }, hitY, { box.min.z, box.max.z }, w);
 	}
-	else {
+	else if (velocity.y < 0.f) {
 		AABB box = GetPlrBox();
-
-		MoveNegativeY({ box.min.x, box.max.x }, box.min.y, { box.min.z, box.max.z }, w);
+		int64_t hitY = static_cast<int64_t>(std::floor(box.min.y));
+		MoveNegativeY({ box.min.x, box.max.x }, hitY, { box.min.z, box.max.z }, w);
 	}
 
 
@@ -32,34 +34,36 @@ void Player::Tick(float dt, World& w) {
 	if (velocity.x > 0.f) {
 		AABB box = GetPlrBox();
 
-		MovePositiveX(box.max.x, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
+		int64_t hitX = static_cast<int64_t>(std::floor(box.max.x));
+		MovePositiveX(hitX, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
 
 	}
-	else {
+	else if (velocity.x < 0.f) {
 		AABB box = GetPlrBox();
-
-		MoveNegativeX(box.min.x, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
+		int64_t hitX = static_cast<int64_t>(std::floor(box.min.x));
+		MoveNegativeX(hitX, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
 	}
 
 	position.z += velocity.z * dt;
 	if (velocity.z > 0.f) {
 		AABB box = GetPlrBox();
-
-		MovePositiveZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, box.max.z, w);
+		int64_t hitZ = static_cast<int64_t>(std::floor(box.max.z));
+		MovePositiveZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, hitZ, w);
 
 	}
-	else {
+	else if (velocity.z < 0.f) {
 		AABB box = GetPlrBox();
-
-		MoveNegativeZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, box.min.z, w);
+		int64_t hitZ = static_cast<int64_t>(std::floor(box.min.z));
+		MoveNegativeZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, hitZ, w);
 	}
 
 	feetPos.x = position.x;
 	feetPos.z = position.z;
-	feetPos.y = position.y + feetHeight;
+	feetPos.y = position.y;
 
 
-
+	velocity.x = 0.f;
+	velocity.z = 0.f;
 
 }
 
@@ -150,7 +154,7 @@ void Player::MoveNegativeY(glm::vec2 xSet, int64_t y, glm::vec2 zSet, World& w) 
 		w.CanCollideBlock(maxX, y, maxZ)) {
 
 		velocity.y = 0.f;
-		position.y = (y + BLOCK_SIZE) + height/2.0f;//heightÇÕposÇ™äÓèÄ
+		position.y = y + BLOCK_SIZE;
 
 	}
 
@@ -175,8 +179,7 @@ void Player::MovePositiveZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w) 
 		w.CanCollideBlock(maxX, maxY, z)) {
 
 		velocity.z = 0.f;
-
-		position.z = z - depth;
+		position.z = z - depth / 2.0f;
 
 	}
 
@@ -199,8 +202,7 @@ void Player::MoveNegativeZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w) 
 		w.CanCollideBlock(maxX, maxY, z)) {
 
 		velocity.z = 0.f;
-
-		position.z = (z + depth) + depth / 2.0f;
+		position.z = z + BLOCK_SIZE + depth / 2.0f;
 
 	}
 
@@ -208,14 +210,19 @@ void Player::MoveNegativeZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w) 
 }
 
 
-
 AABB Player::GetPlrBox() const {
-
 	return {
-		glm::vec3{position.x - (width/2.f), position.y + feetHeight, position.z - (depth/2.0f)},
-		glm::vec3{position.x + (width/2.f), position.y + height, position.z + (depth/2.0f)}
+		glm::vec3{
+			position.x - width * 0.5f,
+			position.y + 0.001f,
+			position.z - depth * 0.5f
+		},
+		glm::vec3{
+			position.x + width * 0.5f,
+			position.y + height - 0.001f,
+			position.z + depth * 0.5f
+		}
 	};
-
 }
 
 
