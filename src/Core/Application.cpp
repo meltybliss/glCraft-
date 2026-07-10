@@ -168,6 +168,26 @@ void Application::ProcessInput() {
 	
 	PlayerInput input;
 
+	bool pressSpace = (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS);
+
+	bool spacePressedThisFrame = pressSpace && !wasSpacePressed;
+
+	wasSpacePressed = pressSpace;
+
+
+	if (spacePressedThisFrame) {
+		double now = glfwGetTime();
+
+		if (now - lastSpacePressTime <= spectateDoubleTime) {
+			input.toggleSpectator = true;
+		
+			lastSpacePressTime = -1000.0;
+		}
+		else {
+			lastSpacePressTime = now;
+		}
+
+	}
 
 	if (glfwGetKey(m_window, GLFW_KEY_W) == GLFW_PRESS) {
 	
@@ -188,7 +208,7 @@ void Application::ProcessInput() {
 	
 		input.right = true;
 	}
-	if (glfwGetKey(m_window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+	if (pressSpace) {
 
 		input.up = true;
 	}

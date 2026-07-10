@@ -8,6 +8,45 @@ void Player::SetVelocity(uint8_t xDir, uint8_t yDir, uint8_t zDir) {//0 or 1
 }
 
 
+void Player::CalcVelocityXZ(PlayerInput& input) {
+
+
+	glm::vec3 local_front = GetFront();
+	glm::vec3 local_right = GetRight();
+
+	local_front.y = 0.0f;
+	local_right.y = 0.0f;
+
+	if (glm::length(local_front) > 0.0f) {
+		local_front = glm::normalize(local_front);
+	}
+
+	if (glm::length(local_right) > 0.0f) {
+		local_right = glm::normalize(local_right);
+	}
+
+	glm::vec3 moveDir{ 0.0f };
+
+	float s = m_isSpectator ? flySpeed : speed;
+
+
+	if (input.forward) moveDir += local_front;
+	if (input.back)    moveDir -= local_front;
+	if (input.left)    moveDir -= local_right;
+	if (input.right)   moveDir += local_right;
+	
+
+	if (glm::length(moveDir) > 0.0f) {
+		moveDir = glm::normalize(moveDir);
+	}
+
+
+	SetVelX(moveDir.x * s);
+	SetVelZ(moveDir.z * s);
+
+}
+
+
 void Player::Tick(float dt, World& w, PlayerInput& input) {
 
 
@@ -16,53 +55,80 @@ void Player::Tick(float dt, World& w, PlayerInput& input) {
 	bool wasOnGround = onGround;
 	onGround = false;
 
-	if (input.up && wasOnGround) {
-		
-		velocity.y = jumpPower;
+	if (input.toggleSpectator) {
+		m_isSpectator = !m_isSpectator;
 	}
 
-	velocity.y += GRAVITY * dt;
-	velocity.y = std::max(velocity.y, MAX_FALL_SPEED);
+	
+	CalcVelocityXZ(input);
 
 
-	position.y += velocity.y * dt;
-	if (velocity.y > 0.f) {
-		AABB box = GetPlrBox();
-		int64_t hitY = static_cast<int64_t>(std::floor(box.max.y));
-		MovePositiveY({ box.min.x, box.max.x }, hitY, { box.min.z, box.max.z }, w);
+	if (m_isSpectator) {
+
+		if (input.up) {
+			velocity.y = 30.0f;
+		}
+		if (input.down) {
+			velocity.y = -30.0f;
+		}
+
+		position.y += velocity.y * dt;
+		position.x += velocity.x * dt;
+		position.z += velocity.z * dt;
+
+
+		velocity.y = 0.0f;
 	}
-	else if (velocity.y < 0.f) {
-		AABB box = GetPlrBox();
-		int64_t hitY = static_cast<int64_t>(std::floor(box.min.y));
-		MoveNegativeY({ box.min.x, box.max.x }, hitY, { box.min.z, box.max.z }, w);
-	}
+	else {
+
+		if (input.up && wasOnGround) {
+
+			velocity.y = jumpPower;
+		}
+
+		velocity.y += GRAVITY * dt;
+		velocity.y = std::max(velocity.y, MAX_FALL_SPEED);
 
 
-	position.x += velocity.x * dt;
-	if (velocity.x > 0.f) {
-		AABB box = GetPlrBox();
+		position.y += velocity.y * dt;
+		if (velocity.y > 0.f) {
+			AABB box = GetPlrBox();
+			int64_t hitY = static_cast<int64_t>(std::floor(box.max.y));
+			MovePositiveY({ box.min.x, box.max.x }, hitY, { box.min.z, box.max.z }, w);
+		}
+		else if (velocity.y < 0.f) {
+			AABB box = GetPlrBox();
+			int64_t hitY = static_cast<int64_t>(std::floor(box.min.y));
+			MoveNegativeY({ box.min.x, box.max.x }, hitY, { box.min.z, box.max.z }, w);
+		}
 
-		int64_t hitX = static_cast<int64_t>(std::floor(box.max.x));
-		MovePositiveX(hitX, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
 
-	}
-	else if (velocity.x < 0.f) {
-		AABB box = GetPlrBox();
-		int64_t hitX = static_cast<int64_t>(std::floor(box.min.x));
-		MoveNegativeX(hitX, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
-	}
+		position.x += velocity.x * dt;
+		if (velocity.x > 0.f) {
+			AABB box = GetPlrBox();
 
-	position.z += velocity.z * dt;
-	if (velocity.z > 0.f) {
-		AABB box = GetPlrBox();
-		int64_t hitZ = static_cast<int64_t>(std::floor(box.max.z));
-		MovePositiveZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, hitZ, w);
+			int64_t hitX = static_cast<int64_t>(std::floor(box.max.x));
+			MovePositiveX(hitX, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
 
-	}
-	else if (velocity.z < 0.f) {
-		AABB box = GetPlrBox();
-		int64_t hitZ = static_cast<int64_t>(std::floor(box.min.z));
-		MoveNegativeZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, hitZ, w);
+		}
+		else if (velocity.x < 0.f) {
+			AABB box = GetPlrBox();
+			int64_t hitX = static_cast<int64_t>(std::floor(box.min.x));
+			MoveNegativeX(hitX, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
+		}
+
+		position.z += velocity.z * dt;
+		if (velocity.z > 0.f) {
+			AABB box = GetPlrBox();
+			int64_t hitZ = static_cast<int64_t>(std::floor(box.max.z));
+			MovePositiveZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, hitZ, w);
+
+		}
+		else if (velocity.z < 0.f) {
+			AABB box = GetPlrBox();
+			int64_t hitZ = static_cast<int64_t>(std::floor(box.min.z));
+			MoveNegativeZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, hitZ, w);
+		}
 	}
 
 	feetPos.x = position.x;

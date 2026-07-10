@@ -71,6 +71,11 @@ public:
 	}
 
 	
+
+private:
+
+	void CalcVelocityXZ(PlayerInput& input);
+
 private:
 	glm::vec3 position{0.f, 200.f, 0.f};
 	glm::vec3 feetPos{};
@@ -98,7 +103,10 @@ private:
 
 
 	float speed = 10.f;
+	float flySpeed = 30.0f;
+
 	float jumpPower = 8.0f;
 
 	bool onGround = false;
+	bool m_isSpectator = false;
 };
