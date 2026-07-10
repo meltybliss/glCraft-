@@ -1447,37 +1447,7 @@ void WorldThread::ApplyPlayerStatus(float dt) {
 		input = m_inputBuffer;
 
 	}
-
-	glm::vec3 front = m_plr.GetFront();
-	glm::vec3 right = m_plr.GetRight();
-
-	front.y = 0.0f;
-	right.y = 0.0f;
-
-	if (glm::length(front) > 0.0f) {
-		front = glm::normalize(front);
-	}
-
-	if (glm::length(right) > 0.0f) {
-		right = glm::normalize(right);
-	}
-
-	glm::vec3 moveDir{ 0.0f };
-
-	if (input.forward) moveDir += front;
-	if (input.back)    moveDir -= front;
-	if (input.left)    moveDir -= right;
-	if (input.right)   moveDir += right;
-
-
-	if (glm::length(moveDir) > 0.0f) {
-		moveDir = glm::normalize(moveDir);
-	}
-
-	float speed = m_plr.GetSpeed();
-
-	m_plr.SetVelX(moveDir.x * speed);
-	m_plr.SetVelZ(moveDir.z * speed);
+	
 
 
 	m_plr.Tick(dt, m_world, input);//player tick

@@ -57,4 +57,9 @@ private:
 	std::unique_ptr<Texture> torch_side;
 
 	RaycastHit lastHit;
+
+
+	bool wasSpacePressed = false;
+	double lastSpacePressTime = -1000.0;
+	double spectateDoubleTime = 0.5;
 };

@@ -11,5 +11,5 @@ struct PlayerInput {
 	bool right = false;
 	bool left = false;
 
-
+	bool toggleSpectator = false;
 };
