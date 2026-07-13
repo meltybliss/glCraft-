@@ -426,8 +426,6 @@ void WorldThread::Start_BlockLightTask(
 
 	if (!c) return;
 
-	c->readyForMesh = false;
-
 
 	LightTask task;
 	task.lightType = LightType::BLOCK;
@@ -923,7 +921,6 @@ void WorldThread::Rebuild_allChunks() {
 		}
 
 		chunkPtr->dirty = true;
-		chunkPtr->readyForMesh = true;
 		chunkPtr->urgentUpdateMesh = true;
 	}
 
@@ -1190,14 +1187,12 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 	
 	if (task.bfs_queue.empty()) {
 		c.dirty = true;
-		c.readyForMesh = true;
 
 		FinishLightTask(task);//周囲チャンクをdirtyするために
 		return;
 	}
 	
 
-	c.readyForMesh = false;
 
 	
 	m_lightTasks.push_back(task);
@@ -1270,7 +1265,6 @@ void WorldThread::FinishLightTask(LightTask& task) {
 
 		Chunk* c = m_world.GetTargetChunkFromKey(key);
 		c->dirty = true;
-		c->readyForMesh = true;
 
 		if (task.lightType == LightType::BLOCK) {
 			c->urgentUpdateMesh = true;
@@ -1398,8 +1392,7 @@ void WorldThread::DispatchDirtyMeshJobs() {
 	auto& chunks = m_world.GetChunks();
 
 	for (auto& [key, chunkPtr] : chunks) {
-		if (!chunkPtr->readyForMesh) continue;
-
+		
 		if (!chunkPtr->dirty) continue;
 
 		//if (chunkPtr->meshJobInFlight) continue;
@@ -1407,7 +1400,6 @@ void WorldThread::DispatchDirtyMeshJobs() {
 		EnqueueMeshJob(*chunkPtr);
 
 		chunkPtr->dirty = false;
-		chunkPtr->readyForMesh = false;
 	}
 
 }
@@ -1418,8 +1410,7 @@ void WorldThread::DispatchOneDirtyMeshJob() {//TODO: 仕組みをunordered_setを使う
 	auto& chunks = m_world.GetChunks();
 
 	for (auto& [key, chunkPtr] : chunks) {
-		if (!chunkPtr->readyForMesh) continue;
-
+		
 		if (!chunkPtr->dirty) continue;
 
 		//if (chunkPtr->meshJobInFlight) continue;
@@ -1427,7 +1418,6 @@ void WorldThread::DispatchOneDirtyMeshJob() {//TODO: 仕組みをunordered_setを使う
 		EnqueueMeshJob(*chunkPtr);
 
 		chunkPtr->dirty = false;
-		chunkPtr->readyForMesh = false;
 
 		return;
 	}

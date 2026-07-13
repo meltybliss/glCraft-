@@ -102,7 +102,6 @@ public:
 		c.dirty = true;
 		c.urgentUpdateMesh = true;
 		
-		c.readyForMesh = true;
 	}
 
 
