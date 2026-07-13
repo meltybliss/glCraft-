@@ -22,7 +22,6 @@ struct Chunk {
 	bool urgentUpdateMesh = false;
 
 	bool readyForMesh = false;
-	bool meshJobInFlight = false;
 
 	constexpr static int CHUNK_WIDTH = 16;
 	constexpr static int CHUNK_DEPTH = 16;

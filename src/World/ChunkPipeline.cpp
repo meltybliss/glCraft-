@@ -4,6 +4,8 @@
 #include "World/WorldThread.h"
 #include "World/LightEngine.h"
 #include <memory>
+#include <iostream>
+#include "Util/ThreadSafeLogUtils.h"
 
 void ChunkPipeline::StartWorkerThread() {
 	if (runningWorker) {
@@ -103,7 +105,6 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 					std::lock_guard<std::mutex> lock(meshResultMutex);
 
 					m_meshChunkResult.push_back({
-						targetJob.isNewChunk,
 						key,
 						std::move(data)
 
@@ -117,8 +118,6 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 			}
 			
-
-
 			break;
 		}
 	}
@@ -142,7 +141,13 @@ void ChunkPipeline::StartLoop() {
 			}
 
 			targetJob = std::move(m_jobQueue.front());
+
 			m_jobQueue.pop_front();
+
+			if (targetJob.type == JobType::BUILD_MESH) {
+				m_pendingMeshJobs_ChunkKeys.erase(Index(targetJob.cx, targetJob.cz));
+			}
+
 		}
 
 		ProcessJob(std::move(targetJob));
@@ -198,6 +203,17 @@ bool ChunkPipeline::PopFrontGenResult(GeneratedChunkResult& out) {
 
 
 void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
+
+
+
+	uint64_t key = Index(job.cx, job.cz);
+	if (m_pendingMeshJobs_ChunkKeys.contains(key)) {
+		RemoveQueuedMeshJob(key);
+	}
+
+	m_pendingMeshJobs_ChunkKeys.insert(key);
+
+
 	{
 		std::lock_guard<std::mutex> lock(jobsMutex);
 
@@ -208,6 +224,8 @@ void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
 			m_jobQueue.push_back(std::move(job));
 		}
 	}
+
+
 
 	workerCv.notify_all();
 }
@@ -255,6 +273,33 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 
 	return canceledKey;
 }
+
+
+void ChunkPipeline::RemoveQueuedMeshJob(uint64_t targetKey) {
+
+	std::lock_guard<std::mutex> lock(jobsMutex);
+
+	auto newEnd = std::remove_if(
+		m_jobQueue.begin(),
+		m_jobQueue.end(),
+
+		[targetKey](const ChunkJob& job) {
+			if (job.type != JobType::BUILD_MESH) {
+				return false;
+			}
+
+			uint64_t key = Index(job.cx, job.cz);
+
+			return targetKey == key;
+
+		}
+
+	);
+		
+
+	m_jobQueue.erase(newEnd, m_jobQueue.end());
+}
+
 
 /*
 void ChunkPipeline::CancelQueuedOutside_ChunkJob() {

@@ -2,6 +2,7 @@
 #include "World/WorldThread.h"
 #include "Render/MeshBuilder.h"
 #include "Core/ChunkJob.h"
+#include <iostream>
 
 /*void WorldRenderer::RebuildDrityChunkMesh(World& w) {
 	for (auto& [key, c] : w.GetChunks()) {
@@ -71,7 +72,6 @@ void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 	
 	while (wt.PopPendingMeshData(out)) {
 		auto [it, inserted] = m_chunkMeshes.try_emplace(out.key);
-
 
 		it->second.Upload(out.meshData);
 		

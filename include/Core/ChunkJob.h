@@ -13,7 +13,6 @@ enum JobType {
 struct ChunkJob {
 	int32_t cx, cz;
 	bool urgent = false;
-	bool isNewChunk = false;
 
 	JobType type;
 	std::unique_ptr<ChunkMeshSnapshot> snapshot;//for BUILD_MESH

@@ -914,6 +914,23 @@ void WorldThread::UpdateChunksAround() {
 
 
 
+void WorldThread::Rebuild_allChunks() {
+	auto& chunks = m_world.GetChunks();
+
+	for (auto& [key, chunkPtr] : chunks) {
+		if (!chunkPtr) {
+			continue;
+		}
+
+		chunkPtr->dirty = true;
+		chunkPtr->readyForMesh = true;
+		chunkPtr->urgentUpdateMesh = true;
+	}
+
+	Wake();
+}
+
+
 void WorldThread::SetDesiredStreamCenter(
 	int32_t cx,
 	int32_t cz
@@ -953,6 +970,9 @@ void WorldThread::ApplyStreamCenter() {
 	m_lastStreamCz = curCenterCz;
 
 	if (enternedNewChunk) {
+
+		m_nextLoadOffset = 0;
+
 		m_chunkPipeline.SetStreamCenter(curCenterCx, curCenterCz);
 
 		std::vector<uint64_t> canceledKey =
@@ -981,9 +1001,10 @@ void WorldThread::ProcOneChunkResult() {
 	if (m_chunkPipeline.PopFrontMeshResult(meshResult)) {
 		const auto& key = meshResult.key;
 
-		int32_t cx = 0;
-		int32_t cz = 0;
+		int32_t cx = RestoreCxFromKey(key);
+		int32_t cz = RestoreCzFromKey(key);
 
+		
 
 		if (meshResult.meshData) {
 			PendingMesh mesh;
@@ -993,17 +1014,15 @@ void WorldThread::ProcOneChunkResult() {
 			PushPendingMesh(mesh);
 		}
 
-		if (meshResult.wasNewChunk) {
+		/*if (c->waitingFirstMesh) {
 			m_world.MarkNeighborChunksDirty(cx, cz);
-		}
+			c->waitingFirstMesh = false;
+		}*/
 	}
 
 	if (m_chunkPipeline.PopFrontGenResult(genResult)) {
 
 		const auto& key = genResult.key;
-
-		int32_t cx = 0;
-		int32_t cz = 0;
 
 
 		m_pendingChunkKeys.erase(key);
@@ -1016,13 +1035,22 @@ void WorldThread::ProcOneChunkResult() {
 
 		}
 
-
 		chunks[key] = std::move(genResult.chunk);
 
 
 		Start_SkyLightTaskForNewChunk(*chunks[key]);
 
 	}
+
+}
+
+
+
+void WorldThread::Debug_CurStreamCenter() {
+
+	std::lock_guard<std::mutex> lock(streamCenterMutex);
+
+	std::cout << m_streamCx << ", " << m_streamCz << "\n";
 
 }
 
@@ -1037,9 +1065,9 @@ void WorldThread::ProcChunkResults() {
 
 		const auto& key = meshResult.key;
 
-		int32_t cx = 0;
-		int32_t cz = 0;
 
+		int32_t cx = RestoreCxFromKey(key);
+		int32_t cz = RestoreCzFromKey(key);
 
 		if (meshResult.meshData) {
 			PendingMesh mesh;
@@ -1049,9 +1077,10 @@ void WorldThread::ProcChunkResults() {
 			PushPendingMesh(mesh);
 		}
 
-		if (meshResult.wasNewChunk) {
+		/*if (c->waitingFirstMesh) {
 			m_world.MarkNeighborChunksDirty(cx, cz);
-		}
+			c->waitingFirstMesh = false;
+		}*/
 
 	}
 
@@ -1060,10 +1089,7 @@ void WorldThread::ProcChunkResults() {
 
 		const auto& key = genResult.key;
 
-		int32_t cx = 0;
-		int32_t cz = 0;
-
-
+	
 		m_pendingChunkKeys.erase(key);
 
 
@@ -1083,6 +1109,8 @@ void WorldThread::ProcChunkResults() {
 }
 
 
+
+
 void WorldThread::EnqueueMeshJob(Chunk& c) {
 
 	ChunkJob job;
@@ -1091,12 +1119,12 @@ void WorldThread::EnqueueMeshJob(Chunk& c) {
 	job.snapshot = m_world.CreateMeshSnapshot(c);
 	job.type = JobType::BUILD_MESH;
 
-	job.isNewChunk = false;
-
 	if (c.urgentUpdateMesh) {
 		c.urgentUpdateMesh = false;
 		job.urgent = true;
 	}
+
+	uint64_t key = Index(c.cx, c.cz);
 
 
 	m_chunkPipeline.EnqueueJob(std::move(job));
@@ -1163,6 +1191,8 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 	if (task.bfs_queue.empty()) {
 		c.dirty = true;
 		c.readyForMesh = true;
+
+		FinishLightTask(task);//ŽüˆÍƒ`ƒƒƒ“ƒN‚ðdirty‚·‚é‚½‚ß‚É
 		return;
 	}
 	
