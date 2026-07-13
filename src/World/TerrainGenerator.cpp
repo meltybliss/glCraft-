@@ -30,8 +30,6 @@ void TerrainGenerator::GenerateTerrain(Chunk& c) {
 	}
 	
 
-	c.dirty = true;
-
 }
 
 

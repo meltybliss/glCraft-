@@ -179,7 +179,6 @@ void World::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 		}
 
 		it->second->dirty = true;
-		it->second->readyForMesh = true;
 
 	}
 
@@ -194,7 +193,6 @@ void World::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 		}
 
 		it->second->dirty = true;
-		it->second->readyForMesh = true;
 
 
 	}
@@ -213,7 +211,6 @@ void World::MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz) {
 
 		it->second->urgentUpdateMesh = true;
 		it->second->dirty = true;
-		it->second->readyForMesh = true;
 
 	}
 
@@ -229,7 +226,6 @@ void World::MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz) {
 
 		it->second->urgentUpdateMesh = true;
 		it->second->dirty = true;
-		it->second->readyForMesh = true;
 
 
 	}
