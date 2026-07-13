@@ -143,6 +143,8 @@ private:
 	std::priority_queue<ChunkDirtyEntry> m_dirtyMeshQueue;
 
 	std::vector<ChunkOffset> m_loadOffsets;
+	std::unordered_map<uint64_t, int> m_loadOffsetsRank;//dx‚Ædz‚ğ‡‘Ì‚³‚¹‚½key
+
 	size_t m_nextLoadOffset = 0;
 private:
 

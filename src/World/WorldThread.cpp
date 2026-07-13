@@ -617,6 +617,15 @@ void WorldThread::BuildLoadOffsets()
 			return da < db;
 		}
 	);
+
+
+
+	for (int i = 0; i < m_loadOffsets.size(); ++i) {
+		auto& offset = m_loadOffsets[i];
+
+		m_loadOffsetsRank[Index(offset.dx, offset.dz)] = i;
+	}
+
 }
 
 
@@ -1493,18 +1502,18 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 	const int32_t cx = c.cx;
 	const int32_t cz = c.cz;
 
-	const int32_t dx = cx - m_lastStreamCx;
-	const int32_t dz = cz - m_lastStreamCz;
+	const int32_t dx = std::abs(cx - m_lastStreamCx);
+	const int32_t dz = std::abs(cz - m_lastStreamCz);
 
 	const uint64_t key = Index(cx, cz);
 
-	const int priority = dx * dx + dz * dz;
+	const int priority = m_loadOffsetsRank[Index(dx, dz)];
 
 	/*const int priority = std::max(
 		std::abs(cx - m_lastStreamCx),
 		std::abs(cz - m_lastStreamCz)
 	);*/
-
+	
 	m_dirtyMeshQueue.push({
 		priority,
 		key
