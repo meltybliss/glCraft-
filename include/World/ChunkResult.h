@@ -11,7 +11,6 @@ struct GeneratedChunkResult {
 };
 
 struct MeshChunkResult {
-	bool wasNewChunk = false;
 	uint64_t key;
 	std::optional<MeshData> meshData;
 };

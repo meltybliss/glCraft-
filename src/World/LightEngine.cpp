@@ -203,6 +203,9 @@ void LightEngine::CreateSkylightLeakSeeds(Chunk& c, LightTask& task) {
 
 	};
 
+	task.touchedChunkKeys.insert(Index(c.cx, c.cz));
+
+
 	for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
 		for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
 			for (int y = Chunk::CHUNK_HEIGHT - 1; y >= 0; --y) {

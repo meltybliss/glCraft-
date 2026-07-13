@@ -150,6 +150,7 @@
     <ClInclude Include="include\Render\Shader.h" />
     <ClInclude Include="include\Render\Texture.h" />
     <ClInclude Include="include\Render\WorldRenderer.h" />
+    <ClInclude Include="include\Util\ThreadSafeLogUtils.h" />
     <ClInclude Include="include\World\BlockData.h" />
     <ClInclude Include="include\World\Chunk.h" />
     <ClInclude Include="include\World\ChunkUtil.h" />

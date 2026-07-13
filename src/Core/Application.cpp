@@ -219,8 +219,10 @@ void Application::ProcessInput() {
 
 
 	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
-		//m_world.DebugChunkInfo();
+		m_worldThread.Debug_CurStreamCenter();
 	}
+
+
 
 
 	m_worldThread.SetInput(std::move(input));

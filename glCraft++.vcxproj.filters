@@ -1008,6 +1008,9 @@
     <ClInclude Include="include\Gameplay\PlayerSnapshot.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="include\Util\ThreadSafeLogUtils.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="third_party\glad.c">

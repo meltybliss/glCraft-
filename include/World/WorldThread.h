@@ -8,6 +8,7 @@
 #include "Gameplay/Player.h"
 #include "Gameplay/PlayerInput.h"
 #include "Gameplay/PlayerSnapshot.h"
+#include "Util/ThreadSafeLogUtils.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -73,6 +74,10 @@ public:
 	RaycastHit RequestRaycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const;
 
 
+	void Rebuild_allChunks();
+
+	void Debug_CurStreamCenter();
+
 	[[nodiscard]] PlayerSnapshot GetPlrSnapshot() {
 		std::lock_guard<std::mutex> lock(snapshotMutex);
 
@@ -120,6 +125,7 @@ private:
 	std::mutex pendingDeleteMeshMutex;
 	std::mutex inputMutex;
 	std::mutex offsetMutex;
+	
 
 	std::deque<WorldCommand> m_commands;
 
@@ -128,7 +134,9 @@ private:
 
 
 	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
-	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks
+	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks to create and generate Terrain
+	
+
 	std::deque<uint64_t> m_pendingDeleteMeshKey;
 
 
@@ -246,6 +254,7 @@ private:
 
 	void DispatchDirtyMeshJobs();
 	void DispatchOneDirtyMeshJob();
+
 
 	bool HasImmediateTask();
 	void Wake();

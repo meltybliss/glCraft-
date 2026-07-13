@@ -5,6 +5,8 @@
 #include "Render/PendingMesh.h"
 #include "World/RaycastHit.h"
 #include "World/ChunkMeshSnapshot.h"
+
+#include "Util/ThreadSafeLogUtils.h"
 #include <unordered_map>
 #include <memory>
 #include <unordered_set>

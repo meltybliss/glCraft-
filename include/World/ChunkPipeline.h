@@ -10,6 +10,7 @@
 #include <mutex>
 #include <deque>
 #include <unordered_map>
+#include <unordered_set>
 #include <condition_variable>
 #include <stdint.h>
 #include <memory>
@@ -39,8 +40,13 @@ public:
 
 		m_resultReadyCallback = std::move(callback);
 	}
+
+
+	void RemoveQueuedMeshJob(uint64_t targetKey);
+
 private:
 	void StartLoop();
+	
 
 private:
 
@@ -72,7 +78,9 @@ private:
 
 	std::atomic<int32_t> m_curStreamCx = 0;
 	std::atomic<int32_t> m_curStreamCz = 0;
+	
 
+	std::unordered_set<uint64_t> m_pendingMeshJobs_ChunkKeys;
 
 	//size_t m_cancelScanedIndex = 0;
 
