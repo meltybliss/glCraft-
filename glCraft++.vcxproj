@@ -153,6 +153,7 @@
     <ClInclude Include="include\Util\ThreadSafeLogUtils.h" />
     <ClInclude Include="include\World\BlockData.h" />
     <ClInclude Include="include\World\Chunk.h" />
+    <ClInclude Include="include\World\ChunkDirtyEntryPriority.h" />
     <ClInclude Include="include\World\ChunkUtil.h" />
     <ClInclude Include="include\World\ChunkMeshSnapshot.h" />
     <ClInclude Include="include\World\ChunkPipeline.h" />

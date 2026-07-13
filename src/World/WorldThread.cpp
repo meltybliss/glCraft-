@@ -246,7 +246,7 @@ void WorldThread::ApplyEditBlock(
 	}
 
 
-	m_world.MarkChunkUrgentDirty(*c);
+	MarkChunkUrgentDirty(*c);
 
 }
 
@@ -588,28 +588,36 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 }
 
-
-
-void WorldThread::BuildLoadOffsets() {
-
+void WorldThread::BuildLoadOffsets()
+{
 	m_loadOffsets.clear();
 	m_nextLoadOffset = 0;
 
-	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE; ++r) {//これいい自分の周囲からloadするアルゴリズム
-		for (int32_t dx = -r; dx <= r; ++dx) {
-			for (int32_t dz = -r; dz <= r; ++dz) {
-				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//内側は処理済みなので外周だけ
-					continue;
-				}
+	const int32_t r = LOAD_CHUNKS_DISTANCE;
 
-
-				m_loadOffsets.push_back({ dx, dz });
-			}
+	for (int32_t dx = -r; dx <= r; ++dx) {
+		for (int32_t dz = -r; dz <= r; ++dz) {
+			m_loadOffsets.push_back({ dx, dz });
 		}
 	}
 
-}
+	std::sort(
+		m_loadOffsets.begin(),
+		m_loadOffsets.end(),
+		[](const auto& a, const auto& b)
+		{
+			const int64_t da =
+				static_cast<int64_t>(a.dx) * a.dx +
+				static_cast<int64_t>(a.dz) * a.dz;
 
+			const int64_t db =
+				static_cast<int64_t>(b.dx) * b.dx +
+				static_cast<int64_t>(b.dz) * b.dz;
+
+			return da < db;
+		}
+	);
+}
 
 
 bool WorldThread::RequestOneMissingChunkAround() {
@@ -1270,7 +1278,7 @@ void WorldThread::FinishLightTask(LightTask& task) {
 			c->urgentUpdateMesh = true;
 		}
 
-		m_world.MarkNeighborChunksUrgentDirty(c->cx, c->cz);
+		MarkNeighborChunksUrgentDirty(c->cx, c->cz);
 
 	}
 
@@ -1391,7 +1399,32 @@ void WorldThread::DispatchDirtyMeshJobs() {
 
 	auto& chunks = m_world.GetChunks();
 
-	for (auto& [key, chunkPtr] : chunks) {
+	while (!m_dirtyMeshQueue.empty()) {
+
+		auto entry = m_dirtyMeshQueue.top();
+		m_dirtyMeshQueue.pop();
+
+		auto it = chunks.find(entry.key);
+		if (it != chunks.end()) {
+
+			if (!it->second->dirty) {
+				continue;
+			}
+
+			EnqueueMeshJob(*it->second);
+			it->second->dirty = false;
+
+		}
+		else {
+
+			continue;
+
+		}
+
+
+	}
+
+	/*for (auto& [key, chunkPtr] : chunks) {
 		
 		if (!chunkPtr->dirty) continue;
 
@@ -1400,7 +1433,7 @@ void WorldThread::DispatchDirtyMeshJobs() {
 		EnqueueMeshJob(*chunkPtr);
 
 		chunkPtr->dirty = false;
-	}
+	}*/
 
 }
 
@@ -1409,7 +1442,33 @@ void WorldThread::DispatchOneDirtyMeshJob() {//TODO: 仕組みをunordered_setを使う
 
 	auto& chunks = m_world.GetChunks();
 
-	for (auto& [key, chunkPtr] : chunks) {
+	while (!m_dirtyMeshQueue.empty()) {
+
+		auto entry = m_dirtyMeshQueue.top();
+		m_dirtyMeshQueue.pop();
+
+		auto it = chunks.find(entry.key);
+		if (it != chunks.end()) {
+
+			if (!it->second->dirty) {
+				continue;
+			}
+
+			EnqueueMeshJob(*it->second);
+			it->second->dirty = false;
+
+			return;
+		}
+		else {
+
+			continue;
+
+		}
+
+
+	}
+
+	/*for (auto& [key, chunkPtr] : chunks) {
 		
 		if (!chunkPtr->dirty) continue;
 
@@ -1420,9 +1479,121 @@ void WorldThread::DispatchOneDirtyMeshJob() {//TODO: 仕組みをunordered_setを使う
 		chunkPtr->dirty = false;
 
 		return;
+	}*/
+
+}
+
+
+void WorldThread::MarkChunkDirty(Chunk& c) {
+
+
+	c.dirty = true;
+
+
+	const int32_t cx = c.cx;
+	const int32_t cz = c.cz;
+
+	const int32_t dx = cx - m_lastStreamCx;
+	const int32_t dz = cz - m_lastStreamCz;
+
+	const uint64_t key = Index(cx, cz);
+
+	const int priority = dx * dx + dz * dz;
+
+	/*const int priority = std::max(
+		std::abs(cx - m_lastStreamCx),
+		std::abs(cz - m_lastStreamCz)
+	);*/
+
+	m_dirtyMeshQueue.push({
+		priority,
+		key
+	});
+
+}
+
+
+void WorldThread::MarkChunkUrgentDirty(Chunk& c) {
+	c.urgentUpdateMesh = true;
+
+	MarkChunkDirty(c);
+}
+
+void WorldThread::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
+
+	auto& chunks = m_world.GetChunks();
+
+	for (int32_t x = cx - 1; x <= cx + 1; ++x) {
+		if (x == cx) continue;
+
+		uint64_t key = Index(x, cz);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
+
+
+		MarkChunkDirty(*it->second);
+	}
+
+	for (int32_t z = cz - 1; z <= cz + 1; ++z) {
+		if (z == cz) continue;
+
+		uint64_t key = Index(cx, z);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
+
+		
+
+		MarkChunkDirty(*it->second);
+	}
+}
+
+void WorldThread::MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz) {
+
+	auto& chunks = m_world.GetChunks();
+
+
+	for (int32_t x = cx - 1; x <= cx + 1; ++x) {
+		if (x == cx) continue;
+
+		uint64_t key = Index(x, cz);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
+
+		it->second->urgentUpdateMesh = true;
+
+		MarkChunkDirty(*it->second);
+
+	}
+
+	for (int32_t z = cz - 1; z <= cz + 1; ++z) {
+		if (z == cz) continue;
+
+		uint64_t key = Index(cx, z);
+		auto it = chunks.find(key);
+
+		if (it == chunks.end() || !it->second) {
+			continue;
+		}
+
+		it->second->urgentUpdateMesh = true;
+
+		MarkChunkDirty(*it->second);
+
+
 	}
 
 }
+
+
 
 
 void WorldThread::Wake() {

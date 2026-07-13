@@ -9,13 +9,14 @@
 #include "Gameplay/PlayerInput.h"
 #include "Gameplay/PlayerSnapshot.h"
 #include "Util/ThreadSafeLogUtils.h"
+#include "ChunkDirtyEntryPriority.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
 #include <mutex>
 #include <deque>
 #include <condition_variable>
-
+#include <queue>
 
 struct ChunkOffset {
 	int32_t dx = 0;
@@ -139,6 +140,7 @@ private:
 
 	std::deque<uint64_t> m_pendingDeleteMeshKey;
 
+	std::priority_queue<ChunkDirtyEntry> m_dirtyMeshQueue;
 
 	std::vector<ChunkOffset> m_loadOffsets;
 	size_t m_nextLoadOffset = 0;
@@ -255,6 +257,11 @@ private:
 	void DispatchDirtyMeshJobs();
 	void DispatchOneDirtyMeshJob();
 
+	void MarkChunkDirty(Chunk& c);
+	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
+	void MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz);
+
+	void MarkChunkUrgentDirty(Chunk& c);
 
 	bool HasImmediateTask();
 	void Wake();
