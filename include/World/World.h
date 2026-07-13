@@ -92,17 +92,6 @@ public:
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(uint64_t key);
 
 
-	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
-	void MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz);
-
-	void MarkChunkDirty(Chunk& c) {
-		c.dirty = true;
-	}
-	void MarkChunkUrgentDirty(Chunk& c) {
-		c.dirty = true;
-		c.urgentUpdateMesh = true;
-		
-	}
 
 
 	bool CanCollideBlock(int64_t x, int64_t y, int64_t z) const {
