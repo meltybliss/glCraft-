@@ -1502,12 +1502,12 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 	const int32_t cx = c.cx;
 	const int32_t cz = c.cz;
 
-	const int32_t dx = std::abs(cx - m_lastStreamCx);
-	const int32_t dz = std::abs(cz - m_lastStreamCz);
+	const int32_t dx = cx - m_lastStreamCx;
+	const int32_t dz = cz - m_lastStreamCz;
 
-	const uint64_t key = Index(cx, cz);
+	const uint64_t relativeKey = Index(cx, cz);
 
-	const int priority = m_loadOffsetsRank[Index(dx, dz)];
+	const auto rankIt = m_loadOffsetsRank.find(relativeKey);
 
 	/*const int priority = std::max(
 		std::abs(cx - m_lastStreamCx),
@@ -1515,8 +1515,8 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 	);*/
 	
 	m_dirtyMeshQueue.push({
-		priority,
-		key
+		rankIt->second,
+		relativeKey
 	});
 
 }
