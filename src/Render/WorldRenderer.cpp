@@ -37,6 +37,8 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam) {
 
 	shader.SetMat4("view", view);
 	shader.SetMat4("projection", projection);
+
+	shader.SetVec3("sunDirection", { -0.5f, -1.0f, -0.3f });
 	
 	for (auto& [key, mesh] : m_chunkMeshes) {
 

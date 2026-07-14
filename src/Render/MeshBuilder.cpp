@@ -29,7 +29,7 @@ void MeshBuilder::BuildTorchMesh(
 		} };
 
 		std::vector<float> vertices_buffer;
-		AddFace(pointsSet, BlockType::TORCH, BlockFace::LEFT, vertices_buffer);
+		AddFaceAndNormal(pointsSet, BlockType::TORCH, BlockFace::LEFT, vertices_buffer);
 		AddLightToVertex(x, y, z, BlockFace::LEFT, BlockType::TORCH, vertices_buffer, v, indices, snapShot);
 	}
 
@@ -45,7 +45,7 @@ void MeshBuilder::BuildTorchMesh(
 		} };
 
 		std::vector<float> vertices_buffer;
-		AddFace(pointsSet, BlockType::TORCH, BlockFace::RIGHT, vertices_buffer);
+		AddFaceAndNormal(pointsSet, BlockType::TORCH, BlockFace::RIGHT, vertices_buffer);
 		AddLightToVertex(x, y, z, BlockFace::RIGHT, BlockType::TORCH, vertices_buffer, v, indices, snapShot);
 
 	}
@@ -61,7 +61,7 @@ void MeshBuilder::BuildTorchMesh(
 		} };
 
 		std::vector<float> vertices_buffer;
-		AddFace(pointsSet, BlockType::TORCH, BlockFace::FRONT, vertices_buffer);
+		AddFaceAndNormal(pointsSet, BlockType::TORCH, BlockFace::FRONT, vertices_buffer);
 		AddLightToVertex(x, y, z, BlockFace::FRONT, BlockType::TORCH, vertices_buffer, v, indices, snapShot);
 
 
@@ -78,7 +78,7 @@ void MeshBuilder::BuildTorchMesh(
 		} };
 
 		std::vector<float> vertices_buffer;
-		AddFace(pointsSet, BlockType::TORCH, BlockFace::BACK, vertices_buffer);
+		AddFaceAndNormal(pointsSet, BlockType::TORCH, BlockFace::BACK, vertices_buffer);
 		AddLightToVertex(x, y, z, BlockFace::BACK, BlockType::TORCH, vertices_buffer, v, indices, snapShot);
 
 	}
@@ -93,7 +93,7 @@ void MeshBuilder::BuildTorchMesh(
 		} };
 
 		std::vector<float> vertices_buffer;
-		AddFace(pointsSet, BlockType::TORCH, BlockFace::TOP, vertices_buffer);
+		AddFaceAndNormal(pointsSet, BlockType::TORCH, BlockFace::TOP, vertices_buffer);
 		AddLightToVertex(x, y, z, BlockFace::TOP, BlockType::TORCH, vertices_buffer, v, indices, snapShot);
 
 	}
@@ -200,12 +200,14 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 						if (!CheckNeighborTorch(x - 1, y, z)) {
 							if (CheckNeighborAir(x - 1, y, z)) {
-								AddFace(pointsSet, (BlockType)b, BlockFace::LEFT, vertices_buffer);
+								AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::LEFT, vertices_buffer);
+								
 								AddLightToVertex(x, y, z, BlockFace::LEFT, (BlockType)b, vertices_buffer, v, indices, snapshot);
 							}
 						}
 						else {
-							AddFace(pointsSet, (BlockType)b, BlockFace::LEFT, vertices_buffer);
+							AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::LEFT, vertices_buffer);
+							
 							AddLightToVertex(x, y, z, BlockFace::LEFT, (BlockType)b, vertices_buffer, v, indices, snapshot);
 						
 						}
@@ -226,12 +228,14 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						if (!CheckNeighborTorch(x + 1, y, z)) {
 							if (CheckNeighborAir(x + 1, y, z)) {
 
-								AddFace(pointsSet, (BlockType)b, BlockFace::RIGHT, vertices_buffer);
+								AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::RIGHT, vertices_buffer);
+								
 								AddLightToVertex(x, y, z, BlockFace::RIGHT, (BlockType)b, vertices_buffer, v, indices, snapshot);
 							}
 						}
 						else {
-							AddFace(pointsSet, (BlockType)b, BlockFace::RIGHT, vertices_buffer);
+							AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::RIGHT, vertices_buffer);
+							
 							AddLightToVertex(x, y, z, BlockFace::RIGHT, (BlockType)b, vertices_buffer, v, indices, snapshot);
 						
 						}
@@ -254,12 +258,14 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						if (!CheckNeighborTorch(x, y - 1, z)) {
 							if (CheckNeighborAir(x, y - 1, z)) {
 
-								AddFace(pointsSet, (BlockType)b, BlockFace::BOTTOM, vertices_buffer);
+								AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::BOTTOM, vertices_buffer);
+								
 								AddLightToVertex(x, y, z, BlockFace::BOTTOM, (BlockType)b, vertices_buffer, v, indices, snapshot);
 							}
 						}
 						else {
-							AddFace(pointsSet, (BlockType)b, BlockFace::BOTTOM, vertices_buffer);
+							AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::BOTTOM, vertices_buffer);
+							
 							AddLightToVertex(x, y, z, BlockFace::BOTTOM, (BlockType)b, vertices_buffer, v, indices, snapshot);
 						}
 					}
@@ -278,13 +284,15 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						if (!CheckNeighborTorch(x, y + 1, z)) {
 							if (CheckNeighborAir(x, y + 1, z)) {
 								
-								AddFace(pointsSet, (BlockType)b, BlockFace::TOP, vertices_buffer);
+								AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::TOP, vertices_buffer);
+							
 								AddLightToVertex(x, y, z, BlockFace::TOP, (BlockType)b, vertices_buffer, v, indices, snapshot);
 							}
 						}
 						else {
 							
-							AddFace(pointsSet, (BlockType)b, BlockFace::TOP, vertices_buffer);
+							AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::TOP, vertices_buffer);
+							
 							AddLightToVertex(x, y, z, BlockFace::TOP, (BlockType)b, vertices_buffer, v, indices, snapshot);
 						}
 					}
@@ -305,12 +313,14 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						if (!CheckNeighborTorch(x, y, z - 1)) {
 							if (CheckNeighborAir(x, y, z - 1)) {
 
-								AddFace(pointsSet, (BlockType)b, BlockFace::FRONT, vertices_buffer);
+								AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::FRONT, vertices_buffer);
+								
 								AddLightToVertex(x, y, z, BlockFace::FRONT, (BlockType)b, vertices_buffer, v, indices, snapshot);
 							}
 						}
 						else {
-							AddFace(pointsSet, (BlockType)b, BlockFace::FRONT, vertices_buffer);
+							AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::FRONT, vertices_buffer);
+							
 							AddLightToVertex(x, y, z, BlockFace::FRONT, (BlockType)b, vertices_buffer, v, indices, snapshot);
 						}
 					}
@@ -332,13 +342,16 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 						if (!CheckNeighborTorch(x, y, z + 1)) {
 							if (CheckNeighborAir(x, y, z + 1)) {
 
-								AddFace(pointsSet, (BlockType)b, BlockFace::BACK, vertices_buffer);
+								AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::BACK, vertices_buffer);
+								
+
 								AddLightToVertex(x, y, z, BlockFace::BACK, (BlockType)b, vertices_buffer, v, indices, snapshot);
 
 							}
 						}
 						else {
-							AddFace(pointsSet, (BlockType)b, BlockFace::BACK, vertices_buffer);
+							AddFaceAndNormal(pointsSet, (BlockType)b, BlockFace::BACK, vertices_buffer);
+							
 							AddLightToVertex(x, y, z, BlockFace::BACK, (BlockType)b, vertices_buffer, v, indices, snapshot);
 
 						}
@@ -505,7 +518,7 @@ UV MeshBuilder::GetTileVertexUV(uint8_t index, int tileX, int tileY) {
 }
 
 
-void MeshBuilder::AddFace(
+void MeshBuilder::AddFaceAndNormal(
 	std::array<std::array<float, 3>, 4>& pointsSet, 
 	const BlockType b, 
 	const BlockFace face,
@@ -513,18 +526,38 @@ void MeshBuilder::AddFace(
 {
 
 
+	const glm::vec3 dirs[6]= {
+		glm::vec3{0.f, 1.f, 0.f},
+		glm::vec3{0.f, -1.f, 0.f},
+		glm::vec3{1.f, 0.f, 0.f},
+		glm::vec3{-1.f, 0.f, 0.f},
+		glm::vec3{0.f, 0.f, -1.f},
+		glm::vec3{0.f, 0.f, 1.f}
+		
+
+	};
+
+	const int faceIndex = static_cast<int>(face);
+	
+
+	assert(faceIndex >= 0 && faceIndex < 6);
+
+	const glm::vec3 dir = dirs[faceIndex];
+
+
 	//base+0,1,2,3
 	for (int i = 0; i < 4; i++) {
 		UV uv = GetUV((BlockType)b, i, face);
 		const std::array<float, 3>& points = pointsSet[i];
 
-		buffer.insert(buffer.end(), { points[0], points[1], points[2], uv.u, uv.v });
+		buffer.insert(buffer.end(), { points[0], points[1], points[2], uv.u, uv.v, dir.x, dir.y, dir.z });
 
 	}
 
 	
 
 }
+
 
 
 
@@ -695,7 +728,7 @@ void MeshBuilder::AddLightToVertex(
 
 
 
-	unsigned int base = static_cast<unsigned int>(v.size() / 8);
+	unsigned int base = static_cast<unsigned int>(v.size() / 11);
 
 
 	const auto& centerLights = snapShot.centerLights;
@@ -830,7 +863,7 @@ void MeshBuilder::AddLightToVertex(
 	uint8_t self_light = std::max(next_lightLevel, emission);
 
 	for (int i = 4; i >= 1; --i) {
-		int point = i * 5;
+		int point = i * 8;
 
 		buffer.insert(
 			buffer.begin() + point,

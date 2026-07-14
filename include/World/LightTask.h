@@ -27,6 +27,7 @@ struct RemoveNode {
 
 struct LightTask {
 
+	bool urgent = false;
 	LightType lightType;
 
 	std::queue<LightNode> bfs_queue;
