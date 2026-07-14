@@ -68,7 +68,10 @@ private:
 		bool cornerOpaque
 	);
 
-	static void AddFace(std::array<std::array<float, 3>, 4>& pointsSet, const BlockType b, const BlockFace face, std::vector<float>& buffer);
+	static void AddFaceAndNormal(std::array<std::array<float, 3>, 4>& pointsSet, const BlockType b, const BlockFace face, std::vector<float>& buffer);
 	static float BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot, const BlockFace face, AoPoint point);
 	static void AddLightToVertex(int x, int y, int z, const BlockFace face, const BlockType type, std::vector<float>& buffer, std::vector<float>& v, std::vector<unsigned int>& indices, ChunkMeshSnapshot& snapShot);
+
+
+
 };

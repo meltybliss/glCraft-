@@ -271,7 +271,7 @@ void LightEngine::Propagate_SkyLight(
 
 	while (!bfs_queue.empty() && taskBudget > 0) {
 		LightNode targetNode = bfs_queue.front();
-		uint8_t oldLightLevel = targetNode.lightLevel;
+		
 		
 		bfs_queue.pop();
 
@@ -279,6 +279,22 @@ void LightEngine::Propagate_SkyLight(
 
 		taskBudget--;
 
+		const uint8_t currentLight =
+			w.GetSkyLightGlobal(
+				targetNode.x,
+				targetNode.y,
+				targetNode.z
+			);
+
+		if (currentLight == 0) {
+			continue;
+		}
+
+		if (currentLight != targetNode.lightLevel) {
+			continue;
+		}
+
+		const uint8_t oldLightLevel = currentLight;
 
 		if (oldLightLevel <= 1) {
 			continue;
@@ -411,6 +427,11 @@ void LightEngine::StartRemoveSkyLightTask(
 
 	w.SetSkyLightGlobal(worldX, worldY, worldZ, 0);
 
+	const int32_t cx = floorDiv(worldX, Chunk::CHUNK_WIDTH);
+	const int32_t cz = floorDiv(worldZ, Chunk::CHUNK_DEPTH);
+	task.touchedChunkKeys.insert(Index(cx, cz));
+
+
 	task.remove_queue.push({
 		worldX,
 		worldY,
@@ -418,6 +439,7 @@ void LightEngine::StartRemoveSkyLightTask(
 		oldLight
 
 	});
+
 
 	task.lightType = LightType::SKY;
 	task.phase = Phase::REMOVE;

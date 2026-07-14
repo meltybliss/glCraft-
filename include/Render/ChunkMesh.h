@@ -40,7 +40,7 @@ struct ChunkMesh {
 			GL_STATIC_DRAW
 		);
 
-		constexpr GLsizei stribe = 8 * sizeof(float);
+		constexpr GLsizei stribe = 11 * sizeof(float);
 
 		//vao
 		//xyz
@@ -65,10 +65,10 @@ struct ChunkMesh {
 		);
 		glEnableVertexAttribArray(1);
 
-		//block light level
+		//normal
 		glVertexAttribPointer(
 			2,
-			1,
+			3,
 			GL_FLOAT,
 			GL_FALSE,
 			stribe,
@@ -76,28 +76,41 @@ struct ChunkMesh {
 		);
 		glEnableVertexAttribArray(2);
 
-		//sky light level
+		//block light level
 		glVertexAttribPointer(
 			3,
 			1,
 			GL_FLOAT,
 			GL_FALSE,
 			stribe,
-			(void*)(6 * sizeof(float))
+			(void*)(8 * sizeof(float))
 		);
 		glEnableVertexAttribArray(3);
 
-
-		//AO
+		//sky light level
 		glVertexAttribPointer(
 			4,
 			1,
 			GL_FLOAT,
 			GL_FALSE,
 			stribe,
-			(void*)(7 * sizeof(float))
+			(void*)(9 * sizeof(float))
 		);
 		glEnableVertexAttribArray(4);
+
+
+		//AO
+		glVertexAttribPointer(
+			5,
+			1,
+			GL_FLOAT,
+			GL_FALSE,
+			stribe,
+			(void*)(10 * sizeof(float))
+		);
+		glEnableVertexAttribArray(5);
+
+		
 
 
 		glBindVertexArray(0);//unbind
@@ -125,7 +138,7 @@ struct ChunkMesh {
 
 	void DeleteGL() {
 		if (ebo != 0) glDeleteBuffers(1, &ebo);
-		if (vao != 0) glDeleteBuffers(1, &vao);
+		if (vao != 0) glDeleteVertexArrays(1, &vao);
 		if (vbo != 0) glDeleteBuffers(1, &vbo);
 
 

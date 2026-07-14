@@ -202,7 +202,7 @@ void WorldThread::ApplyEditBlock(
 
 	if (oldIsAir && !newIsAir) {
 
-
+		
 		Start_RemoveBlockLightTask_WithEmissionTask(
 			x,
 			y,
@@ -221,6 +221,7 @@ void WorldThread::ApplyEditBlock(
 	}
 	else if (!oldIsAir && newIsAir) {
 
+		//これらでblock light taskが例えば終わったらmeshがアップデートされてさらにsky light taskおわったら再度またしてしまうので無駄があるかも
 		if (isLightSourceBlock(oldBlock)) {
 			Start_RemoveBlockLightTask(
 				x,
@@ -245,8 +246,6 @@ void WorldThread::ApplyEditBlock(
 		
 	}
 
-
-	MarkChunkUrgentDirty(*c);
 
 }
 
@@ -315,6 +314,8 @@ void WorldThread::Start_RemoveBlockLightTask(
 	task.phase = Phase::REMOVE;
 	task.emissionAfterRemove = 0;
 
+	task.urgent = urgent;
+
 	m_lightEngine.StartRemoveBlockLightTask(
 		m_world,
 		x,
@@ -355,6 +356,8 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 	task.lightType = LightType::BLOCK;
 	task.phase = Phase::REMOVE;
 	task.emissionAfterRemove = emissionAfterRemove;
+	task.urgent = urgent;
+
 
 	m_lightEngine.StartRemoveBlockLightTask(
 		m_world,
@@ -389,6 +392,8 @@ void WorldThread::Start_RemoveSkyLightTask(
 	LightTask task;
 	task.lightType = LightType::SKY;
 	task.phase = Phase::REMOVE;
+	task.urgent = urgent;
+
 
 	m_lightEngine.StartRemoveSkyLightTask(
 		m_world,
@@ -430,6 +435,8 @@ void WorldThread::Start_BlockLightTask(
 	LightTask task;
 	task.lightType = LightType::BLOCK;
 
+	task.urgent = urgent;
+
 
 	m_lightEngine.AddLightLevel(
 		m_world,
@@ -462,6 +469,8 @@ void WorldThread::Start_SkyLightTask(
 
 	LightTask task;
 	task.lightType = LightType::SKY;
+	task.urgent = urgent;
+
 
 	m_lightEngine.AddSkyLightLevel(
 		m_world,
@@ -591,6 +600,7 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 void WorldThread::BuildLoadOffsets()
 {
 	m_loadOffsets.clear();
+	m_loadOffsetsRank.clear();
 	m_nextLoadOffset = 0;
 
 	const int32_t r = LOAD_CHUNKS_DISTANCE;
@@ -937,8 +947,7 @@ void WorldThread::Rebuild_allChunks() {
 			continue;
 		}
 
-		chunkPtr->dirty = true;
-		chunkPtr->urgentUpdateMesh = true;
+		MarkChunkUrgentDirty(*chunkPtr);
 	}
 
 	Wake();
@@ -1203,8 +1212,7 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 
 	
 	if (task.bfs_queue.empty()) {
-		c.dirty = true;
-
+		
 		FinishLightTask(task);//周囲チャンクをdirtyするために
 		return;
 	}
@@ -1281,10 +1289,12 @@ void WorldThread::FinishLightTask(LightTask& task) {
 	for (auto& key : task.touchedChunkKeys) {
 
 		Chunk* c = m_world.GetTargetChunkFromKey(key);
-		c->dirty = true;
-
-		if (task.lightType == LightType::BLOCK) {
-			c->urgentUpdateMesh = true;
+		
+		if (task.urgent) {
+			MarkChunkUrgentDirty(*c);
+		}
+		else {
+			MarkChunkDirty(*c);
 		}
 
 		MarkNeighborChunksUrgentDirty(c->cx, c->cz);
@@ -1505,7 +1515,7 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 	const int32_t dx = cx - m_lastStreamCx;
 	const int32_t dz = cz - m_lastStreamCz;
 
-	const uint64_t relativeKey = Index(cx, cz);
+	const uint64_t relativeKey = Index(dx, dz);
 
 	const auto rankIt = m_loadOffsetsRank.find(relativeKey);
 
@@ -1514,9 +1524,19 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 		std::abs(cz - m_lastStreamCz)
 	);*/
 	
+	if (rankIt == m_loadOffsetsRank.end()) {
+		return;
+	}
+
+
+	const int priority =
+		c.urgentUpdateMesh ?
+		-1 :
+		rankIt->second;
+
 	m_dirtyMeshQueue.push({
-		rankIt->second,
-		relativeKey
+		priority,
+		Index(cx, cz)
 	});
 
 }
