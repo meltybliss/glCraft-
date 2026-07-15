@@ -104,6 +104,8 @@ void WorldRenderer::InitShadownMap() {
 		"assets/Shaders/shadow_depth.frag"
 
 	);
+
+	
 }
 
 
@@ -121,7 +123,7 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 	glm::vec3 sunDirection =
 		glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f));
 
-	glm::vec3 shadowCenter = cam.position;
+	glm::vec3 shadowCenter = { 0.f, 0.f, 0.f };
 
 	glm::vec3 lightPos =
 		shadowCenter - sunDirection * 100.0f;
@@ -215,7 +217,16 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam) {
 	shader.SetVec3("sunDirection", sunDirection);
 
 	shader.SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
-	
+
+
+	//TODO ふつうこれはinitで一度だけにしたい。そのためにbaseShaderも普通にrendererが所有にする.
+	shader.SetInt("shadowMap", 1);
+	//
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, m_shadowDepthTexture);
+
+
 	for (auto& [key, mesh] : m_chunkMeshes) {
 
 		glm::mat4 model(1.0f);//identity matrix 単位行列
