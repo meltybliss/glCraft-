@@ -1503,5 +1503,11 @@
     <None Include="assets\Shaders\selectionOutline.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="assets\Shaders\shadow_depth.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\Shaders\shadow_depth.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

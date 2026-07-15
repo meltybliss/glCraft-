@@ -42,8 +42,6 @@ void Application::Run() {
 		UpdateStreamCenter();
 
 
-		blockAtlas->Bind(0);
-
 
 		//m_wRenderer.RebuildDrityChunkMesh(m_world);
 		m_wRenderer.UploadPendingMeshData(m_worldThread);
@@ -52,6 +50,11 @@ void Application::Run() {
 
 		baseShader->Use();
 		m_wRenderer.DeleteMeshes(m_worldThread);
+
+		m_wRenderer.RenderShadowPass(m_camera);
+
+
+		blockAtlas->Bind(0);
 		m_wRenderer.RenderWorld(*baseShader, m_camera);
 		
 
@@ -156,7 +159,7 @@ bool Application::InitGL() {
 	baseShader->Use();
 	baseShader->SetInt("u_Texture", 0);
 
-	
+	m_wRenderer.InitShadownMap();
 
 	return true;
 
