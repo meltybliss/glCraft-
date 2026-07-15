@@ -488,6 +488,8 @@
     <None Include="assets\Shaders\basic.vert" />
     <None Include="assets\Shaders\selectionOutline.frag" />
     <None Include="assets\Shaders\selectionOutline.vert" />
+    <None Include="assets\Shaders\shadow_depth.frag" />
+    <None Include="assets\Shaders\shadow_depth.vert" />
     <None Include="third_party\glm\detail\func_common.inl" />
     <None Include="third_party\glm\detail\func_common_simd.inl" />
     <None Include="third_party\glm\detail\func_exponential.inl" />

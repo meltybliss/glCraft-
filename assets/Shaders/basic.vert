@@ -13,12 +13,26 @@ out float vBlockLightLevel;
 out float vSkyLightLevel;
 out float vAO;
 
+out vec4 FragPosLightSpace;
+
 uniform mat4 projection;
 uniform mat4 view;
 uniform mat4 model;
 
+uniform mat4 lightSpaceMatrix;
+
+
+
 void main() {
-	gl_Position = projection * view * model * vec4(aPos, 1.0);
+
+	vec4 worldPos =  model * vec4(aPos, 1.0);
+	
+	
+	FragPosLightSpace = lightSpaceMatrix * worldPos;
+
+	
+	gl_Position = projection * view * worldPos;
+
 
 	TexCoord = aTexCoord;
 	vNormal = aNormal;
