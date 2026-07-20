@@ -40,8 +40,10 @@ struct ChunkMesh {
 			GL_STATIC_DRAW
 		);
 
-		constexpr GLsizei stribe = 11 * sizeof(float);
+		constexpr GLsizei stride = 11 * sizeof(float);
 
+
+		
 		//vao
 		//xyz
 		glVertexAttribPointer(
@@ -49,7 +51,7 @@ struct ChunkMesh {
 			3,
 			GL_FLOAT,
 			GL_FALSE,
-			stribe,
+			stride,
 			(void*)0
 		);
 		glEnableVertexAttribArray(0);
@@ -60,7 +62,7 @@ struct ChunkMesh {
 			2,
 			GL_FLOAT,
 			GL_FALSE,
-			stribe,
+			stride,
 			(void*)(3 * sizeof(float))
 		);
 		glEnableVertexAttribArray(1);
@@ -71,7 +73,7 @@ struct ChunkMesh {
 			3,
 			GL_FLOAT,
 			GL_FALSE,
-			stribe,
+			stride,
 			(void*)(5 * sizeof(float))
 		);
 		glEnableVertexAttribArray(2);
@@ -82,7 +84,7 @@ struct ChunkMesh {
 			1,
 			GL_FLOAT,
 			GL_FALSE,
-			stribe,
+			stride,
 			(void*)(8 * sizeof(float))
 		);
 		glEnableVertexAttribArray(3);
@@ -93,7 +95,7 @@ struct ChunkMesh {
 			1,
 			GL_FLOAT,
 			GL_FALSE,
-			stribe,
+			stride,
 			(void*)(9 * sizeof(float))
 		);
 		glEnableVertexAttribArray(4);
@@ -105,7 +107,7 @@ struct ChunkMesh {
 			1,
 			GL_FLOAT,
 			GL_FALSE,
-			stribe,
+			stride,
 			(void*)(10 * sizeof(float))
 		);
 		glEnableVertexAttribArray(5);
