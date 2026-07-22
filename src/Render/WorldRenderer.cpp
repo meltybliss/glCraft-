@@ -19,6 +19,34 @@
 }*/
 
 
+
+void WorldRenderer::InitSkyRender() {
+
+	glGenVertexArrays(1, &m_skyVAO);
+
+	m_skyShader.emplace(
+		"assets/Shaders/sky.vert",
+		"assets/Shaders/sky.frag"
+	);
+}
+
+
+void WorldRenderer::RenderSky() {
+
+
+	glDisable(GL_DEPTH_TEST);
+
+	m_skyShader->Use();
+
+	glBindVertexArray(m_skyVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+	glBindVertexArray(0);
+
+
+	glEnable(GL_DEPTH_TEST);
+}
+
+
 void WorldRenderer::InitShadownMap() {
 
 	glGenFramebuffers(1, &m_shadowFBO);

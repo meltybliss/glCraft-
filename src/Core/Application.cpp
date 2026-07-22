@@ -55,6 +55,8 @@ void Application::Run() {
 
 
 		blockAtlas->Bind(0);
+
+		m_wRenderer.RenderSky();
 		m_wRenderer.RenderWorld(*baseShader, m_camera);
 		
 
@@ -159,6 +161,7 @@ bool Application::InitGL() {
 	baseShader->Use();
 	baseShader->SetInt("u_Texture", 0);
 
+	m_wRenderer.InitSkyRender();
 	m_wRenderer.InitShadownMap();
 
 	return true;

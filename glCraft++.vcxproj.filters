@@ -1509,5 +1509,11 @@
     <None Include="assets\Shaders\shadow_depth.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="assets\Shaders\sky.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\Shaders\sky.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
