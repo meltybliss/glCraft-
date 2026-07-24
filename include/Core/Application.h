@@ -14,6 +14,8 @@
 #include <memory>
 #include "World/RaycastHit.h"
 #include "World/WorldThread.h"
+#include "WindowSize.h"
+
 
 class Application {
 public:

@@ -56,8 +56,8 @@ void Application::Run() {
 
 		blockAtlas->Bind(0);
 
-		m_wRenderer.RenderSky();
-		m_wRenderer.RenderWorld(*baseShader, m_camera);
+		m_wRenderer.RenderSky(m_camera);
+		m_wRenderer.RenderWorld(*baseShader, m_camera, m_worldThread.GetWorldPtr());
 		
 
 		RenderOutline();//switch shader
@@ -97,7 +97,7 @@ bool Application::InitGL() {
 		return false;
 	}
 
-	m_window = glfwCreateWindow(800, 600, "glCraft++", nullptr, nullptr);
+	m_window = glfwCreateWindow(WindowSize::windowWidth, WindowSize::windowHeight, "glCraft++", nullptr, nullptr);
 
 	if (!m_window) {
 		glfwTerminate();
@@ -134,7 +134,7 @@ bool Application::InitGL() {
 
 	glEnable(GL_DEPTH_TEST);
 
-	glViewport(0, 0, 800, 600);
+	glViewport(0, 0, WindowSize::windowWidth, WindowSize::windowHeight);
 	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -258,7 +258,7 @@ void Application::OnMouseButton(int button, int action) {
 			lastHit.previousX,
 			lastHit.previousY,
 			lastHit.previousZ,     
-			BlockType::STONE
+			BlockType::TORCH
 		);
 	}
 }

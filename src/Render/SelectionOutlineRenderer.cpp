@@ -1,5 +1,6 @@
 #include "Render/SelectionOutlineRenderer.h"
 #include "Render/Camera.h"
+#include "Core/WindowSize.h"
 
 void SelectionOutlineRenderer::Init() {
 	constexpr float e = 0.002f;
@@ -70,8 +71,8 @@ void SelectionOutlineRenderer::RenderOutline(
 
 
 	glm::mat4 proj = glm::perspective(
-		glm::radians(70.0f),
-		800.0f / 600.0f,
+		glm::radians(cam.fov),
+		WindowSize::windowWidth / WindowSize::windowHeight,
 		0.1f,
 		1000.f
 

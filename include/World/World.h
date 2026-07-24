@@ -103,10 +103,14 @@ public:
 		return block != BlockType::AIR && block != BlockType::TORCH;
 	}
 
+
+	void SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count);
+
 private:
 
 private:
 
 	ChunkMap chunks;
 	
+
 };

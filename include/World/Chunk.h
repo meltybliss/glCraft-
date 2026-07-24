@@ -3,6 +3,7 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "World/BlockData.h"
+#include "PointLight.h"
 
 #include <array>
 
@@ -32,6 +33,9 @@ struct Chunk {
 	std::array<BlockType, CHUNK_SIZE> blocks;
 	std::array<uint8_t, CHUNK_SIZE> blockLights{};
 	std::array<uint8_t, CHUNK_SIZE> skyLights{};
+	std::vector<PointLight> pointLights{};
+
+
 
 	static int Index(int x, int y, int z) {
 		return x + CHUNK_WIDTH * z + y * CHUNK_WIDTH * CHUNK_DEPTH;
@@ -97,6 +101,12 @@ struct Chunk {
 		}
 		blocks[Index(x, y, z)] = b;
 
+	}
+
+
+	void SetPointLight(const glm::vec3& pos, const glm::vec3& color, float radius, float intensity) {
+		
+		pointLights.emplace_back(pos, color, radius, intensity);
 	}
 
 	static bool InBounds(int x, int y, int z) {

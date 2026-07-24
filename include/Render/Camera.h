@@ -15,11 +15,12 @@ struct Camera {
 	glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);//飛行機のように視点が傾いてるときでも対応できるように上を向いたときの向くべき方向。
 	glm::vec3 worldUp = glm::vec3(0.f, 1.f, 0.f);//上昇するときのための
 
-	
+	float fov = 70.0f;
+
 	float mouseSensitivity = 0.1f;
 
 	glm::mat4 GetViewMatrix() const {
-		return glm::lookAt(position, position + front, up);
+		return glm::lookAt(position, position + front, up); 
 	}
 
 };

@@ -4,6 +4,7 @@
 #include "World/ChunkPipeline.h"
 #include "Render/Camera.h"
 #include <iostream>
+#include <algorithm>
 
 
 
@@ -85,6 +86,18 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	c->SetBlock(lx, ly, lz, b);
 
+	//test
+	if (b == BlockType::TORCH) {
+		
+		c->SetPointLight(glm::vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)),
+			glm::vec3(1.0f, 0.42f, 0.12f),
+			8.0f,
+			2.5f);
+
+
+
+	}
+
 }
 
 
@@ -102,6 +115,8 @@ bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) 
 	}
 
 	auto* c = it->second.get();
+
+
 
 	return c->SetBlockLight(lx, ly, lz, level);
 
@@ -151,8 +166,138 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	c->SetBlock(lx, ly, lz, b);
 
+	//test
+	if (b == BlockType::TORCH) {
+
+		c->SetPointLight(glm::vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)),
+			glm::vec3(1.0f, 0.42f, 0.12f),
+			8.0f,
+			2.5f);
+
+
+
+	}
+
 	/*c->dirty = true;
 	c->urgentUpdateMesh = true;*/
+}
+
+
+
+void World::SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count) {
+
+	std::vector<PointLight*> candidates;
+
+	const int64_t chunkMinX =
+		cx * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
+
+	const int64_t chunkMinZ =
+		cz * static_cast<int64_t>(Chunk::CHUNK_DEPTH);
+
+
+	const int64_t chunkMaxX =
+		chunkMinX + Chunk::CHUNK_WIDTH;
+
+	const int64_t chunkMaxZ =
+		chunkMinZ + Chunk::CHUNK_DEPTH;
+
+
+
+
+	for (int x = -1; x <= 1; ++x) {
+		for (int z = -1; z <= 1; ++z) {
+
+			auto it = chunks.find(Index(cx + x, cz + z));
+			if (it == chunks.end() || !it->second) continue;
+
+			auto* c = it->second.get();
+			
+			for (auto& pl : c->pointLights) {
+
+				const int64_t closestX = std::clamp(
+					pl.position.x,
+					chunkMinX,
+					chunkMaxX
+				);
+
+				const int64_t closestZ = std::clamp(
+					pl.position.z,
+					chunkMinZ,
+					chunkMaxZ
+				);
+
+
+				const double dxToChunk =
+					static_cast<double>(
+						pl.position.x - closestX
+					);
+
+				const double dzToChunk =
+					static_cast<double>(
+						pl.position.z - closestZ
+					);
+
+
+				const double distanceSquared =
+					dxToChunk * dxToChunk +
+					dzToChunk * dzToChunk;
+
+				const double radiusSquared =
+					static_cast<double>(pl.radius) *
+					static_cast<double>(pl.radius);
+
+
+				if (distanceSquared > radiusSquared) continue;
+
+				candidates.push_back(&pl);
+				
+			}
+
+		}
+	}
+
+
+	std::sort(candidates.begin(), candidates.end(),
+		[&](const PointLight* a, const PointLight* b) {
+
+			auto distanceSquared = [&](const PointLight* light) {
+
+				const int64_t closestX = std::clamp(
+					light->position.x,
+					chunkMinX,
+					chunkMaxX
+				);
+
+
+				const int64_t closestZ = std::clamp(
+					light->position.z,
+					chunkMaxX,
+					chunkMaxZ
+				);
+
+				const double dx =
+					static_cast<double>(light->position.x - closestX);
+
+				const double dz =
+					static_cast<double>(light->position.z - closestZ);
+
+
+				return dx * dx + dz * dz;
+			};
+
+
+			return distanceSquared(a) < distanceSquared(b);
+		}
+	);
+
+
+	size_t c = std::min(candidates.size(), out.size());
+	count = c;
+
+	for (size_t i = 0; i < c; ++i)
+		out[i] = candidates[i];
+
+
 }
 
 

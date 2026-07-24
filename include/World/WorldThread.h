@@ -84,6 +84,16 @@ public:
 
 		return m_plrSnapshot;
 	}
+
+
+	[[nodiscard]] World* GetWorldPtr() {
+		return &m_world;
+	}
+
+	[[nodiscard]] const World* GetWorldPtr() const {
+		return &m_world;
+	}
+	
 private:
 	World m_world;
 	ChunkPipeline m_chunkPipeline;

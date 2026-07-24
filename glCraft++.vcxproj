@@ -133,6 +133,7 @@
   <ItemGroup>
     <ClInclude Include="include\Core\Application.h" />
     <ClInclude Include="include\Core\ChunkJob.h" />
+    <ClInclude Include="include\Core\WindowSize.h" />
     <ClInclude Include="include\Gameplay\Player.h" />
     <ClInclude Include="include\Gameplay\PlayerInput.h" />
     <ClInclude Include="include\Gameplay\PlayerSnapshot.h" />
@@ -162,6 +163,7 @@
     <ClInclude Include="include\World\LightNode.h" />
     <ClInclude Include="include\World\LightTask.h" />
     <ClInclude Include="include\World\PendingMesh.h" />
+    <ClInclude Include="include\World\PointLight.h" />
     <ClInclude Include="include\World\RaycastHit.h" />
     <ClInclude Include="include\World\TerrainGenerator.h" />
     <ClInclude Include="include\World\World.h" />
