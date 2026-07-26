@@ -2,13 +2,15 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+
+#include "World/WorldPos.h"
+
 struct Camera {
 
 	//apply from player
 
 
-	glm::vec3 position = glm::vec3(8.0f, 28.0f, 24.0f);//floatだと32bit. worldにつかうならworld座標である64bitと対応できるように。
-	//だが描画はfloatに直すように
+	WorldPos position;
 	glm::vec3 front = glm::vec3(0.f, 0.f, -1.0f);
 	glm::vec3 right = glm::vec3(1.f, 0.f, 0.f);
 
@@ -20,7 +22,10 @@ struct Camera {
 	float mouseSensitivity = 0.1f;
 
 	glm::mat4 GetViewMatrix() const {
-		return glm::lookAt(position, position + front, up); 
+
+		glm::vec3 eye{ 0.0f };//世界をカメラからのrelativeな値の位置に配置する仕組みにするのでカメラは常に原点にする。cameraのposからあるオブジェクトの位置を引いた距離にものを配置
+
+		return glm::lookAt(eye, eye + front, up); 
 	}
 
 };

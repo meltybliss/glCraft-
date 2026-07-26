@@ -168,6 +168,7 @@
     <ClInclude Include="include\World\TerrainGenerator.h" />
     <ClInclude Include="include\World\World.h" />
     <ClInclude Include="include\World\WorldCommand.h" />
+    <ClInclude Include="include\World\WorldPos.h" />
     <ClInclude Include="include\World\WorldThread.h" />
     <ClInclude Include="third_party\glad\glad.h" />
     <ClInclude Include="third_party\GLFW\glfw3.h" />

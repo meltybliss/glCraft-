@@ -154,7 +154,8 @@ void WorldRenderer::InitShadownMap() {
 void WorldRenderer::UploadPointLights(
 	Shader& shader,
 	std::array<PointLight*, 16> lights,
-	size_t count
+	size_t count,
+	const Camera& cam
 ) {
 
 	shader.SetInt("uPointLightCount", static_cast<int>(count));
@@ -169,10 +170,15 @@ void WorldRenderer::UploadPointLights(
 			std::to_string(i) +
 			"]";
 
+		WorldPos lightPos;
+		lightPos.block = light->position;
+		lightPos.local = glm::dvec3(0.5);
+
+		glm::dvec3 relative = GetRelativePos(cam.position, lightPos);
 
 		shader.SetVec3(
 			(uniformName + ".position").c_str(),
-			glm::vec3(light->position)
+			glm::vec3(relative)
 		);
 
 		shader.SetVec3(
@@ -249,13 +255,17 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 		int32_t cx = RestoreCxFromKey(key);
 		int32_t cz = RestoreCzFromKey(key);
 
+		WorldPos pos;
+		pos.block = { static_cast<int64_t>(cx) * Chunk::CHUNK_WIDTH, 0, static_cast<int64_t>(cz) * Chunk::CHUNK_DEPTH };
+		pos.local = glm::dvec3(0.0);
+
+		glm::dvec3 relative = GetRelativePos(cam.position, pos);
+
+		glm::vec3 drawPos = glm::vec3(relative);
+
 		model = glm::translate(
 			model,
-			glm::vec3(
-				cx * Chunk::CHUNK_WIDTH,
-				0,
-				cz * Chunk::CHUNK_DEPTH
-			)
+			drawPos
 
 		);
 
@@ -330,20 +340,25 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam, World* w) {
 		int32_t cx = RestoreCxFromKey(key);
 		int32_t cz = RestoreCzFromKey(key);
 
+		WorldPos pos;
+		pos.block = { static_cast<int64_t>(cx) * Chunk::CHUNK_WIDTH, 0, static_cast<int64_t>(cz) * Chunk::CHUNK_DEPTH };
+		pos.local = glm::dvec3(0.0);
+
+		glm::dvec3 relative = GetRelativePos(cam.position, pos);
+
+		glm::vec3 drawPos = glm::vec3(relative);
+
 		w->SelectOptimalPointLights(cx, cz, pLights, count);
 
-		model = glm::translate(model,
-			glm::vec3(
-				cx * Chunk::CHUNK_WIDTH,
-				0,
-				cz * Chunk::CHUNK_DEPTH
-			)
+		model = glm::translate(
+			model,
+			drawPos
 
 		);
 
 		shader.SetMat4("model", model);
 		
-		UploadPointLights(shader, pLights, count);
+		UploadPointLights(shader, pLights, count, cam);
 
 		auto it = m_chunkMeshes.find(key);
 		if (it == m_chunkMeshes.end()) continue;

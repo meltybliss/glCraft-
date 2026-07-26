@@ -89,7 +89,8 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 	//test
 	if (b == BlockType::TORCH) {
 		
-		c->SetPointLight(glm::vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)),
+		c->SetPointLight(
+			glm::i64vec3(x, y, z),
 			glm::vec3(1.0f, 0.42f, 0.12f),
 			8.0f,
 			2.5f);
@@ -169,7 +170,8 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 	//test
 	if (b == BlockType::TORCH) {
 
-		c->SetPointLight(glm::vec3(static_cast<float>(x), static_cast<float>(y), static_cast<float>(z)),
+		c->SetPointLight(
+			glm::i64vec3(x, y, z),
 			glm::vec3(1.0f, 0.42f, 0.12f),
 			8.0f,
 			2.5f);
@@ -271,7 +273,7 @@ void World::SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLig
 
 				const int64_t closestZ = std::clamp(
 					light->position.z,
-					chunkMaxX,
+					chunkMinZ,
 					chunkMaxZ
 				);
 
@@ -727,30 +729,30 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 
 RaycastHit World::Raycast(
-	const glm::vec3& origin, 
-	const glm::vec3& dir, 
+	const WorldPos& origin,
+	const glm::vec3& direction,
 	float distance) const {
 
 
-	double originX = static_cast<double>(origin.x);
-	double originY = static_cast<double>(origin.y);
-	double originZ = static_cast<double>(origin.z);
+	int64_t x = origin.block.x;
+	int64_t y = origin.block.y;
+	int64_t z = origin.block.z;
 
-	const double dirX = static_cast<double>(dir.x);
-	const double dirY = static_cast<double>(dir.y);
-	const double dirZ = static_cast<double>(dir.z);
+	const double localX = origin.local.x;
+	const double localY = origin.local.y;
+	const double localZ = origin.local.z;
 
-	int64_t x = static_cast<int64_t>(std::floor(originX));
-	int64_t y = static_cast<int64_t>(std::floor(originY));
-	int64_t z = static_cast<int64_t>(std::floor(originZ));
+	const glm::dvec3 dir =
+		glm::normalize(glm::dvec3(direction));
+
 
 	if (GetBlockGlobal(x, y, z) != 0) {
 		return RaycastHit{ true, x, y, z, x, y, z };
 	}
 
-	int64_t previousX = static_cast<int64_t>(std::floor(originX));
-	int64_t previousY = static_cast<int64_t>(std::floor(originY));
-	int64_t previousZ = static_cast<int64_t>(std::floor(originZ));
+	int64_t previousX = x;
+	int64_t previousY = y;
+	int64_t previousZ = z;
 
 	
 	const double inf = std::numeric_limits<double>::infinity();
@@ -767,43 +769,39 @@ RaycastHit World::Raycast(
 	double tDeltaY = inf;
 	double tDeltaZ = inf;
 
-	if (dirX > 0.0f) {
+	if (dir.x > 0.0) {
 		stepX = 1;
-		double nextBoundaryX = static_cast<double>(x + 1);
-		tMaxX = (nextBoundaryX - originX) / dirX;
-		tDeltaX = 1.0f / dirX;
+		tMaxX = (1.0 - localX) / dir.x;
+		tDeltaX = 1.0 / dir.x;
 	}
-	else if (dirX < 0.0f) {
+	else if (dir.x < 0.0) {
 		stepX = -1;
-		double nextBoundaryX = static_cast<double>(x);
-		tMaxX = (nextBoundaryX - originX) / dirX;
-		tDeltaX = -1.0f / dirX;
+		tMaxX = localX / -dir.x;
+		tDeltaX = 1.0 / -dir.x;
 	}
 
-	if (dirY > 0.0f) {
+	if (dir.y > 0.0f) {
 		stepY = 1;
-		double nextBoundaryY = static_cast<double>(y + 1);
-		tMaxY = (nextBoundaryY - originY) / dirY;
-		tDeltaY = 1.0f / dirY;
+		tMaxY = (1.0 - localY) / dir.y;
+		tDeltaY = 1.0 / dir.y;
 	}
-	else if (dirY < 0.0f) {
+	else if (dir.y < 0.0f) {
 		stepY = -1;
-		double nextBoundaryY = static_cast<double>(y);
-		tMaxY = (nextBoundaryY - originY) / dirY;
-		tDeltaY = -1.0f / dirY;
+		tMaxY = localY / -dir.y;
+		tDeltaY = 1.0 / -dir.y;
 	}
 
-	if (dirZ > 0.0f) {
+	if (dir.z > 0.0)
+	{
 		stepZ = 1;
-		double nextBoundaryZ = static_cast<double>(z + 1);
-		tMaxZ = (nextBoundaryZ - originZ) / dirZ;
-		tDeltaZ = 1.0f / dirZ;
+		tMaxZ = (1.0 - localZ) / dir.z;
+		tDeltaZ = 1.0 / dir.z;
 	}
-	else if (dirZ < 0.0f) {
+	else if (dir.z < 0.0)
+	{
 		stepZ = -1;
-		double nextBoundaryZ = static_cast<double>(z);
-		tMaxZ = (nextBoundaryZ - originZ) / dirZ;
-		tDeltaZ = -1.0f / dirZ;
+		tMaxZ = localZ / -dir.z;
+		tDeltaZ = 1.0 / -dir.z;
 	}
 
 

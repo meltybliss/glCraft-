@@ -104,7 +104,7 @@ struct Chunk {
 	}
 
 
-	void SetPointLight(const glm::vec3& pos, const glm::vec3& color, float radius, float intensity) {
+	void SetPointLight(const glm::i64vec3& pos, const glm::vec3& color, float radius, float intensity) {
 		
 		pointLights.emplace_back(pos, color, radius, intensity);
 	}

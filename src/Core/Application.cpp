@@ -5,11 +5,11 @@
 void Application::UpdateStreamCenter() {
 
 	int32_t centerCx = static_cast<int32_t>(
-		floorDiv(m_camera.position.x, Chunk::CHUNK_WIDTH)
+		floorDiv(m_camera.position.block.x, Chunk::CHUNK_WIDTH)
 	);
 
 	int32_t centerCz = static_cast<int32_t>(
-		floorDiv(m_camera.position.z, Chunk::CHUNK_DEPTH)
+		floorDiv(m_camera.position.block.z, Chunk::CHUNK_DEPTH)
 	);
 
 
@@ -288,7 +288,7 @@ void Application::OnMouseMove(double xpos, double ypos) {
 
 void Application::UpdateRayHit() {
 
-	glm::vec3 origin = m_camera.position;
+	WorldPos origin = m_camera.position;
 	glm::vec3 rayDir = glm::normalize(m_camera.front);
 
 	float distance = 4.0f;

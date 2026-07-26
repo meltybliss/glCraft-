@@ -79,12 +79,21 @@ void SelectionOutlineRenderer::RenderOutline(
 	);
 
 	glm::mat4 model(1.0f);
+
+	const glm::i64vec3 blockDelta{
+		hitX - cam.position.block.x,
+		hitY - cam.position.block.y,
+		hitZ - cam.position.block.z
+	};
+
+	const glm::dvec3 relative =
+		glm::dvec3(blockDelta) - cam.position.local;
+
+
+
 	model = glm::translate(
 		model,
-		glm::vec3(
-			static_cast<float>(hitX), 
-			static_cast<float>(hitY), 
-			static_cast<float>(hitZ))
+		glm::vec3(relative)
 	);
 
 

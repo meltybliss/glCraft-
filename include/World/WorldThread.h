@@ -72,7 +72,7 @@ public:
 
 	void AddMouseDelta(float xoffset, float yoffset);
 
-	RaycastHit RequestRaycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const;
+	RaycastHit RequestRaycast(const WorldPos& origin, const glm::vec3& dir, float distance) const;
 
 
 	void Rebuild_allChunks();

@@ -82,7 +82,7 @@ public:
 		return it->second.get();
 	}
 
-	[[nodiscard]] RaycastHit Raycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const;
+	[[nodiscard]] RaycastHit Raycast(const WorldPos& origin, const glm::vec3& direction, float distance) const;
 	
 	void DebugChunkInfo();
 

@@ -36,7 +36,8 @@ private:
 	void UploadPointLights(
 		Shader& shader,
 		std::array<PointLight*, 16> lights,
-		size_t count
+		size_t count,
+		const Camera& cam
 	);
 
 private:
