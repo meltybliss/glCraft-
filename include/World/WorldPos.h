@@ -15,7 +15,7 @@ inline void NormalizeAxis(int64_t& block, double& local) {
 
 	if (local >= 0.0 && local < 1.0) return;
 
-	int64_t portion = static_cast<int>(std::floor(local));
+	int64_t portion = static_cast<int64_t>(std::floor(local));
 
 	local -= portion;
 	block += portion;

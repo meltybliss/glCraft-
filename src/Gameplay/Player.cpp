@@ -207,7 +207,7 @@ void Player::MoveNegativeX(int64_t x, const WorldAABB& box, World& w) {
 
 
 		velocity.x = 0.f;
-		position.block.x = x + BLOCK_SIZE;
+		position.block.x = x + static_cast<int64_t>(BLOCK_SIZE);
 		position.local.x = width / 2.0;
 
 		NormalizeAxis(
