@@ -10,7 +10,7 @@ enum class BlockType {
 
 };
 
-constexpr float BLOCK_SIZE = 1.f;
+constexpr float BLOCK_SIZE = 1.f;//it must consist solely of integer
 
 
 inline uint8_t GetEmission(BlockType b) {
