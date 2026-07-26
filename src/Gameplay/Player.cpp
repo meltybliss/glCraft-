@@ -3,7 +3,11 @@
 
 void Player::SetVelocity(uint8_t xDir, uint8_t yDir, uint8_t zDir) {//0 or 1
 
-	this->velocity = glm::vec3(xDir * speed, yDir * speed, zDir * speed);
+	velocity = glm::dvec3(
+		static_cast<double>(xDir) * speed,
+		static_cast<double>(yDir) * speed,
+		static_cast<double>(zDir) * speed
+	);
 
 }
 
@@ -50,7 +54,6 @@ void Player::CalcVelocityXZ(PlayerInput& input) {
 void Player::Tick(float dt, World& w, PlayerInput& input) {
 
 
-	constexpr float EPS = 0.0001f;
 
 	bool wasOnGround = onGround;
 	onGround = false;
@@ -66,15 +69,17 @@ void Player::Tick(float dt, World& w, PlayerInput& input) {
 	if (m_isSpectator) {
 
 		if (input.up) {
-			velocity.y = 30.0f;
+			velocity.y = 30.0;
 		}
 		if (input.down) {
-			velocity.y = -30.0f;
+			velocity.y = -30.0;
 		}
 
-		position.y += velocity.y * dt;
-		position.x += velocity.x * dt;
-		position.z += velocity.z * dt;
+		position.local += velocity * static_cast<double>(dt);
+
+		NormalizePosition(position);
+
+
 
 
 		velocity.y = 0.0f;
@@ -90,67 +95,110 @@ void Player::Tick(float dt, World& w, PlayerInput& input) {
 		velocity.y = std::max(velocity.y, MAX_FALL_SPEED);
 
 
-		position.y += velocity.y * dt;
-		if (velocity.y > 0.f) {
-			AABB box = GetPlrBox();
-			int64_t hitY = static_cast<int64_t>(std::floor(box.max.y));
-			MovePositiveY({ box.min.x, box.max.x }, hitY, { box.min.z, box.max.z }, w);
+		position.local.y += velocity.y * static_cast<double>(dt);
+		NormalizeAxis(
+			position.block.y,
+			position.local.y
+		);
+
+		if (velocity.y > 0.0) {
+			const WorldAABB box = GetPlrBox();
+			int64_t hitY = box.originBlock.y + static_cast<int64_t>(std::floor(box.max.y));
+			MovePositiveY(hitY, box, w);
 		}
-		else if (velocity.y < 0.f) {
-			AABB box = GetPlrBox();
-			int64_t hitY = static_cast<int64_t>(std::floor(box.min.y));
-			MoveNegativeY({ box.min.x, box.max.x }, hitY, { box.min.z, box.max.z }, w);
-		}
-
-
-		position.x += velocity.x * dt;
-		if (velocity.x > 0.f) {
-			AABB box = GetPlrBox();
-
-			int64_t hitX = static_cast<int64_t>(std::floor(box.max.x));
-			MovePositiveX(hitX, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
-
-		}
-		else if (velocity.x < 0.f) {
-			AABB box = GetPlrBox();
-			int64_t hitX = static_cast<int64_t>(std::floor(box.min.x));
-			MoveNegativeX(hitX, { box.min.y, box.max.y }, { box.min.z, box.max.z }, w);
+		else if (velocity.y < 0.0) {
+			WorldAABB box = GetPlrBox();
+			int64_t hitY = box.originBlock.y + static_cast<int64_t>(std::floor(box.min.y));
+			MoveNegativeY(hitY, box, w);
 		}
 
-		position.z += velocity.z * dt;
-		if (velocity.z > 0.f) {
-			AABB box = GetPlrBox();
-			int64_t hitZ = static_cast<int64_t>(std::floor(box.max.z));
-			MovePositiveZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, hitZ, w);
+
+		position.local.x += velocity.x * static_cast<double>(dt);
+		NormalizeAxis(
+			position.block.x,
+			position.local.x
+		);
+
+		if (velocity.x > 0.0) {
+			WorldAABB box = GetPlrBox();
+
+			int64_t hitX = box.originBlock.x + static_cast<int64_t>(std::floor(box.max.x));
+			MovePositiveX(hitX, box, w);
 
 		}
-		else if (velocity.z < 0.f) {
-			AABB box = GetPlrBox();
-			int64_t hitZ = static_cast<int64_t>(std::floor(box.min.z));
-			MoveNegativeZ({ box.min.x, box.max.x }, { box.min.y, box.max.y }, hitZ, w);
+		else if (velocity.x < 0.0) {
+			WorldAABB box = GetPlrBox();
+			int64_t hitX = box.originBlock.x + static_cast<int64_t>(std::floor(box.min.x));
+			MoveNegativeX(hitX, box, w);
+		}
+
+		position.local.z += velocity.z * static_cast<double>(dt);
+		NormalizeAxis(
+			position.block.z,
+			position.local.z
+		);
+
+		if (velocity.z > 0.0) {
+			WorldAABB box = GetPlrBox();
+			int64_t hitZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.max.z));
+			MovePositiveZ(hitZ, box, w);
+
+		}
+		else if (velocity.z < 0.0) {
+			WorldAABB box = GetPlrBox();
+			int64_t hitZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.min.z));
+			MoveNegativeZ(hitZ, box, w);
 		}
 	}
 
-	feetPos.x = position.x;
-	feetPos.z = position.z;
-	feetPos.y = position.y;
-
-
-	velocity.x = 0.f;
-	velocity.z = 0.f;
-
-}
-
-
-void Player::MovePositiveX(int64_t x, glm::vec2 ySet, glm::vec2 zSet, World& w) {
 	
-	constexpr float EPS = 0.0001f;
 
-	int64_t minY = static_cast<int64_t>(std::floor(ySet[0]));
-	int64_t maxY = static_cast<int64_t>(std::floor(ySet[1] - EPS));
+	velocity.x = 0.0;
+	velocity.z = 0.0;
 
-	int64_t minZ = static_cast<int64_t>(std::floor(zSet[0]));
-	int64_t maxZ = static_cast<int64_t>(std::floor(zSet[1] - EPS));
+}
+
+
+void Player::MovePositiveX(int64_t x, const WorldAABB& box, World& w) {
+	
+	constexpr double EPS = 0.0001;
+
+	int64_t minY = box.originBlock.y + static_cast<int64_t>(std::floor(box.min.y));
+	int64_t maxY = box.originBlock.y + static_cast<int64_t>(std::floor(box.max.y - EPS));
+
+	int64_t minZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.min.z));
+	int64_t maxZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.max.z - EPS));
+
+	if (w.CanCollideBlock(x, minY, minZ) ||
+		w.CanCollideBlock(x, maxY, minZ) ||
+		w.CanCollideBlock(x, minY, maxZ) ||
+		w.CanCollideBlock(x, maxY, maxZ)) {
+
+
+		velocity.x = 0.0;
+
+		position.block.x = x;
+		position.local.x = -width / 2.0;
+
+		NormalizeAxis(
+			position.block.x,
+			position.local.x
+		);
+	}
+
+}
+
+
+
+void Player::MoveNegativeX(int64_t x, const WorldAABB& box, World& w) {
+	constexpr double EPS = 0.0001;
+
+
+	int64_t minY = box.originBlock.y + static_cast<int64_t>(std::floor(box.min.y));
+	int64_t maxY = box.originBlock.y + static_cast<int64_t>(std::floor(box.max.y - EPS));
+
+	int64_t minZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.min.z));
+	int64_t maxZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.max.z - EPS));
 
 	if (w.CanCollideBlock(x, minY, minZ) ||
 		w.CanCollideBlock(x, maxY, minZ) ||
@@ -159,44 +207,59 @@ void Player::MovePositiveX(int64_t x, glm::vec2 ySet, glm::vec2 zSet, World& w) 
 
 
 		velocity.x = 0.f;
-		position.x = x - width / 2.0f;
+		position.block.x = x + BLOCK_SIZE;
+		position.local.x = width / 2.0;
+
+		NormalizeAxis(
+			position.block.x,
+			position.local.x
+		);
+
 	}
 
 }
 
 
+void Player::MovePositiveY(int64_t y, const WorldAABB& box, World& w) {
+	constexpr double EPS = 0.0001;
 
-void Player::MoveNegativeX(int64_t x, glm::vec2 ySet, glm::vec2 zSet, World& w) {
-	constexpr float EPS = 0.0001f;
+	int64_t minX = box.originBlock.x + static_cast<int64_t>(std::floor(box.min.x));
+	int64_t maxX = box.originBlock.x + static_cast<int64_t>(std::floor(box.max.x - EPS));
 
+	int64_t minZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.min.z));
+	int64_t maxZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.max.z - EPS));
 
-	int64_t minY = static_cast<int64_t>(std::floor(ySet[0]));
-	int64_t maxY = static_cast<int64_t>(std::floor(ySet[1] - EPS));
+	if (w.CanCollideBlock(minX, y, minZ) ||
+		w.CanCollideBlock(maxX, y, minZ) ||
+		w.CanCollideBlock(minX, y, maxZ) ||
+		w.CanCollideBlock(maxX, y, maxZ)) {
 
-	int64_t minZ = static_cast<int64_t>(std::floor(zSet[0]));
-	int64_t maxZ = static_cast<int64_t>(std::floor(zSet[1] - EPS));
+		velocity.y = 0.0;
+	
 
-	if (w.CanCollideBlock(x, minY, minZ) ||
-		w.CanCollideBlock(x, maxY, minZ) ||
-		w.CanCollideBlock(x, minY, maxZ) ||
-		w.CanCollideBlock(x, maxY, maxZ)) {
+		position.block.y = y;
+		position.local.y = -height;
 
+		NormalizeAxis(
+			position.block.y,
+			position.local.y
+		);
 
-		velocity.x = 0.f;
-		position.x = (x + BLOCK_SIZE) + width / 2.0f;
 	}
+
 
 }
 
 
-void Player::MovePositiveY(glm::vec2 xSet, int64_t y, glm::vec2 zSet, World& w) {
-	constexpr float EPS = 0.0001f;
+void Player::MoveNegativeY(int64_t y, const WorldAABB& box, World& w) {
 
-	int64_t minX = static_cast<int64_t>(std::floor(xSet[0]));
-	int64_t maxX = static_cast<int64_t>(std::floor(xSet[1] - EPS));
+	constexpr float EPS = 0.0001;
 
-	int64_t minZ = static_cast<int64_t>(std::floor(zSet[0]));
-	int64_t maxZ = static_cast<int64_t>(std::floor(zSet[1] - EPS));
+	int64_t minX = box.originBlock.x + static_cast<int64_t>(std::floor(box.min.x));
+	int64_t maxX = box.originBlock.x + static_cast<int64_t>(std::floor(box.max.x - EPS));
+
+	int64_t minZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.min.z));
+	int64_t maxZ = box.originBlock.z + static_cast<int64_t>(std::floor(box.max.z - EPS));
 
 	if (w.CanCollideBlock(minX, y, minZ) ||
 		w.CanCollideBlock(maxX, y, minZ) ||
@@ -204,32 +267,14 @@ void Player::MovePositiveY(glm::vec2 xSet, int64_t y, glm::vec2 zSet, World& w) 
 		w.CanCollideBlock(maxX, y, maxZ)) {
 
 		velocity.y = 0.f;
-		position.y = y - height;//heightÇÕposÇ™äÓèÄ
+	
+		position.block.y = y;
+		position.local.y = static_cast<double>(BLOCK_SIZE);
 
-	}
-
-
-}
-
-
-void Player::MoveNegativeY(glm::vec2 xSet, int64_t y, glm::vec2 zSet, World& w) {
-
-	constexpr float EPS = 0.0001f;
-
-	int64_t minX = static_cast<int64_t>(std::floor(xSet[0]));
-	int64_t maxX = static_cast<int64_t>(std::floor(xSet[1] - EPS));
-
-	int64_t minZ = static_cast<int64_t>(std::floor(zSet[0]));
-	int64_t maxZ = static_cast<int64_t>(std::floor(zSet[1] - EPS));
-
-	if (w.CanCollideBlock(minX, y, minZ) ||
-		w.CanCollideBlock(maxX, y, minZ) ||
-		w.CanCollideBlock(minX, y, maxZ) ||
-		w.CanCollideBlock(maxX, y, maxZ)) {
-
-		velocity.y = 0.f;
-		position.y = y + BLOCK_SIZE;
-
+		NormalizeAxis(
+			position.block.y,
+			position.local.y
+		);
 
 		onGround = true;
 	}
@@ -238,38 +283,15 @@ void Player::MoveNegativeY(glm::vec2 xSet, int64_t y, glm::vec2 zSet, World& w) 
 
 
 
-void Player::MovePositiveZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w) {
+void Player::MovePositiveZ(int64_t z, const WorldAABB& box, World& w) {
 
-	constexpr float EPS = 0.0001f;
+	constexpr float EPS = 0.0001;
 
-	int64_t minX = static_cast<int64_t>(std::floor(xSet[0]));
-	int64_t maxX = static_cast<int64_t>(std::floor(xSet[1] - EPS));
+	int64_t minX = box.originBlock.x + static_cast<int64_t>(std::floor(box.min.x));
+	int64_t maxX = box.originBlock.x + static_cast<int64_t>(std::floor(box.max.x - EPS));
 
-	int64_t minY = static_cast<int64_t>(std::floor(ySet[0]));
-	int64_t maxY = static_cast<int64_t>(std::floor(ySet[1] - EPS));
-
-
-	if (w.CanCollideBlock(minX, minY, z) ||
-		w.CanCollideBlock(maxX, minY, z) ||
-		w.CanCollideBlock(minX, maxY, z) ||
-		w.CanCollideBlock(maxX, maxY, z)) {
-
-		velocity.z = 0.f;
-		position.z = z - depth / 2.0f;
-
-	}
-
-}
-
-
-void Player::MoveNegativeZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w) {
-	constexpr float EPS = 0.0001f;
-
-	int64_t minX = static_cast<int64_t>(std::floor(xSet[0]));
-	int64_t maxX = static_cast<int64_t>(std::floor(xSet[1] - EPS));
-
-	int64_t minY = static_cast<int64_t>(std::floor(ySet[0]));
-	int64_t maxY = static_cast<int64_t>(std::floor(ySet[1] - EPS));
+	int64_t minY = box.originBlock.y + static_cast<int64_t>(std::floor(box.min.y));
+	int64_t maxY = box.originBlock.y + static_cast<int64_t>(std::floor(box.max.y - EPS));
 
 
 	if (w.CanCollideBlock(minX, minY, z) ||
@@ -278,7 +300,44 @@ void Player::MoveNegativeZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w) 
 		w.CanCollideBlock(maxX, maxY, z)) {
 
 		velocity.z = 0.f;
-		position.z = z + BLOCK_SIZE + depth / 2.0f;
+		
+		position.block.z = z;
+		position.local.z = -depth / 2.0;
+
+		NormalizeAxis(
+			position.block.z,
+			position.local.z
+		);
+	}
+
+}
+
+
+void Player::MoveNegativeZ(int64_t z, const WorldAABB& box, World& w) {
+	constexpr float EPS = 0.0001;
+
+	int64_t minX = box.originBlock.x + static_cast<int64_t>(std::floor(box.min.x));
+	int64_t maxX = box.originBlock.x + static_cast<int64_t>(std::floor(box.max.x - EPS));
+
+	int64_t minY = box.originBlock.y + static_cast<int64_t>(std::floor(box.min.y));
+	int64_t maxY = box.originBlock.y + static_cast<int64_t>(std::floor(box.max.y - EPS));
+
+
+	if (w.CanCollideBlock(minX, minY, z) ||
+		w.CanCollideBlock(maxX, minY, z) ||
+		w.CanCollideBlock(minX, maxY, z) ||
+		w.CanCollideBlock(maxX, maxY, z)) {
+
+		velocity.z = 0.f;
+		
+
+		position.block.z = z;
+		position.local.z = static_cast<double>(BLOCK_SIZE) + depth / 2.0;
+
+		NormalizeAxis(
+			position.block.z,
+			position.local.z
+		);
 
 	}
 
@@ -286,23 +345,29 @@ void Player::MoveNegativeZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w) 
 }
 
 
-AABB Player::GetPlrBox() const {
+WorldAABB Player::GetPlrBox() const {
+
+
+
 	return {
-		glm::vec3{
-			position.x - width * 0.5f,
-			position.y + 0.001f,
-			position.z - depth * 0.5f
+
+		position.block,
+
+		glm::dvec3{
+			position.local.x - width * 0.5,
+			position.local.y + 0.001,
+			position.local.z - depth * 0.5
 		},
-		glm::vec3{
-			position.x + width * 0.5f,
-			position.y + height - 0.001f,
-			position.z + depth * 0.5f
+		glm::dvec3{
+			position.local.x + width * 0.5,
+			position.local.y + height - 0.001,
+			position.local.z + depth * 0.5
 		}
 	};
 }
 
 
-glm::vec3 Player::GetPos() const {
+WorldPos Player::GetPos() const {
 
 	return position;
 }

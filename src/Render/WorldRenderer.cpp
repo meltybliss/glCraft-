@@ -2,6 +2,7 @@
 #include "World/WorldThread.h"
 #include "Render/MeshBuilder.h"
 #include "Core/ChunkJob.h"
+#include "Core/WindowSize.h"
 #include <iostream>
 
 /*void WorldRenderer::RebuildDrityChunkMesh(World& w) {
@@ -31,12 +32,24 @@ void WorldRenderer::InitSkyRender() {
 }
 
 
-void WorldRenderer::RenderSky() {
+void WorldRenderer::RenderSky(const Camera& cam) {
 
+	float aspect = WindowSize::windowWidth / WindowSize::windowHeight;
+	float tanHalfFov = std::tan(glm::radians(cam.fov));
 
 	glDisable(GL_DEPTH_TEST);
 
 	m_skyShader->Use();
+
+
+	m_skyShader->SetFloat("aspect", aspect);
+	m_skyShader->SetFloat("tanHalfFov", tanHalfFov);
+	m_skyShader->SetVec3("cameraForward", cam.front);
+	m_skyShader->SetVec3("cameraRight", cam.right);
+	m_skyShader->SetVec3("cameraUp", cam.up);
+
+
+
 
 	glBindVertexArray(m_skyVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -137,6 +150,57 @@ void WorldRenderer::InitShadownMap() {
 }
 
 
+
+void WorldRenderer::UploadPointLights(
+	Shader& shader,
+	std::array<PointLight*, 16> lights,
+	size_t count,
+	const Camera& cam
+) {
+
+	shader.SetInt("uPointLightCount", static_cast<int>(count));
+
+	for (size_t i = 0; i < count; ++i) {
+
+		const auto& light = lights[i];
+		if (!light) continue;
+
+		std::string uniformName =
+			"uPointLights[" +
+			std::to_string(i) +
+			"]";
+
+		WorldPos lightPos;
+		lightPos.block = light->position;
+		lightPos.local = glm::dvec3(0.5);
+
+		glm::dvec3 relative = GetRelativePos(cam.position, lightPos);
+
+		shader.SetVec3(
+			(uniformName + ".position").c_str(),
+			glm::vec3(relative)
+		);
+
+		shader.SetVec3(
+			(uniformName + ".color").c_str(),
+			light->color
+		);
+
+		shader.SetFloat(
+			(uniformName + ".radius").c_str(),
+			light->radius
+		);
+
+		shader.SetFloat(
+			(uniformName + ".intensity").c_str(),
+			light->intensity
+		);
+
+	}
+
+}
+
+
 void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
@@ -191,13 +255,17 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 		int32_t cx = RestoreCxFromKey(key);
 		int32_t cz = RestoreCzFromKey(key);
 
+		WorldPos pos;
+		pos.block = { static_cast<int64_t>(cx) * Chunk::CHUNK_WIDTH, 0, static_cast<int64_t>(cz) * Chunk::CHUNK_DEPTH };
+		pos.local = glm::dvec3(0.0);
+
+		glm::dvec3 relative = GetRelativePos(cam.position, pos);
+
+		glm::vec3 drawPos = glm::vec3(relative);
+
 		model = glm::translate(
 			model,
-			glm::vec3(
-				cx * Chunk::CHUNK_WIDTH,
-				0,
-				cz * Chunk::CHUNK_DEPTH
-			)
+			drawPos
 
 		);
 
@@ -215,17 +283,25 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 
 
-void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam) {
+void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam, World* w) {
 
-	glViewport(0, 0, 800, 600);
+
+
+	glViewport(0, 0, WindowSize::windowWidth, WindowSize::windowHeight);
+
+
+	std::array<PointLight*, 16> pLights;
+	size_t count = 0;
+
 
 	shader.Use();
+
 
 	glm::mat4 view = cam.GetViewMatrix();
 
 	glm::mat4 projection = glm::perspective(
-		glm::radians(70.0f),
-		800.0f / 600.0f,
+		glm::radians(cam.fov),
+		WindowSize::windowWidth / WindowSize::windowHeight,
 		0.1f,
 		1000.f
 
@@ -235,7 +311,6 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam) {
 	glm::vec3 sunDirection =
 		glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f));
 
-	
 
 	shader.SetFloat("u_skyStrength", 1.0f);
 
@@ -257,21 +332,33 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam) {
 
 	for (auto& [key, mesh] : m_chunkMeshes) {
 
+		count = 0;
+		pLights.fill(0);
+
 		glm::mat4 model(1.0f);//identity matrix íPà çsóÒ
 
 		int32_t cx = RestoreCxFromKey(key);
 		int32_t cz = RestoreCzFromKey(key);
 
-		model = glm::translate(model,
-			glm::vec3(
-				cx * Chunk::CHUNK_WIDTH,
-				0,
-				cz * Chunk::CHUNK_DEPTH
-			)
+		WorldPos pos;
+		pos.block = { static_cast<int64_t>(cx) * Chunk::CHUNK_WIDTH, 0, static_cast<int64_t>(cz) * Chunk::CHUNK_DEPTH };
+		pos.local = glm::dvec3(0.0);
+
+		glm::dvec3 relative = GetRelativePos(cam.position, pos);
+
+		glm::vec3 drawPos = glm::vec3(relative);
+
+		w->SelectOptimalPointLights(cx, cz, pLights, count);
+
+		model = glm::translate(
+			model,
+			drawPos
 
 		);
 
 		shader.SetMat4("model", model);
+		
+		UploadPointLights(shader, pLights, count, cam);
 
 		auto it = m_chunkMeshes.find(key);
 		if (it == m_chunkMeshes.end()) continue;

@@ -82,7 +82,7 @@ public:
 		return it->second.get();
 	}
 
-	[[nodiscard]] RaycastHit Raycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const;
+	[[nodiscard]] RaycastHit Raycast(const WorldPos& origin, const glm::vec3& direction, float distance) const;
 	
 	void DebugChunkInfo();
 
@@ -103,10 +103,14 @@ public:
 		return block != BlockType::AIR && block != BlockType::TORCH;
 	}
 
+
+	void SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count);
+
 private:
 
 private:
 
 	ChunkMap chunks;
 	
+
 };

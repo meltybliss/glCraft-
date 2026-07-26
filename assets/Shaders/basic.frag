@@ -3,6 +3,17 @@
 out vec4 FragColor;
 
 
+struct PointLight {
+	vec3 position;
+	vec3 color;
+	float radius;
+	float intensity;
+
+};
+
+
+
+in vec3 FragPos;
 in vec2 TexCoord;
 in vec3 vNormal;
 in float vBlockLightLevel;
@@ -10,12 +21,19 @@ in float vSkyLightLevel;
 in float vAO;
 in vec4 FragPosLightSpace;
 
+
+
+
 uniform sampler2D u_Texture;
 uniform float u_skyStrength;//’‹1.0, –é0.1‚İ‚½‚¢‚È
 
 uniform vec3 sunDirection;
 
 uniform sampler2D shadowMap;
+
+
+uniform int uPointLightCount;
+uniform PointLight uPointLights[16];
 
 
 float CalculateShadow(vec4 fragPosLightSpace)
@@ -63,6 +81,50 @@ float CalculateShadow(vec4 fragPosLightSpace)
 
 }
 
+
+vec3 CalcPointLights(vec3 normal) {
+
+	vec3 result = vec3(0.0);
+
+	for (int i = 0; i < uPointLightCount; i++) {
+		
+		vec3 toLight = uPointLights[i].position - FragPos;
+
+		float distanceToLight = length(toLight);
+		if (distanceToLight > uPointLights[i].radius) continue;
+
+		vec3 lightDir = normalize(toLight);
+
+		//–Ê‚ªŒõŒ¹‚Ì•ûŒü‚ğŒü‚¢‚Ä‚¢‚é‚©‚©‚ç‚í‚©‚éA‚Ç‚ê‚¾‚¯Œõ‚ğó‚¯æ‚é‚©
+		float diffuseFactor = max(dot(normal, lightDir), 0.0);
+
+		float softLight = 0.15;
+		float lightingFactor = mix(softLight, 1.0, diffuseFactor); 
+
+
+
+		//ŒõŒ¹‚©‚ç‰“‚­‚È‚é‚Ù‚Çã‚­‚·‚é
+		float attenuation = clamp(1.0 - distanceToLight / uPointLights[i].radius, 0.0, 1.0);
+
+		//Œ¸Š‚ğ­‚µ©‘R‚É‚·‚é
+		attenuation = attenuation * attenuation * attenuation;
+
+		result +=
+			uPointLights[i].color *
+			uPointLights[i].intensity *
+			lightingFactor *
+			attenuation;
+
+
+
+		
+	}
+
+
+	return result;
+}
+
+
 void main() {
 	vec4 texColor = texture(u_Texture, TexCoord);
 	
@@ -90,9 +152,15 @@ void main() {
 
 	vec3 ambientLight = vec3(ambientBrightness);
 
+
+	vec3 normal = normalize(vNormal);
+	vec3 pointLight = CalcPointLights(normal);
+
+
 	vec3 finalLight =
 		ambientLight +
-		sunLight;
+		sunLight +
+		pointLight;
 
 	FragColor = vec4(
 		texColor.rgb * finalLight * vAO,

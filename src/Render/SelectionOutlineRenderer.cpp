@@ -1,5 +1,6 @@
 #include "Render/SelectionOutlineRenderer.h"
 #include "Render/Camera.h"
+#include "Core/WindowSize.h"
 
 void SelectionOutlineRenderer::Init() {
 	constexpr float e = 0.002f;
@@ -70,20 +71,29 @@ void SelectionOutlineRenderer::RenderOutline(
 
 
 	glm::mat4 proj = glm::perspective(
-		glm::radians(70.0f),
-		800.0f / 600.0f,
+		glm::radians(cam.fov),
+		WindowSize::windowWidth / WindowSize::windowHeight,
 		0.1f,
 		1000.f
 
 	);
 
 	glm::mat4 model(1.0f);
+
+	const glm::i64vec3 blockDelta{
+		hitX - cam.position.block.x,
+		hitY - cam.position.block.y,
+		hitZ - cam.position.block.z
+	};
+
+	const glm::dvec3 relative =
+		glm::dvec3(blockDelta) - cam.position.local;
+
+
+
 	model = glm::translate(
 		model,
-		glm::vec3(
-			static_cast<float>(hitX), 
-			static_cast<float>(hitY), 
-			static_cast<float>(hitZ))
+		glm::vec3(relative)
 	);
 
 

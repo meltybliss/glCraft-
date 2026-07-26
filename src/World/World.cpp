@@ -4,6 +4,7 @@
 #include "World/ChunkPipeline.h"
 #include "Render/Camera.h"
 #include <iostream>
+#include <algorithm>
 
 
 
@@ -85,6 +86,19 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	c->SetBlock(lx, ly, lz, b);
 
+	//test
+	if (b == BlockType::TORCH) {
+		
+		c->SetPointLight(
+			glm::i64vec3(x, y, z),
+			glm::vec3(1.0f, 0.42f, 0.12f),
+			8.0f,
+			2.5f);
+
+
+
+	}
+
 }
 
 
@@ -102,6 +116,8 @@ bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) 
 	}
 
 	auto* c = it->second.get();
+
+
 
 	return c->SetBlockLight(lx, ly, lz, level);
 
@@ -151,8 +167,139 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	c->SetBlock(lx, ly, lz, b);
 
+	//test
+	if (b == BlockType::TORCH) {
+
+		c->SetPointLight(
+			glm::i64vec3(x, y, z),
+			glm::vec3(1.0f, 0.42f, 0.12f),
+			8.0f,
+			2.5f);
+
+
+
+	}
+
 	/*c->dirty = true;
 	c->urgentUpdateMesh = true;*/
+}
+
+
+
+void World::SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count) {
+
+	std::vector<PointLight*> candidates;
+
+	const int64_t chunkMinX =
+		cx * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
+
+	const int64_t chunkMinZ =
+		cz * static_cast<int64_t>(Chunk::CHUNK_DEPTH);
+
+
+	const int64_t chunkMaxX =
+		chunkMinX + Chunk::CHUNK_WIDTH;
+
+	const int64_t chunkMaxZ =
+		chunkMinZ + Chunk::CHUNK_DEPTH;
+
+
+
+
+	for (int x = -1; x <= 1; ++x) {
+		for (int z = -1; z <= 1; ++z) {
+
+			auto it = chunks.find(Index(cx + x, cz + z));
+			if (it == chunks.end() || !it->second) continue;
+
+			auto* c = it->second.get();
+			
+			for (auto& pl : c->pointLights) {
+
+				const int64_t closestX = std::clamp(
+					pl.position.x,
+					chunkMinX,
+					chunkMaxX
+				);
+
+				const int64_t closestZ = std::clamp(
+					pl.position.z,
+					chunkMinZ,
+					chunkMaxZ
+				);
+
+
+				const double dxToChunk =
+					static_cast<double>(
+						pl.position.x - closestX
+					);
+
+				const double dzToChunk =
+					static_cast<double>(
+						pl.position.z - closestZ
+					);
+
+
+				const double distanceSquared =
+					dxToChunk * dxToChunk +
+					dzToChunk * dzToChunk;
+
+				const double radiusSquared =
+					static_cast<double>(pl.radius) *
+					static_cast<double>(pl.radius);
+
+
+				if (distanceSquared > radiusSquared) continue;
+
+				candidates.push_back(&pl);
+				
+			}
+
+		}
+	}
+
+
+	std::sort(candidates.begin(), candidates.end(),
+		[&](const PointLight* a, const PointLight* b) {
+
+			auto distanceSquared = [&](const PointLight* light) {
+
+				const int64_t closestX = std::clamp(
+					light->position.x,
+					chunkMinX,
+					chunkMaxX
+				);
+
+
+				const int64_t closestZ = std::clamp(
+					light->position.z,
+					chunkMinZ,
+					chunkMaxZ
+				);
+
+				const double dx =
+					static_cast<double>(light->position.x - closestX);
+
+				const double dz =
+					static_cast<double>(light->position.z - closestZ);
+
+
+				return dx * dx + dz * dz;
+			};
+
+
+			return distanceSquared(a) < distanceSquared(b);
+		}
+	);
+
+
+	size_t c = std::min(candidates.size(), out.size());
+	count = c;
+
+	for (size_t i = 0; i < c; ++i)
+		out[i] = candidates[i];
+
+
 }
 
 
@@ -582,30 +729,30 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 
 RaycastHit World::Raycast(
-	const glm::vec3& origin, 
-	const glm::vec3& dir, 
+	const WorldPos& origin,
+	const glm::vec3& direction,
 	float distance) const {
 
 
-	double originX = static_cast<double>(origin.x);
-	double originY = static_cast<double>(origin.y);
-	double originZ = static_cast<double>(origin.z);
+	int64_t x = origin.block.x;
+	int64_t y = origin.block.y;
+	int64_t z = origin.block.z;
 
-	const double dirX = static_cast<double>(dir.x);
-	const double dirY = static_cast<double>(dir.y);
-	const double dirZ = static_cast<double>(dir.z);
+	const double localX = origin.local.x;
+	const double localY = origin.local.y;
+	const double localZ = origin.local.z;
 
-	int64_t x = static_cast<int64_t>(std::floor(originX));
-	int64_t y = static_cast<int64_t>(std::floor(originY));
-	int64_t z = static_cast<int64_t>(std::floor(originZ));
+	const glm::dvec3 dir =
+		glm::normalize(glm::dvec3(direction));
+
 
 	if (GetBlockGlobal(x, y, z) != 0) {
 		return RaycastHit{ true, x, y, z, x, y, z };
 	}
 
-	int64_t previousX = static_cast<int64_t>(std::floor(originX));
-	int64_t previousY = static_cast<int64_t>(std::floor(originY));
-	int64_t previousZ = static_cast<int64_t>(std::floor(originZ));
+	int64_t previousX = x;
+	int64_t previousY = y;
+	int64_t previousZ = z;
 
 	
 	const double inf = std::numeric_limits<double>::infinity();
@@ -622,43 +769,39 @@ RaycastHit World::Raycast(
 	double tDeltaY = inf;
 	double tDeltaZ = inf;
 
-	if (dirX > 0.0f) {
+	if (dir.x > 0.0) {
 		stepX = 1;
-		double nextBoundaryX = static_cast<double>(x + 1);
-		tMaxX = (nextBoundaryX - originX) / dirX;
-		tDeltaX = 1.0f / dirX;
+		tMaxX = (1.0 - localX) / dir.x;
+		tDeltaX = 1.0 / dir.x;
 	}
-	else if (dirX < 0.0f) {
+	else if (dir.x < 0.0) {
 		stepX = -1;
-		double nextBoundaryX = static_cast<double>(x);
-		tMaxX = (nextBoundaryX - originX) / dirX;
-		tDeltaX = -1.0f / dirX;
+		tMaxX = localX / -dir.x;
+		tDeltaX = 1.0 / -dir.x;
 	}
 
-	if (dirY > 0.0f) {
+	if (dir.y > 0.0f) {
 		stepY = 1;
-		double nextBoundaryY = static_cast<double>(y + 1);
-		tMaxY = (nextBoundaryY - originY) / dirY;
-		tDeltaY = 1.0f / dirY;
+		tMaxY = (1.0 - localY) / dir.y;
+		tDeltaY = 1.0 / dir.y;
 	}
-	else if (dirY < 0.0f) {
+	else if (dir.y < 0.0f) {
 		stepY = -1;
-		double nextBoundaryY = static_cast<double>(y);
-		tMaxY = (nextBoundaryY - originY) / dirY;
-		tDeltaY = -1.0f / dirY;
+		tMaxY = localY / -dir.y;
+		tDeltaY = 1.0 / -dir.y;
 	}
 
-	if (dirZ > 0.0f) {
+	if (dir.z > 0.0)
+	{
 		stepZ = 1;
-		double nextBoundaryZ = static_cast<double>(z + 1);
-		tMaxZ = (nextBoundaryZ - originZ) / dirZ;
-		tDeltaZ = 1.0f / dirZ;
+		tMaxZ = (1.0 - localZ) / dir.z;
+		tDeltaZ = 1.0 / dir.z;
 	}
-	else if (dirZ < 0.0f) {
+	else if (dir.z < 0.0)
+	{
 		stepZ = -1;
-		double nextBoundaryZ = static_cast<double>(z);
-		tMaxZ = (nextBoundaryZ - originZ) / dirZ;
-		tDeltaZ = -1.0f / dirZ;
+		tMaxZ = localZ / -dir.z;
+		tDeltaZ = 1.0 / -dir.z;
 	}
 
 

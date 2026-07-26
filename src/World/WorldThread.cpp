@@ -1645,7 +1645,7 @@ bool WorldThread::HasImmediateTask() {
 
 
 
-RaycastHit WorldThread::RequestRaycast(const glm::vec3& origin, const glm::vec3& dir, float distance) const {
+RaycastHit WorldThread::RequestRaycast(const WorldPos& origin, const glm::vec3& dir, float distance) const {
 
 	return m_world.Raycast(
 		origin,
@@ -1658,7 +1658,6 @@ RaycastHit WorldThread::RequestRaycast(const glm::vec3& origin, const glm::vec3&
 
 void WorldThread::ApplyPlayerStatus(float dt) {
 
-	glm::vec3 pos = m_plr.GetPos();
 	PlayerInput input;
 
 	{

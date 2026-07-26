@@ -7,13 +7,16 @@ layout (location = 3) in float aBlockLightLevel;
 layout (location = 4) in float aSkyLightLevel;
 layout (location = 5) in float aAO;
 
+
+out vec3 FragPos;
 out vec2 TexCoord;
 out vec3 vNormal;
 out float vBlockLightLevel;
 out float vSkyLightLevel;
 out float vAO;
-
 out vec4 FragPosLightSpace;
+
+
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -34,9 +37,13 @@ void main() {
 	gl_Position = projection * view * worldPos;
 
 
+	FragPos = worldPos.xyz;
+
 	TexCoord = aTexCoord;
 	vNormal = aNormal;
 	vBlockLightLevel = aBlockLightLevel;
 	vSkyLightLevel = aSkyLightLevel;
 	vAO = aAO;
+
+
 }

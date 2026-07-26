@@ -1,6 +1,7 @@
 #pragma once
 #include "Gameplay/PlayerInput.h"
 #include "Math/AABB.h"
+#include "World/WorldPos.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -22,29 +23,37 @@ public:
 		velocity.z = velZ;
 	}
 
-	void SetPosition(const glm::vec3& pos) { position = pos; }
+	void SetPosition(const WorldPos& pos)
+	{
+		position = pos;
+	}
 	void SetYaw(const float yaw) { this->yaw = yaw; }
 	void SetPitch(const float pitch) { this->pitch = pitch; }
 
  	void Tick(float dt, World& w, PlayerInput& input);
 	
-	void MovePositiveX(int64_t x, glm::vec2 ySet, glm::vec2 zSet, World& w);
-	void MoveNegativeX(int64_t x, glm::vec2 ySet, glm::vec2 zSet, World& w);
+	void MovePositiveX(int64_t x, const WorldAABB& box, World& w);
+	void MoveNegativeX(int64_t x, const WorldAABB& box, World& w);
 
-	void MovePositiveY(glm::vec2 xSet, int64_t y, glm::vec2 zSet, World& w);
-	void MoveNegativeY(glm::vec2 xSet, int64_t y, glm::vec2 zSet, World& w);
+	void MovePositiveY(int64_t y, const WorldAABB& box, World& w);
+	void MoveNegativeY(int64_t y, const WorldAABB& box, World& w);
 
-	void MovePositiveZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w);
-	void MoveNegativeZ(glm::vec2 xSet, glm::vec2 ySet, int64_t z, World& w);
+	void MovePositiveZ(int64_t z, const WorldAABB& box, World& w);
+	void MoveNegativeZ(int64_t z, const WorldAABB& box, World& w);
 
 	void UpdateVectors();
 	
 
-	[[nodiscard]] AABB GetPlrBox() const;
-	[[nodiscard]] glm::vec3 GetPos() const;
-	[[nodiscard]] glm::vec3 GetEyePos() const {
+	[[nodiscard]] WorldAABB GetPlrBox() const;
+	[[nodiscard]] WorldPos GetPos() const;
+	[[nodiscard]] WorldPos GetEyePos() const
+	{
+		WorldPos eyePos = position;
 
-		return position + glm::vec3(0, eyeHeight, 0);
+		eyePos.local.y += eyeHeight;
+		NormalizePosition(eyePos);
+
+		return eyePos;
 	}
 	[[nodiscard]] float GetSpeed() const;
 	[[nodiscard]] glm::vec3 GetFront() const {
@@ -77,10 +86,15 @@ private:
 	void CalcVelocityXZ(PlayerInput& input);
 
 private:
-	glm::vec3 position{0.f, 200.f, 0.f};
-	glm::vec3 feetPos{};
 
-	glm::vec3 velocity{};
+
+	WorldPos position{
+		glm::i64vec3(0, 200, 0),
+		glm::dvec3(0.0)
+	};
+	
+
+	glm::dvec3 velocity{};
 	
 	//cameraån
 	glm::vec3 front = glm::vec3(0.f, 0.f, -1.0f);
@@ -92,14 +106,14 @@ private:
 	float pitch = 0.f;
 	//
 
-	const float GRAVITY = -25.0f;//-25
-	const float MAX_FALL_SPEED = -50.0f;
+	const double GRAVITY = -25.0;//-25
+	const double MAX_FALL_SPEED = -50.0;
 
-	float width = 0.6f;
-	float depth = 0.6f;
+	double width = 0.6;
+	double depth = 0.6;
 
-	float eyeHeight = 1.8f;
-	float height = 2.f;
+	double eyeHeight = 1.8;
+	double height = 2.0;
 
 
 	float speed = 10.f;

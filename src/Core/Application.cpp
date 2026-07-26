@@ -5,11 +5,11 @@
 void Application::UpdateStreamCenter() {
 
 	int32_t centerCx = static_cast<int32_t>(
-		floorDiv(m_camera.position.x, Chunk::CHUNK_WIDTH)
+		floorDiv(m_camera.position.block.x, Chunk::CHUNK_WIDTH)
 	);
 
 	int32_t centerCz = static_cast<int32_t>(
-		floorDiv(m_camera.position.z, Chunk::CHUNK_DEPTH)
+		floorDiv(m_camera.position.block.z, Chunk::CHUNK_DEPTH)
 	);
 
 
@@ -56,8 +56,8 @@ void Application::Run() {
 
 		blockAtlas->Bind(0);
 
-		m_wRenderer.RenderSky();
-		m_wRenderer.RenderWorld(*baseShader, m_camera);
+		m_wRenderer.RenderSky(m_camera);
+		m_wRenderer.RenderWorld(*baseShader, m_camera, m_worldThread.GetWorldPtr());
 		
 
 		RenderOutline();//switch shader
@@ -97,7 +97,7 @@ bool Application::InitGL() {
 		return false;
 	}
 
-	m_window = glfwCreateWindow(800, 600, "glCraft++", nullptr, nullptr);
+	m_window = glfwCreateWindow(WindowSize::windowWidth, WindowSize::windowHeight, "glCraft++", nullptr, nullptr);
 
 	if (!m_window) {
 		glfwTerminate();
@@ -134,7 +134,7 @@ bool Application::InitGL() {
 
 	glEnable(GL_DEPTH_TEST);
 
-	glViewport(0, 0, 800, 600);
+	glViewport(0, 0, WindowSize::windowWidth, WindowSize::windowHeight);
 	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -258,7 +258,7 @@ void Application::OnMouseButton(int button, int action) {
 			lastHit.previousX,
 			lastHit.previousY,
 			lastHit.previousZ,     
-			BlockType::STONE
+			BlockType::TORCH
 		);
 	}
 }
@@ -288,7 +288,7 @@ void Application::OnMouseMove(double xpos, double ypos) {
 
 void Application::UpdateRayHit() {
 
-	glm::vec3 origin = m_camera.position;
+	WorldPos origin = m_camera.position;
 	glm::vec3 rayDir = glm::normalize(m_camera.front);
 
 	float distance = 4.0f;
