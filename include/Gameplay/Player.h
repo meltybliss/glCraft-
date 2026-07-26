@@ -89,7 +89,7 @@ private:
 
 
 	WorldPos position{
-		glm::i64vec3(0, 200, 0),
+		glm::i64vec3(34359738160LL, 200, 34359738160LL),
 		glm::dvec3(0.0)
 	};
 	

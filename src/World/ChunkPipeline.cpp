@@ -253,12 +253,15 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 			const int32_t cx = job.cx;
 			const int32_t cz = job.cz;
 
-			const int32_t dx = std::abs(m_curStreamCx.load() - cx);
-			const int32_t dz = std::abs(m_curStreamCz.load() - cz);
+			const int64_t dx = std::abs(m_curStreamCx.load() - static_cast<int64_t>(cx));
+			const int64_t dz = std::abs(m_curStreamCz.load() - static_cast<int64_t>(cz));
+
+			const int64_t unloadDist =
+				WorldThread::Get_UNLOAD_DISTANCE();
 
 			bool willCancel =
-				dx >= WorldThread::Get_UNLOAD_DISTANCE() ||
-				dz >= WorldThread::Get_UNLOAD_DISTANCE();
+				dx >= unloadDist ||
+				dz >= unloadDist;
 		
 			if (willCancel) {
 				canceledKey.push_back(Index(cx, cz));
