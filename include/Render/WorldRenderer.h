@@ -26,11 +26,15 @@ public:
 
 	void RenderShadowPass(const Camera& cam);
 
+	void BeginHDRScene();
+	void EndHDRScene();
 
+	void InitSkyShaderAndVAO();
+	void InitPostShaderAndVAO();
 
-	void InitSkyRender();
 	void InitShadownMap();
 
+	void InitHDRFrameBuffer();
 private:
 
 	void UploadPointLights(
@@ -48,9 +52,17 @@ private:
 	unsigned int m_shadowDepthTexture = 0;
 	std::optional<Shader> m_shadowShader;
 
+	unsigned int m_hdrFBO = 0;
+	unsigned int m_sceneTexture = 0;
+	unsigned int m_depthRBO = 0;
+
 
 	unsigned int m_skyVAO = 0;
 	std::optional<Shader> m_skyShader;
+
+
+	unsigned int m_postVAO = 0;
+	std::optional<Shader> m_postShader;
 
 
 	static constexpr int SHADOW_WIDTH = 2048;

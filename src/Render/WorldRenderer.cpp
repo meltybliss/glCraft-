@@ -21,7 +21,7 @@
 
 
 
-void WorldRenderer::InitSkyRender() {
+void WorldRenderer::InitSkyShaderAndVAO() {
 
 	glGenVertexArrays(1, &m_skyVAO);
 
@@ -32,9 +32,29 @@ void WorldRenderer::InitSkyRender() {
 }
 
 
+void WorldRenderer::InitPostShaderAndVAO() {
+
+	glGenVertexArrays(1, &m_postVAO);
+
+	m_postShader.emplace(
+		"assets/Shaders/post.vert",
+		"assets/Shaders/post.frag"
+
+	);
+
+
+	m_postShader->Use();
+
+	m_postShader->SetInt("uSceneTexture", 0);
+}
+
+
+
 void WorldRenderer::RenderSky(const Camera& cam) {
 
-	float aspect = WindowSize::windowWidth / WindowSize::windowHeight;
+	const float aspect =
+		static_cast<float>(WindowSize::windowWidth) /
+		static_cast<float>(WindowSize::windowHeight);
 	float tanHalfFov = std::tan(glm::radians(cam.fov));
 
 	glDisable(GL_DEPTH_TEST);
@@ -149,6 +169,145 @@ void WorldRenderer::InitShadownMap() {
 	
 }
 
+
+
+void WorldRenderer::InitHDRFrameBuffer() {
+
+	glGenFramebuffers(1, &m_hdrFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_hdrFBO);
+
+	glGenTextures(1, &m_sceneTexture);
+	glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+
+	glTexImage2D(
+		GL_TEXTURE_2D,
+		0,
+		GL_RGBA16F,
+		WindowSize::windowWidth,
+		WindowSize::windowHeight,
+		0,
+		GL_RGBA,
+		GL_FLOAT,
+		nullptr
+
+	);
+
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MIN_FILTER,
+		GL_LINEAR
+	);
+
+
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		GL_LINEAR
+	);
+
+	glFramebufferTexture2D(
+		GL_FRAMEBUFFER,
+		GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D,
+		m_sceneTexture,
+		0
+	);
+
+	glGenRenderbuffers(1, &m_depthRBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_depthRBO);
+
+	glRenderbufferStorage(
+		GL_RENDERBUFFER,
+		GL_DEPTH_COMPONENT24,
+		WindowSize::windowWidth,
+		WindowSize::windowHeight
+
+	);
+
+
+	glFramebufferRenderbuffer(
+		GL_FRAMEBUFFER,
+		GL_DEPTH_ATTACHMENT,
+		GL_RENDERBUFFER,
+		m_depthRBO
+	);
+
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cerr << "HDR framebuffer incomplete\n";
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+}
+
+
+
+void WorldRenderer::BeginHDRScene() {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, m_hdrFBO);
+	
+
+	glViewport(
+		0,
+		0,
+		WindowSize::windowWidth,
+		WindowSize::windowHeight
+	);
+
+
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+}
+
+
+
+void WorldRenderer::EndHDRScene() {
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+
+	glDisable(GL_DEPTH_TEST);
+
+	m_postShader->Use();
+	m_postShader->SetFloat(
+		"uExposure",
+		1.0f
+	);
+
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+
+	/*glBlitFramebuffer(
+		0, 0,
+		WindowSize::windowWidth,
+		WindowSize::windowHeight,
+
+		0, 0,
+		WindowSize::windowWidth,
+		WindowSize::windowHeight,
+
+		GL_COLOR_BUFFER_BIT,
+		GL_NEAREST
+
+	);*/
+
+	glBindVertexArray(m_postVAO);
+
+	glDrawArrays(
+		GL_TRIANGLES,
+		0,
+		3
+	);
+
+	glBindVertexArray(0);
+
+	glEnable(GL_DEPTH_TEST);
+}
 
 
 void WorldRenderer::UploadPointLights(
@@ -366,7 +525,6 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam, World* w) {
 		it->second.Draw();
 
 	}
-
 }
 
 

@@ -16,12 +16,90 @@ struct ChunkMesh {
 
 		indexCount = static_cast<GLsizei>(indices.size());
 
-		glGenVertexArrays(1, &vao);
-		glGenBuffers(1, &vbo);
-		glGenBuffers(1, &ebo);
+		
 
-		glBindVertexArray(vao);
+		constexpr GLsizei stride = 11 * sizeof(float);
 
+		
+		if (vao == 0) {
+
+
+			glGenVertexArrays(1, &vao);
+			glGenBuffers(1, &vbo);
+			glGenBuffers(1, &ebo);
+
+
+			glBindVertexArray(vao);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			//vao
+			//xyz
+			glVertexAttribPointer(
+				0,
+				3,
+				GL_FLOAT,
+				GL_FALSE,
+				stride,
+				(void*)0
+			);
+			glEnableVertexAttribArray(0);
+
+			//UV
+			glVertexAttribPointer(
+				1,
+				2,
+				GL_FLOAT,
+				GL_FALSE,
+				stride,
+				(void*)(3 * sizeof(float))
+			);
+			glEnableVertexAttribArray(1);
+
+			//normal
+			glVertexAttribPointer(
+				2,
+				3,
+				GL_FLOAT,
+				GL_FALSE,
+				stride,
+				(void*)(5 * sizeof(float))
+			);
+			glEnableVertexAttribArray(2);
+
+			//block light level
+			glVertexAttribPointer(
+				3,
+				1,
+				GL_FLOAT,
+				GL_FALSE,
+				stride,
+				(void*)(8 * sizeof(float))
+			);
+			glEnableVertexAttribArray(3);
+
+			//sky light level
+			glVertexAttribPointer(
+				4,
+				1,
+				GL_FLOAT,
+				GL_FALSE,
+				stride,
+				(void*)(9 * sizeof(float))
+			);
+			glEnableVertexAttribArray(4);
+
+
+			//AO
+			glVertexAttribPointer(
+				5,
+				1,
+				GL_FLOAT,
+				GL_FALSE,
+				stride,
+				(void*)(10 * sizeof(float))
+			);
+			glEnableVertexAttribArray(5);
+		}
+		
 		//vbo
 		glBindBuffer(GL_ARRAY_BUFFER, vbo);
 		glBufferData(
@@ -39,80 +117,6 @@ struct ChunkMesh {
 			indices.data(),
 			GL_STATIC_DRAW
 		);
-
-		constexpr GLsizei stride = 11 * sizeof(float);
-
-
-		
-		//vao
-		//xyz
-		glVertexAttribPointer(
-			0,
-			3,
-			GL_FLOAT,
-			GL_FALSE,
-			stride,
-			(void*)0
-		);
-		glEnableVertexAttribArray(0);
-
-		//UV
-		glVertexAttribPointer(
-			1,
-			2,
-			GL_FLOAT,
-			GL_FALSE,
-			stride,
-			(void*)(3 * sizeof(float))
-		);
-		glEnableVertexAttribArray(1);
-
-		//normal
-		glVertexAttribPointer(
-			2,
-			3,
-			GL_FLOAT,
-			GL_FALSE,
-			stride,
-			(void*)(5 * sizeof(float))
-		);
-		glEnableVertexAttribArray(2);
-
-		//block light level
-		glVertexAttribPointer(
-			3,
-			1,
-			GL_FLOAT,
-			GL_FALSE,
-			stride,
-			(void*)(8 * sizeof(float))
-		);
-		glEnableVertexAttribArray(3);
-
-		//sky light level
-		glVertexAttribPointer(
-			4,
-			1,
-			GL_FLOAT,
-			GL_FALSE,
-			stride,
-			(void*)(9 * sizeof(float))
-		);
-		glEnableVertexAttribArray(4);
-
-
-		//AO
-		glVertexAttribPointer(
-			5,
-			1,
-			GL_FLOAT,
-			GL_FALSE,
-			stride,
-			(void*)(10 * sizeof(float))
-		);
-		glEnableVertexAttribArray(5);
-
-		
 
 
 		glBindVertexArray(0);//unbind

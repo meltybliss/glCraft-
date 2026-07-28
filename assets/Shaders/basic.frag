@@ -47,6 +47,13 @@ float CalculateShadow(vec4 fragPosLightSpace)
 	//-1Å`1 Ç 0Å`1 Ç…ïœä∑
     projCoords = projCoords * 0.5 + 0.5;
  
+	if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
+		projCoords.y < 0.0 || projCoords.y > 1.0 ||
+		projCoords.z < 0.0 || projCoords.z > 1.0)
+	{
+		return 0.0;
+	}
+
 
 	 //ç°ï`Ç¢ÇƒÇ¢ÇÈfragmenté©êgÇÃê[Ç≥
     float currentDepth = projCoords.z;
@@ -161,6 +168,8 @@ void main() {
 		ambientLight +
 		sunLight +
 		pointLight;
+
+
 
 	FragColor = vec4(
 		texColor.rgb * finalLight * vAO,
