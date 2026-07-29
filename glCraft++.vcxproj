@@ -489,6 +489,10 @@
   <ItemGroup>
     <None Include="assets\Shaders\basic.frag" />
     <None Include="assets\Shaders\basic.vert" />
+    <None Include="assets\Shaders\blur.frag" />
+    <None Include="assets\Shaders\bright.frag" />
+    <None Include="assets\Shaders\post.frag" />
+    <None Include="assets\Shaders\post.vert" />
     <None Include="assets\Shaders\selectionOutline.frag" />
     <None Include="assets\Shaders\selectionOutline.vert" />
     <None Include="assets\Shaders\shadow_depth.frag" />

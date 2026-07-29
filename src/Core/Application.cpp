@@ -56,11 +56,16 @@ void Application::Run() {
 
 		blockAtlas->Bind(0);
 
+		m_wRenderer.BeginHDRScene();
+
 		m_wRenderer.RenderSky(m_camera);
 		m_wRenderer.RenderWorld(*baseShader, m_camera, m_worldThread.GetWorldPtr());
 		
 
 		RenderOutline();//switch shader
+		
+
+		m_wRenderer.EndHDRScene();
 
 
 		glfwSwapBuffers(m_window);
@@ -161,8 +166,11 @@ bool Application::InitGL() {
 	baseShader->Use();
 	baseShader->SetInt("u_Texture", 0);
 
-	m_wRenderer.InitSkyRender();
+	m_wRenderer.InitSkyShaderAndVAO();
+	m_wRenderer.InitBloom();
 	m_wRenderer.InitShadownMap();
+	m_wRenderer.InitHDRFrameBuffer();
+
 
 	return true;
 

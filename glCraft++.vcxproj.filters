@@ -1524,5 +1524,17 @@
     <None Include="assets\Shaders\sky.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="assets\Shaders\post.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\Shaders\post.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\Shaders\bright.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="assets\Shaders\blur.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

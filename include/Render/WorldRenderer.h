@@ -26,10 +26,16 @@ public:
 
 	void RenderShadowPass(const Camera& cam);
 
+	void BeginHDRScene();
+	void EndHDRScene();
 
+	void InitSkyShaderAndVAO();
 
-	void InitSkyRender();
 	void InitShadownMap();
+
+	void InitHDRFrameBuffer();
+	void InitBloom();
+
 
 private:
 
@@ -40,6 +46,13 @@ private:
 		const Camera& cam
 	);
 
+
+	void ExtractBrightPixels();
+	unsigned int BlurBloom(int passCount);
+	void RenderFinalPost(unsigned int bloomTexture);
+
+	void DrawFullscreenTriangle();
+
 private:
 
 	std::unordered_map<uint64_t, ChunkMesh> m_chunkMeshes;
@@ -48,9 +61,27 @@ private:
 	unsigned int m_shadowDepthTexture = 0;
 	std::optional<Shader> m_shadowShader;
 
+	unsigned int m_hdrFBO = 0;
+	unsigned int m_sceneTexture = 0;
+	unsigned int m_depthRBO = 0;
+
+
+	unsigned int m_brightFBO = 0;
+	unsigned int m_brightTexture = 0;
+	unsigned int m_pingPongFBO[2] = { 0, 0 };
+	unsigned int m_pingPongTextures[2] = { 0, 0 };
+
 
 	unsigned int m_skyVAO = 0;
 	std::optional<Shader> m_skyShader;
+
+
+	unsigned int m_postVAO = 0;
+	std::optional<Shader> m_brightShader;
+	std::optional<Shader> m_blurShader;
+	std::optional<Shader> m_postShader;
+
+
 
 
 	static constexpr int SHADOW_WIDTH = 2048;

@@ -20,7 +20,7 @@ in float vBlockLightLevel;
 in float vSkyLightLevel;
 in float vAO;
 in vec4 FragPosLightSpace;
-
+in vec3 vLightColor;
 
 
 
@@ -35,6 +35,8 @@ uniform sampler2D shadowMap;
 uniform int uPointLightCount;
 uniform PointLight uPointLights[16];
 
+ 
+
 
 float CalculateShadow(vec4 fragPosLightSpace)
 {
@@ -47,6 +49,13 @@ float CalculateShadow(vec4 fragPosLightSpace)
 	//-1Å`1 Ç 0Å`1 Ç…ïœä∑
     projCoords = projCoords * 0.5 + 0.5;
  
+	if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
+		projCoords.y < 0.0 || projCoords.y > 1.0 ||
+		projCoords.z < 0.0 || projCoords.z > 1.0)
+	{
+		return 0.0;
+	}
+
 
 	 //ç°ï`Ç¢ÇƒÇ¢ÇÈfragmenté©êgÇÃê[Ç≥
     float currentDepth = projCoords.z;
@@ -142,7 +151,6 @@ void main() {
 	float B_brightness = vBlockLightLevel / 15.0;
 	float S_brightness = sky * u_skyStrength;
 
-	float ambientBrightness  = max(B_brightness, S_brightness);
 
 	float diffuse = 
 		max(dot(normalize(vNormal), -sunDirection), 0.0);
@@ -150,7 +158,11 @@ void main() {
 
 	vec3 sunLight = sunColor * diffuse * sky * (1.0 - shadow);
 
-	vec3 ambientLight = vec3(ambientBrightness);
+
+	vec3 skyLight = vec3(S_brightness);
+	vec3 blockLight = B_brightness * vLightColor;
+
+	vec3 ambientLight = skyLight + blockLight;
 
 
 	vec3 normal = normalize(vNormal);
@@ -162,8 +174,19 @@ void main() {
 		sunLight +
 		pointLight;
 
+
+	vec3 litColor =
+		texColor.rgb *
+		finalLight *
+		vAO;
+
+	
+
+	vec3 hdrColor =
+		litColor;
+
 	FragColor = vec4(
-		texColor.rgb * finalLight * vAO,
+		hdrColor,
 		texColor.a
 	);
 
