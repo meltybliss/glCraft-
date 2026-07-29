@@ -403,7 +403,13 @@ void WorldThread::Start_RemoveSkyLightTask(
 		task
 	);
 
-	if (task.remove_queue.empty()) return;
+	if (task.remove_queue.empty()) { 
+		
+		FinishLightTask(task); 
+		return;
+	}
+
+
 	if (!urgent) {
 		m_lightTasks.push_back(std::move(task));
 	}
@@ -472,6 +478,8 @@ void WorldThread::Start_SkyLightTask(
 	task.urgent = urgent;
 
 
+	
+
 	m_lightEngine.AddSkyLightLevel(
 		m_world,
 		x,
@@ -481,7 +489,11 @@ void WorldThread::Start_SkyLightTask(
 		task
 	);
 
-	if (task.bfs_queue.empty()) return;
+	if (task.bfs_queue.empty()) {
+		
+		FinishLightTask(task); 
+		return;
+	}
 	
 	if (urgent) {
 		m_urgentLightTasks.push_back(std::move(task));
@@ -545,10 +557,31 @@ void WorldThread::Add_SkylightTask(
 			m_world.GetSkyLightGlobal(nx, ny, nz)
 		);
 	}
+	
 
-	if (strongest > 1) {
-		Start_SkyLightTask(x, y, z, strongest - 1, urgent);
+	if (strongest <= 1) {
+		LightTask task{};
+		task.lightType = LightType::SKY;
+		task.phase = Phase::ADD;
+		task.urgent = urgent;
+
+		m_lightEngine.OnlyInsertTouchedChunkkey(
+			m_world,
+			x,
+			y,
+			z,
+			task
+		);
+
+		FinishLightTask(task);
+		return;
 	}
+
+
+	
+	Start_SkyLightTask(x, y, z, strongest - 1, urgent);
+	
+	
 }
 
 
@@ -1290,6 +1323,11 @@ void WorldThread::FinishLightTask(LightTask& task) {
 
 		Chunk* c = m_world.GetTargetChunkFromKey(key);
 		
+
+		if (!c) {
+			continue;
+		}
+
 		if (task.urgent) {
 			MarkChunkUrgentDirty(*c);
 		}
@@ -1543,6 +1581,8 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 
 
 void WorldThread::MarkChunkUrgentDirty(Chunk& c) {
+
+
 	c.urgentUpdateMesh = true;
 
 	MarkChunkDirty(c);

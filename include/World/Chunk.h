@@ -31,8 +31,8 @@ struct Chunk {
 
 
 	std::array<BlockType, CHUNK_SIZE> blocks;
-	std::array<uint8_t, CHUNK_SIZE> blockLights{};
-	std::array<uint8_t, CHUNK_SIZE> skyLights{};
+	std::array<uint8_t, CHUNK_SIZE> blockLights{0};
+	std::array<uint8_t, CHUNK_SIZE> skyLights{0};
 	std::vector<PointLight> pointLights{};
 
 
