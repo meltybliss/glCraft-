@@ -75,6 +75,14 @@ public:
 		LightTask& task
 	);
 
+
+	static void InsertGeoDirtyChunks(//Œõ‚Í‚¢‚¶‚ç‚¸ƒuƒƒbƒN‚¾‚¯‚ğ‚¢‚¶‚éê‡‚Ìmesh dirty
+		World& w,
+		int64_t worldX,
+		int64_t worldY,
+		int64_t worldZ,
+		LightTask& task);
+
 private:
 
 

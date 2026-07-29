@@ -27,6 +27,7 @@ void LightEngine::AddLightLevel(
 	Chunk* c = w.GetTargetChunk(cx, cz);
 	if (!c) return;
 
+	task.dirtyChunks_light.insert(Index(cx, cz));
 
 	int lx = floorMod(worldX, Chunk::CHUNK_WIDTH);
 	int ly = worldY;
@@ -42,6 +43,34 @@ void LightEngine::AddLightLevel(
 }
 
 
+
+void LightEngine::InsertGeoDirtyChunks(
+	World& w,
+	int64_t worldX,
+	int64_t worldY,
+	int64_t worldZ,
+	LightTask& task) {
+
+
+	if (worldY < 0 || worldY >= Chunk::CHUNK_HEIGHT) {
+		return;
+	}
+
+
+	int32_t cx = floorDiv(worldX, Chunk::CHUNK_WIDTH);
+	int32_t cz = floorDiv(worldZ, Chunk::CHUNK_DEPTH);
+
+	Chunk* c = w.GetTargetChunk(cx, cz);
+	if (!c) return;
+
+
+
+	task.dirtyChunks_geometry.insert(Index(cx, cz));
+
+
+}
+
+
 void LightEngine::AddSkyLightLevel(
 	World& w,
 	int64_t worldX,
@@ -53,6 +82,7 @@ void LightEngine::AddSkyLightLevel(
 	if (worldY < 0 || worldY >= Chunk::CHUNK_HEIGHT) {
 		return;
 	}
+	if (level <= 0 || level >= 255) return;
 
 
 	int32_t cx = floorDiv(worldX, Chunk::CHUNK_WIDTH);
@@ -67,17 +97,17 @@ void LightEngine::AddSkyLightLevel(
 	int lz = floorMod(worldZ, Chunk::CHUNK_DEPTH);
 
 	uint8_t oldLevel = c->GetSkyLight(lx, ly, lz);
+
+	
+	task.dirtyChunks_light.insert(Index(cx, cz));
+
+
 	if (oldLevel >= level) return;
 
 
 	c->SetSkyLights(lx, ly, lz, level);
 	task.bfs_queue.push({ worldX, worldY, worldZ, level });
 
-
-	const int32_t x = floorDiv(worldX, Chunk::CHUNK_WIDTH);
-	const int32_t z = floorDiv(worldZ, Chunk::CHUNK_DEPTH);
-
-	task.touchedChunkKeys.insert(Index(x, z));
 }
 
 
@@ -92,7 +122,7 @@ void LightEngine::Propagate_BlockLight(
 	//
 
 
-	auto& touchedChunkKey = task.touchedChunkKeys;
+	auto& touchedChunkKey = task.dirtyChunks_light;
 	auto& bfs_queue = task.bfs_queue;
 
 
@@ -203,7 +233,7 @@ void LightEngine::CreateSkylightLeakSeeds(Chunk& c, LightTask& task) {
 
 	};
 
-	task.touchedChunkKeys.insert(Index(c.cx, c.cz));
+	task.dirtyChunks_light.insert(Index(c.cx, c.cz));
 
 
 	for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
@@ -256,7 +286,7 @@ void LightEngine::Propagate_SkyLight(
 
 
 	auto& bfs_queue = task.bfs_queue;
-	auto& touchedChunkKeys = task.touchedChunkKeys;
+	auto& touchedChunkKeys = task.dirtyChunks_light;
 
 
 	constexpr int dirs[6][3] = {
@@ -368,8 +398,22 @@ void LightEngine::StartRemoveBlockLightTask(
 	);
 
 
+
+	const int32_t cx = floorDiv(worldX, Chunk::CHUNK_WIDTH);
+	const int32_t cz = floorDiv(worldZ, Chunk::CHUNK_DEPTH);
+
+	if (oldLight == 0) {
+		task.dirtyChunks_geometry.insert(Index(cx, cz));
+		return;
+	}
+
+
 	if (oldLight > 0) {
 		w.SetBlockLightGlobal(worldX, worldY, worldZ, 0);
+
+
+		task.dirtyChunks_light.insert(Index(cx, cz));
+
 
 		task.remove_queue.push({
 			worldX,
@@ -423,13 +467,22 @@ void LightEngine::StartRemoveSkyLightTask(
 
 	);
 
-	if (oldLight == 0) return;
 
-	w.SetSkyLightGlobal(worldX, worldY, worldZ, 0);
 
 	const int32_t cx = floorDiv(worldX, Chunk::CHUNK_WIDTH);
 	const int32_t cz = floorDiv(worldZ, Chunk::CHUNK_DEPTH);
-	task.touchedChunkKeys.insert(Index(cx, cz));
+
+
+
+
+	if (oldLight == 0) {
+		task.dirtyChunks_geometry.insert(Index(cx, cz));
+		return;
+	}
+
+	w.SetSkyLightGlobal(worldX, worldY, worldZ, 0);
+
+	task.dirtyChunks_light.insert(Index(cx, cz));
 
 
 	task.remove_queue.push({
@@ -510,7 +563,7 @@ bool LightEngine::Propagate_RemoveSkylight(
 				const int32_t cx = floorDiv(nx, Chunk::CHUNK_WIDTH);
 				const int32_t cz = floorDiv(nz, Chunk::CHUNK_DEPTH);
 
-				task.touchedChunkKeys.insert(Index(cx, cz));
+				task.dirtyChunks_light.insert(Index(cx, cz));
 			}
 			else {
 				task.bfs_queue.push({
@@ -600,7 +653,7 @@ bool LightEngine::Propagate_RemoveBlockLight(
 				int32_t cx = floorDiv(nx, Chunk::CHUNK_WIDTH);
 				int32_t cz = floorDiv(nz, Chunk::CHUNK_DEPTH);
 
-				task.touchedChunkKeys.insert(Index(cx, cz));
+				task.dirtyChunks_light.insert(Index(cx, cz));
 
 			}
 			else {
