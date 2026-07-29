@@ -32,7 +32,8 @@ struct LightTask {
 
 	std::queue<LightNode> bfs_queue;
 	std::queue<RemoveNode> remove_queue;
-	std::unordered_set<uint64_t> touchedChunkKeys;
+	std::unordered_set<uint64_t> dirtyChunks_light;
+	std::unordered_set<uint64_t> dirtyChunks_geometry;
 
 	Phase phase = Phase::ADD;
 	uint8_t emissionAfterRemove = 0;//if greater than 0, task of propagating block emission will be created

@@ -251,7 +251,7 @@ private:
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		uint8_t level,
+		int level,
 		bool urgent
 	);
 

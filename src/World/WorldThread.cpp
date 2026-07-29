@@ -467,25 +467,36 @@ void WorldThread::Start_SkyLightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	uint8_t level,
+	int level,
 	bool urgent
 ) {
 	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) return;
-	if (level == 0) return;
+	//if (level == 0) return;
 
 	LightTask task;
 	task.lightType = LightType::SKY;
 	task.urgent = urgent;
 
 
-	
+	if (level <= 0) {
+		m_lightEngine.InsertGeoDirtyChunks(
+			m_world,
+			x,
+			y,
+			z,
+			task
+		);
+
+		FinishLightTask(task);
+		return;
+	}
 
 	m_lightEngine.AddSkyLightLevel(
 		m_world,
 		x,
 		y,
 		z,
-		level,
+		(uint8_t)level,
 		task
 	);
 
@@ -558,24 +569,6 @@ void WorldThread::Add_SkylightTask(
 		);
 	}
 	
-
-	if (strongest <= 1) {
-		LightTask task{};
-		task.lightType = LightType::SKY;
-		task.phase = Phase::ADD;
-		task.urgent = urgent;
-
-		m_lightEngine.OnlyInsertTouchedChunkkey(
-			m_world,
-			x,
-			y,
-			z,
-			task
-		);
-
-		FinishLightTask(task);
-		return;
-	}
 
 
 	
@@ -1319,10 +1312,30 @@ void WorldThread::ProcessLightTask(LightTask& task, int& budget) {
 
 
 void WorldThread::FinishLightTask(LightTask& task) {
-	for (auto& key : task.touchedChunkKeys) {
+	for (auto& key : task.dirtyChunks_light) {
 
 		Chunk* c = m_world.GetTargetChunkFromKey(key);
 		
+
+		if (!c) {
+			continue;
+		}
+
+		if (task.urgent) {
+			MarkChunkUrgentDirty(*c);
+		}
+		else {
+			MarkChunkDirty(*c);
+		}
+
+		MarkNeighborChunksUrgentDirty(c->cx, c->cz);
+
+	}
+
+	for (auto& key : task.dirtyChunks_geometry) {
+
+		Chunk* c = m_world.GetTargetChunkFromKey(key);
+
 
 		if (!c) {
 			continue;

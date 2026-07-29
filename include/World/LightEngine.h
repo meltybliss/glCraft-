@@ -76,7 +76,7 @@ public:
 	);
 
 
-	static void OnlyInsertTouchedChunkkey(
+	static void InsertGeoDirtyChunks(//Œõ‚Í‚¢‚¶‚ç‚¸ƒuƒƒbƒN‚¾‚¯‚ğ‚¢‚¶‚éê‡‚Ìmesh dirty
 		World& w,
 		int64_t worldX,
 		int64_t worldY,
