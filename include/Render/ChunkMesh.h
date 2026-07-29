@@ -18,7 +18,7 @@ struct ChunkMesh {
 
 		
 
-		constexpr GLsizei stride = 12 * sizeof(float);
+		constexpr GLsizei stride = 14 * sizeof(float);
 
 		
 		if (vao == 0) {
@@ -100,16 +100,19 @@ struct ChunkMesh {
 			glEnableVertexAttribArray(5);
 
 
-			//emissionForBloom
+			//block light color
 			glVertexAttribPointer(
 				6,
-				1,
+				3,
 				GL_FLOAT,
 				GL_FALSE,
 				stride,
 				(void*)(11 * sizeof(float))
 			);
 			glEnableVertexAttribArray(6);
+
+
+			
 
 		}
 		

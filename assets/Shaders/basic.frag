@@ -20,7 +20,7 @@ in float vBlockLightLevel;
 in float vSkyLightLevel;
 in float vAO;
 in vec4 FragPosLightSpace;
-in float vEmissionStrength;
+in vec3 vLightColor;
 
 
 
@@ -151,7 +151,6 @@ void main() {
 	float B_brightness = vBlockLightLevel / 15.0;
 	float S_brightness = sky * u_skyStrength;
 
-	float ambientBrightness  = max(B_brightness, S_brightness);
 
 	float diffuse = 
 		max(dot(normalize(vNormal), -sunDirection), 0.0);
@@ -159,7 +158,11 @@ void main() {
 
 	vec3 sunLight = sunColor * diffuse * sky * (1.0 - shadow);
 
-	vec3 ambientLight = vec3(ambientBrightness);
+
+	vec3 skyLight = vec3(S_brightness);
+	vec3 blockLight = B_brightness * vLightColor;
+
+	vec3 ambientLight = skyLight + blockLight;
 
 
 	vec3 normal = normalize(vNormal);
@@ -177,14 +180,10 @@ void main() {
 		finalLight *
 		vAO;
 
-	vec3 emissiveColor =
-		texColor.rgb *
-		vEmissionStrength;
-
+	
 
 	vec3 hdrColor =
-		litColor +
-		emissiveColor;
+		litColor;
 
 	FragColor = vec4(
 		hdrColor,

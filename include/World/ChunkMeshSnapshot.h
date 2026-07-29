@@ -2,6 +2,7 @@
 #include "World/Chunk.h"
 #include <array>
 #include <cassert>
+#include <stdint.h>
 #include <type_traits>
 
 struct ChunkMeshSnapshot {
@@ -58,7 +59,7 @@ struct ChunkMeshSnapshot {
 	std::array<BlockType, Chunk::CHUNK_HEIGHT> rightBackCorner;
 	std::array<BlockType, Chunk::CHUNK_HEIGHT> leftFrontCorner;
 	std::array<BlockType, Chunk::CHUNK_HEIGHT> leftBackCorner;
-
+	
 
 	// block light
 	std::array<uint8_t, Chunk::CHUNK_SIZE> centerLights{};

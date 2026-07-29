@@ -1,6 +1,8 @@
 #pragma once
 #include <array>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 enum class BlockType {
 	AIR = 0,
@@ -18,8 +20,33 @@ constexpr std::array<float, static_cast<size_t>(BlockType::COUNT)> emissionDataF
 	0.0f,
 	0.0f,
 	0.0f,
+	4.0f,
+	4.0f
+
+
+};
+
+
+constexpr std::array<glm::vec3, static_cast<size_t>(BlockType::COUNT)> lightColor{//used for blocklight color and point light color
+
+	glm::vec3(0.0f),
+	glm::vec3(0.0f),
+	glm::vec3(0.0f),
+	glm::vec3(0.0f),
+	glm::vec3(1.0f, 0.42f, 0.12f),
+	glm::vec3(1.0f, 0.42f, 0.12f),
+
+
+};
+
+
+constexpr std::array<float, static_cast<size_t>(BlockType::COUNT)> pointLightRadius{
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
 	3.0f,
-	3.0f
+	4.0f
 
 
 };

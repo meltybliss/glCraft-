@@ -91,8 +91,8 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 		
 		c->SetPointLight(
 			glm::i64vec3(x, y, z),
-			glm::vec3(1.0f, 0.42f, 0.12f),
-			8.0f,
+			lightColor[(int)b],
+			pointLightRadius[(int)b],
 			2.5f);
 
 
@@ -172,8 +172,8 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 		c->SetPointLight(
 			glm::i64vec3(x, y, z),
-			glm::vec3(1.0f, 0.42f, 0.12f),
-			8.0f,
+			lightColor[(int)b],
+			pointLightRadius[(int)b],
 			2.5f);
 
 
