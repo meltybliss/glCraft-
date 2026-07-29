@@ -20,7 +20,7 @@ in float vBlockLightLevel;
 in float vSkyLightLevel;
 in float vAO;
 in vec4 FragPosLightSpace;
-
+in float vEmissionStrength;
 
 
 
@@ -34,6 +34,8 @@ uniform sampler2D shadowMap;
 
 uniform int uPointLightCount;
 uniform PointLight uPointLights[16];
+
+ 
 
 
 float CalculateShadow(vec4 fragPosLightSpace)
@@ -170,9 +172,22 @@ void main() {
 		pointLight;
 
 
+	vec3 litColor =
+		texColor.rgb *
+		finalLight *
+		vAO;
+
+	vec3 emissiveColor =
+		texColor.rgb *
+		vEmissionStrength;
+
+
+	vec3 hdrColor =
+		litColor +
+		emissiveColor;
 
 	FragColor = vec4(
-		texColor.rgb * finalLight * vAO,
+		hdrColor,
 		texColor.a
 	);
 

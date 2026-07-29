@@ -728,7 +728,7 @@ void MeshBuilder::AddLightToVertex(
 
 
 
-	unsigned int base = static_cast<unsigned int>(v.size() / 11);
+	unsigned int base = static_cast<unsigned int>(v.size() / 12);
 
 
 	const auto& centerLights = snapShot.centerLights;
@@ -870,7 +870,8 @@ void MeshBuilder::AddLightToVertex(
 			{
 				static_cast<float>(self_light),
 				static_cast<float>(next_skyLightLevel),
-				AO[i-1]
+				AO[i-1],
+				emissionDataForBloom[(int)type]
 			}
 		);
 

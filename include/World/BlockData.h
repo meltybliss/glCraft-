@@ -1,4 +1,6 @@
 #pragma once
+#include <array>
+
 
 enum class BlockType {
 	AIR = 0,
@@ -7,10 +9,21 @@ enum class BlockType {
 	STONE,
 	TORCH,
 	GLOWSTONE,
+	COUNT
+};
+
+constexpr float BLOCK_SIZE = 1.f;//Must be a whole number
+constexpr std::array<float, static_cast<size_t>(BlockType::COUNT)> emissionDataForBloom{//it corresponds to the block types
+	0.0f,
+	0.0f,
+	0.0f,
+	0.0f,
+	3.0f,
+	3.0f
+
 
 };
 
-constexpr float BLOCK_SIZE = 1.f;//it must consist solely of integer
 
 
 inline uint8_t GetEmission(BlockType b) {

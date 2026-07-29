@@ -32,22 +32,6 @@ void WorldRenderer::InitSkyShaderAndVAO() {
 }
 
 
-void WorldRenderer::InitPostShaderAndVAO() {
-
-	glGenVertexArrays(1, &m_postVAO);
-
-	m_postShader.emplace(
-		"assets/Shaders/post.vert",
-		"assets/Shaders/post.frag"
-
-	);
-
-
-	m_postShader->Use();
-
-	m_postShader->SetInt("uSceneTexture", 0);
-}
-
 
 
 void WorldRenderer::RenderSky(const Camera& cam) {
@@ -243,6 +227,341 @@ void WorldRenderer::InitHDRFrameBuffer() {
 
 
 
+void WorldRenderer::InitBloom() {
+	
+
+	//for Bright
+	glGenFramebuffers(1, &m_brightFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_brightFBO);
+
+	glGenTextures(1, &m_brightTexture);
+	glBindTexture(GL_TEXTURE_2D, m_brightTexture);
+
+	glTexImage2D(
+		GL_TEXTURE_2D,
+		0,
+		GL_RGBA16F,
+		(GLsizei)WindowSize::windowWidth,
+		(GLsizei)WindowSize::windowHeight,
+		0,
+		GL_RGBA,
+		GL_FLOAT,
+		nullptr
+
+
+	);
+
+
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MIN_FILTER,
+		GL_LINEAR
+	);
+
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		GL_LINEAR
+	);
+
+	
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_WRAP_S,
+		GL_CLAMP_TO_EDGE
+	);
+
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_WRAP_T,
+		GL_CLAMP_TO_EDGE
+	);
+
+
+	glFramebufferTexture2D(
+		GL_FRAMEBUFFER,
+		GL_COLOR_ATTACHMENT0,
+		GL_TEXTURE_2D,
+		m_brightTexture,
+		0
+	);
+
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+
+		std::cerr << "Bright framebuffer incomplete\n";
+
+	}
+
+
+	//for Blur
+
+	glGenFramebuffers(2, m_pingPongFBO);
+	glGenTextures(2, m_pingPongTextures);
+
+
+	for (int i = 0; i < 2; ++i) {
+
+		glBindFramebuffer(GL_FRAMEBUFFER, m_pingPongFBO[i]);
+
+		glBindTexture(GL_TEXTURE_2D, m_pingPongTextures[i]);
+
+		glTexImage2D(
+			GL_TEXTURE_2D,
+			0,
+			GL_RGBA16F,
+			(GLsizei)WindowSize::windowWidth,
+			(GLsizei)WindowSize::windowHeight,
+			0,
+			GL_RGBA,
+			GL_FLOAT,
+			nullptr
+
+		);
+
+		glTexParameteri(
+			GL_TEXTURE_2D,
+			GL_TEXTURE_MIN_FILTER,
+			GL_LINEAR
+		);
+
+		glTexParameteri(
+			GL_TEXTURE_2D,
+			GL_TEXTURE_MAG_FILTER,
+			GL_LINEAR
+		);
+
+
+		glTexParameteri(
+			GL_TEXTURE_2D,
+			GL_TEXTURE_WRAP_S,
+			GL_CLAMP_TO_EDGE
+		);
+
+		glTexParameteri(
+			GL_TEXTURE_2D,
+			GL_TEXTURE_WRAP_T,
+			GL_CLAMP_TO_EDGE
+		);
+
+
+		glFramebufferTexture(
+			GL_FRAMEBUFFER,
+			GL_COLOR_ATTACHMENT0,
+			m_pingPongTextures[i],
+			0
+		);
+
+
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+
+			std::cerr << "PingPong framebuffer" << i << " incomplete\n";
+
+		}
+
+
+	}
+
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+
+	//Shader
+	m_brightShader.emplace(
+		"assets/Shaders/post.vert",
+		"assets/Shaders/bright.frag"
+
+	);
+
+	m_blurShader.emplace(
+
+		"assets/Shaders/post.vert",
+		"assets/Shaders/blur.frag"
+	);
+
+	m_postShader.emplace(
+		"assets/Shaders/post.vert",
+		"assets/Shaders/post.frag"
+	);
+
+	glGenVertexArrays(
+		1,
+		&m_postVAO
+	);
+
+
+
+	m_brightShader->Use();
+	m_brightShader->SetInt(
+		"uSceneTexture",
+		0
+
+	);
+
+
+	m_blurShader->Use();
+	m_blurShader->SetInt(
+		"uImage",
+		0
+	);
+
+
+	m_postShader->Use();
+	m_postShader->SetInt(
+		"uSceneTexture",
+		0
+	);
+
+	m_postShader->SetInt(
+		"uBloomTexture",
+		1
+	);
+
+}
+
+
+
+void WorldRenderer::ExtractBrightPixels() {
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, m_brightFBO);
+
+	glViewport(
+		0,
+		0,
+		WindowSize::windowWidth,
+		WindowSize::windowHeight
+
+	);
+
+
+	m_brightShader->Use();
+
+	m_brightShader->SetFloat("uThreshold", 1.0f);
+
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+
+
+	DrawFullscreenTriangle();
+
+}
+
+
+unsigned int WorldRenderer::BlurBloom(int passCount) {
+
+	if (passCount <= 0) {
+		return m_brightTexture;
+	}
+
+
+	bool horizontal = true;
+	int writeIndex = 0;
+
+
+	unsigned int inputTexture = m_brightTexture;
+
+	m_blurShader->Use();
+
+
+	for (int pass = 0; pass < passCount; ++pass) {
+
+		glBindFramebuffer(GL_FRAMEBUFFER, m_pingPongFBO[writeIndex]);
+
+		glViewport(
+			0,
+			0,
+			WindowSize::windowWidth,
+			WindowSize::windowHeight
+		);
+
+		//true‚È‚ç‰¡Blur
+		//false‚È‚çcBlur
+		m_blurShader->SetInt(
+			"uHorizontal",
+			horizontal ? 1 : 0
+		);
+
+
+		glActiveTexture(GL_TEXTURE0);
+
+		glBindTexture(
+			GL_TEXTURE_2D,
+			inputTexture
+		);
+
+
+		DrawFullscreenTriangle();
+
+		inputTexture = m_pingPongTextures[writeIndex];
+
+		writeIndex = 1 - writeIndex;
+
+		horizontal =
+			!horizontal;
+
+	}
+	return inputTexture;
+
+}
+
+
+void WorldRenderer::RenderFinalPost(unsigned int bloomTexture) {
+
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glViewport(
+		0,
+		0,
+		WindowSize::windowWidth,
+		WindowSize::windowHeight
+	);
+
+
+	m_postShader->Use();
+
+	m_postShader->SetFloat(
+		"uExposure",
+		1.f
+	);
+
+	m_postShader->SetFloat(
+		"uBloomStrength",
+		0.1f
+	);
+
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, bloomTexture);
+
+
+	DrawFullscreenTriangle();
+
+}
+
+
+
+void WorldRenderer::DrawFullscreenTriangle() {
+
+
+	glBindVertexArray(m_postVAO);
+
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+
+	glBindVertexArray(0);
+}
+
+
+
 void WorldRenderer::BeginHDRScene() {
 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_hdrFBO);
@@ -272,39 +591,11 @@ void WorldRenderer::EndHDRScene() {
 
 	glDisable(GL_DEPTH_TEST);
 
-	m_postShader->Use();
-	m_postShader->SetFloat(
-		"uExposure",
-		1.0f
-	);
+	ExtractBrightPixels();
 
+	unsigned int bloomTexture = BlurBloom(10);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
-
-	/*glBlitFramebuffer(
-		0, 0,
-		WindowSize::windowWidth,
-		WindowSize::windowHeight,
-
-		0, 0,
-		WindowSize::windowWidth,
-		WindowSize::windowHeight,
-
-		GL_COLOR_BUFFER_BIT,
-		GL_NEAREST
-
-	);*/
-
-	glBindVertexArray(m_postVAO);
-
-	glDrawArrays(
-		GL_TRIANGLES,
-		0,
-		3
-	);
-
-	glBindVertexArray(0);
+	RenderFinalPost(bloomTexture);
 
 	glEnable(GL_DEPTH_TEST);
 }

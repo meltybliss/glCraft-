@@ -167,7 +167,7 @@ bool Application::InitGL() {
 	baseShader->SetInt("u_Texture", 0);
 
 	m_wRenderer.InitSkyShaderAndVAO();
-	m_wRenderer.InitPostShaderAndVAO();
+	m_wRenderer.InitBloom();
 	m_wRenderer.InitShadownMap();
 	m_wRenderer.InitHDRFrameBuffer();
 
