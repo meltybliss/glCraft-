@@ -32,10 +32,12 @@ public:
 	[[nodiscard]] unsigned int GetBlockGlobal(int64_t x, int64_t y, int64_t z) const;
 	[[nodiscard]] uint8_t GetBlockLightGlobal(int64_t x, int64_t y, int64_t z) const;
 	[[nodiscard]] uint8_t GetSkyLightGlobal(int64_t x, int64_t y, int64_t z) const;
+	[[nodiscard]] glm::vec3 GetBlockLightColorGlobal(int64_t x, int64_t y, int64_t z) const;
+
 
 	void SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b);
 	void SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b);
-	bool SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level);
+	bool SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level, const glm::vec3& lightColor);
 	bool SetSkyLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level);
 
 	[[nodiscard]] ChunkMap& GetChunks() {

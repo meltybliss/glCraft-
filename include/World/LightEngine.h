@@ -18,6 +18,7 @@ public:
 		int64_t worldY,
 		int64_t worldZ,
 		uint8_t level,
+		const glm::vec3& lightColor,
 		LightTask& task
 	);
 
