@@ -13,6 +13,7 @@ void LightEngine::AddLightLevel(
 	int64_t worldY,
 	int64_t worldZ,
 	uint8_t level,
+	const glm::vec3& lightColor,
 	LightTask& task
 ) {
 
@@ -37,8 +38,8 @@ void LightEngine::AddLightLevel(
 	if (oldLevel >= level) return;
 
 
-	c->SetBlockLight(lx, ly, lz, level);
-	task.bfs_queue.push({ worldX, worldY, worldZ, level });
+	c->SetBlockLight(lx, ly, lz, level, lightColor);
+	task.bfs_queue.push({ worldX, worldY, worldZ, level, lightColor });
 
 }
 
@@ -168,7 +169,7 @@ void LightEngine::Propagate_BlockLight(
 			if (w.GetBlockGlobal(nx, ny, nz) == 0) {
 
 				if (w.GetBlockLightGlobal(nx, ny, nz) < targetLevel) {
-					bool ok = w.SetBlockLightGlobal(nx, ny, nz, targetLevel);
+					bool ok = w.SetBlockLightGlobal(nx, ny, nz, targetLevel, baseNode.color);
 					if (ok) {
 						int32_t cx = floorDiv(nx, Chunk::CHUNK_WIDTH);
 						int32_t cz = floorDiv(nz, Chunk::CHUNK_DEPTH);
@@ -409,7 +410,7 @@ void LightEngine::StartRemoveBlockLightTask(
 
 
 	if (oldLight > 0) {
-		w.SetBlockLightGlobal(worldX, worldY, worldZ, 0);
+		w.SetBlockLightGlobal(worldX, worldY, worldZ, 0, glm::vec3(0.0f));
 
 
 		task.dirtyChunks_light.insert(Index(cx, cz));
@@ -427,7 +428,7 @@ void LightEngine::StartRemoveBlockLightTask(
 
 	if (task.emissionAfterRemove > 0) {
 
-		w.SetBlockLightGlobal(worldX, worldY, worldZ, task.emissionAfterRemove);
+		w.SetBlockLightGlobal(worldX, worldY, worldZ, task.emissionAfterRemove, glm::vec3(0.0f));
 
 		task.bfs_queue.push({
 			worldX,
@@ -641,7 +642,7 @@ bool LightEngine::Propagate_RemoveBlockLight(
 			if (neighborLight == 0) continue;
 
 			if (neighborLight < removeNode.oldLight) {
-				w.SetBlockLightGlobal(nx, ny, nz, 0);
+				w.SetBlockLightGlobal(nx, ny, nz, 0, glm::vec3(0.0f));
 
 				task.remove_queue.push({
 					nx,

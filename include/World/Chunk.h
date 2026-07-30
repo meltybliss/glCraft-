@@ -7,6 +7,9 @@
 
 #include <array>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 
 
 struct Chunk {
@@ -34,6 +37,7 @@ struct Chunk {
 	std::array<uint8_t, CHUNK_SIZE> blockLights{0};
 	std::array<uint8_t, CHUNK_SIZE> skyLights{0};
 	std::vector<PointLight> pointLights{};
+	std::array<glm::vec3, CHUNK_SIZE> blockLightColors{glm::vec3(0.f)};
 
 
 
@@ -65,6 +69,17 @@ struct Chunk {
 		return skyLights[Index(x, y, z)];
 	}
 
+
+
+	[[nodiscard]] glm::vec3 GetBlockLightColor(int x, int y, int z) const {
+		if (!InBounds(x, y, z)) {
+			return glm::vec3(0.0f);
+		}
+
+		return blockLightColors[Index(x, y, z)];
+	}
+
+
 	void SetBlock(int x, int y, int z, BlockType b) {
 		if (!InBounds(x, y, z)) {
 			return;
@@ -75,12 +90,15 @@ struct Chunk {
 		dirty = true;
 	}
 
-	bool SetBlockLight(int x, int y, int z, uint8_t level) {
+	bool SetBlockLight(int x, int y, int z, uint8_t level, const glm::vec3& lightColor) {
 		if (!InBounds(x, y, z)) {
 			return false;
 		}
 
 		blockLights[Index(x, y, z)] = level;
+		blockLightColors[Index(x, y, z)] = lightColor;
+
+
 		return true;
 	}
 

@@ -267,6 +267,7 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 	};
 
 	uint8_t strongest = 0;
+	glm::vec3 color;
 
 	for (const auto& dir : dirs) {
 		int64_t nx = x + dir[0];
@@ -278,6 +279,7 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 		}
 
 		uint8_t light = m_world.GetBlockLightGlobal(nx, ny, nz);
+		color = m_world.GetBlockLightColorGlobal(nx, ny, nz);
 
 		if (light <= 0) continue;
 
@@ -293,6 +295,7 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 		y,
 		z,
 		strongest - 1,
+		color,
 		urgent
 	);
 
@@ -424,6 +427,7 @@ void WorldThread::Start_BlockLightTask(
 	int64_t y,
 	int64_t z,
 	uint8_t level,
+	const glm::vec3& color,
 	bool urgent
 
 ) {
@@ -450,6 +454,7 @@ void WorldThread::Start_BlockLightTask(
 		y,
 		z,
 		level,
+		color,
 		task
 	);
 

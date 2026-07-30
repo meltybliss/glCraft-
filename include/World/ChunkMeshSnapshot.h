@@ -78,6 +78,9 @@ struct ChunkMeshSnapshot {
 	std::array<uint8_t, Chunk::CHUNK_HEIGHT * Chunk::CHUNK_WIDTH> backSkyLights{};
 
 
+	std::array<glm::vec3, Chunk::CHUNK_SIZE> centerBlockLightColors{};
+
+
 	bool hasLeft = false;
 	bool hasRight = false;
 	bool hasFront = false;
@@ -88,6 +91,13 @@ struct ChunkMeshSnapshot {
 	bool hasRightFront = false;
 	bool hasRightBack = false;
 	
+
+	glm::vec3 GetBlockLightColorFromCenter(int x, int y, int z) {
+
+		return centerBlockLightColors[IndexXYZ(x, y, z)];
+	}
+
+
 	BlockType GetBlockFromCenter(int x, int y, int z) {
 
 		return center[IndexXYZ(x, y, z)];

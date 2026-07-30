@@ -215,6 +215,7 @@ private:
 		int64_t y,
 		int64_t z,
 		uint8_t level,
+		const glm::vec3& color,
 		bool urgent = false
 	);
 	void Start_RemoveBlockLightTask(

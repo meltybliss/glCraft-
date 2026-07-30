@@ -69,6 +69,27 @@ uint8_t World::GetSkyLightGlobal(int64_t x, int64_t y, int64_t z) const {
 }
 
 
+
+glm::vec3 World::GetBlockLightColorGlobal(int64_t x, int64_t y, int64_t z) const {
+	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
+	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+
+	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
+	int ly = y;
+	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
+
+	auto it = chunks.find(Index(cx, cz));
+	if (it == chunks.end() || !it->second) {
+		return glm::vec3(0.0f);
+	}
+
+
+	auto* c = it->second.get();
+	return c->GetBlockLightColor(lx, ly, lz);
+}
+
+
+
 void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
 	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
@@ -102,7 +123,7 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 }
 
 
-bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) {
+bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level, const glm::vec3& lightColor) {
 	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
 	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
 
@@ -119,7 +140,7 @@ bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) 
 
 
 
-	return c->SetBlockLight(lx, ly, lz, level);
+	return c->SetBlockLight(lx, ly, lz, level, lightColor);
 
 }
 

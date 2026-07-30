@@ -741,7 +741,7 @@ void MeshBuilder::AddLightToVertex(
 	int tx = x;//target x
 	int ty = y;
 	int tz = z;
-
+	
 	
 
 	std::array<float, 4> AO{};
@@ -862,6 +862,8 @@ void MeshBuilder::AddLightToVertex(
 
 	uint8_t self_light = std::max(next_lightLevel, emission);
 
+	glm::vec3 blockLightColor = snapShot.GetBlockLightColorFromCenter(x, y, z);
+
 	for (int i = 4; i >= 1; --i) {
 		int point = i * 8;
 
@@ -871,9 +873,9 @@ void MeshBuilder::AddLightToVertex(
 				static_cast<float>(self_light),
 				static_cast<float>(next_skyLightLevel),
 				AO[i-1],
-				lightColor[(int)type].x,
-				lightColor[(int)type].y,
-				lightColor[(int)type].z
+				blockLightColor.x,
+				blockLightColor.y,
+				blockLightColor.z
 			}
 		);
 
