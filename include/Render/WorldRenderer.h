@@ -35,7 +35,7 @@ public:
 
 	void InitHDRFrameBuffer();
 	void InitBloom();
-
+	void InitLightVolumeTexture();
 
 private:
 
@@ -70,6 +70,13 @@ private:
 	unsigned int m_brightTexture = 0;
 	unsigned int m_pingPongFBO[2] = { 0, 0 };
 	unsigned int m_pingPongTextures[2] = { 0, 0 };
+
+	unsigned int m_lightVolumeTexture = 0;
+	static constexpr int LIGHT_VOLUME_WIDTH = 32;
+	static constexpr int LIGHT_VOLUME_HEIGHT = 32;
+	static constexpr int LIGHT_VOLUME_DEPTH = 32;
+
+	glm::ivec3 m_lightVolumeOrigin{ 0 };
 
 
 	unsigned int m_skyVAO = 0;
