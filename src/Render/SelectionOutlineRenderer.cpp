@@ -7,6 +7,12 @@ void SelectionOutlineRenderer::Init() {
 	constexpr float min = -e;
 	constexpr float max = 1.0f + e;
 
+	selectionOutlineShader.emplace(
+		"assets/Shaders/selectionOutline.vert",
+		"assets/Shaders/selectionOutline.frag"
+	);
+
+
 	std::vector<float> vertices{
 		//front
 		min, min, min, max, min, min,
@@ -62,10 +68,9 @@ void SelectionOutlineRenderer::RenderOutline(
 	int64_t hitX, 
 	int64_t hitY, 
 	int64_t hitZ,
-	Camera& cam, 
-	Shader& shader) const {
+	Camera& cam) const {
 
-	shader.Use();
+	selectionOutlineShader->Use();
 
 	glm::mat4 view = cam.GetViewMatrix();
 
@@ -97,10 +102,10 @@ void SelectionOutlineRenderer::RenderOutline(
 	);
 
 
-	shader.SetMat4("view", view);
-	shader.SetMat4("projection", proj);
-	shader.SetMat4("model", model);
-	shader.SetVec4("u_Color", { 1.0f, 1.0f, 1.0f, 1.0f });
+	selectionOutlineShader->SetMat4("view", view);
+	selectionOutlineShader->SetMat4("projection", proj);
+	selectionOutlineShader->SetMat4("model", model);
+	selectionOutlineShader->SetVec4("u_Color", { 1.0f, 1.0f, 1.0f, 1.0f });
 
 	glBindVertexArray(vao);
 

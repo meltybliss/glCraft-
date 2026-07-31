@@ -93,6 +93,8 @@ public:
 	[[nodiscard]] const World* GetWorldPtr() const {
 		return &m_world;
 	}
+
+
 	
 private:
 	World m_world;
@@ -166,6 +168,9 @@ private:
 
 
 	static constexpr int MAX_LIGHT_PROPAGATE_BFS_PER_TICK = 2000;
+
+private:
+
 private:
 
 	void ProcCommands();

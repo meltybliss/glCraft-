@@ -229,6 +229,8 @@ void WorldThread::ApplyEditBlock(
 				z,
 				true
 			);
+			
+
 		}
 		else {
 
@@ -631,6 +633,9 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 		DispatchOneDirtyMeshJob();
 		if (clock::now() >= deadline) break;
 	}
+
+
+	
 
 }
 
@@ -1290,6 +1295,7 @@ void WorldThread::ProcessLightTask(LightTask& task, int& budget) {
 
 	}
 	else if (task.lightType == LightType::BLOCK) {
+
 
 		if (task.phase == Phase::ADD) {
 			m_lightEngine.Propagate_BlockLight(

@@ -46,20 +46,21 @@ void Application::Run() {
 		//m_wRenderer.RebuildDrityChunkMesh(m_world);
 		m_wRenderer.UploadPendingMeshData(m_worldThread);
 
+		m_wRenderer.UpdateLightVolume(*m_worldThread.GetWorldPtr(), m_camera);
+
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		baseShader->Use();
+
 		m_wRenderer.DeleteMeshes(m_worldThread);
 
 		m_wRenderer.RenderShadowPass(m_camera);
 
 
-		blockAtlas->Bind(0);
 
 		m_wRenderer.BeginHDRScene();
 
 		m_wRenderer.RenderSky(m_camera);
-		m_wRenderer.RenderWorld(*baseShader, m_camera, m_worldThread.GetWorldPtr());
+		m_wRenderer.RenderWorld(m_camera, m_worldThread.GetWorldPtr());
 		
 
 		RenderOutline();//switch shader
@@ -144,27 +145,11 @@ bool Application::InitGL() {
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	blockAtlas = std::make_unique<Texture>("assets/textures/block_atlas2.png");
-	
-
 	//Initialise shaders that require Init
 	m_outlineRenderer.Init();
 
-
-	//shader build
-	baseShader.emplace(
-		"assets/Shaders/basic.vert",
-		"assets/Shaders/basic.frag"
-	);
-
-	selectionOutlineShader.emplace(
-		"assets/Shaders/selectionOutline.vert",
-		"assets/Shaders/selectionOutline.frag"
-	);
 	
-
-	baseShader->Use();
-	baseShader->SetInt("u_Texture", 0);
+	m_wRenderer.InitBaseShader();
 
 	m_wRenderer.InitSkyShaderAndVAO();
 	m_wRenderer.InitBloom();
@@ -309,14 +294,12 @@ void Application::UpdateRayHit() {
 
 void Application::RenderOutline() {
 	if (lastHit.isHit) {
-		selectionOutlineShader->Use();
 
 		m_outlineRenderer.RenderOutline(
 			lastHit.hitX,
 			lastHit.hitY,
 			lastHit.hitZ,
-			m_camera,
-			*selectionOutlineShader
+			m_camera
 		);
 
 	}

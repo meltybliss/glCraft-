@@ -3,6 +3,7 @@
 #include "Render/MeshBuilder.h"
 #include "Core/ChunkJob.h"
 #include "Core/WindowSize.h"
+#include "Render/Texture.h"
 #include <iostream>
 
 /*void WorldRenderer::RebuildDrityChunkMesh(World& w) {
@@ -18,6 +19,24 @@
 	}
 
 }*/
+
+
+void WorldRenderer::InitBaseShader() {
+
+	baseShader.emplace(
+		"assets/Shaders/basic.vert",
+		"assets/Shaders/basic.frag"
+	);
+
+
+	baseShader->Use();
+	baseShader->SetInt("u_Texture", 0);
+	baseShader->SetInt("shadowMap", 1);
+	baseShader->SetInt("uLightVolumeTexture", 2);
+
+	blockAtlas = std::make_unique<Texture>("assets/textures/block_atlas2.png");
+
+}
 
 
 
@@ -263,17 +282,11 @@ void WorldRenderer::InitLightVolumeTexture() {
 
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
-	constexpr float borderColor[4] = {
-		0.0f,
-		0.0f,
-		0.0f,
-		0.0f
-	};
 
-	glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, borderColor);
 
 	glBindTexture(GL_TEXTURE_3D, 0);
 
@@ -475,6 +488,108 @@ void WorldRenderer::InitBloom() {
 
 }
 
+
+
+void WorldRenderer::UpdateLightVolume(World& w, const Camera& cam) {
+
+	constexpr int channel_count = 4;
+
+
+	std::vector<float> pixels(
+		static_cast<size_t>(LIGHT_VOLUME_WIDTH) *
+		static_cast<size_t>(LIGHT_VOLUME_HEIGHT) *
+		static_cast<size_t>(LIGHT_VOLUME_DEPTH) *
+		channel_count,
+		0.0f
+	);
+
+
+
+	auto GetPixelsIndex = [=](int x, int y, int z) -> size_t {
+
+		size_t texelIndex = (size_t)x + (size_t)y * LIGHT_VOLUME_WIDTH + (size_t)z * LIGHT_VOLUME_WIDTH * LIGHT_VOLUME_HEIGHT;
+		
+		return texelIndex * channel_count;
+
+	};
+
+
+	auto SetPixel = [&](size_t index, const glm::vec3& color, uint8_t blockLightLevel) -> void {
+		
+		float intensity = blockLightLevel / 15.0f;
+
+		const glm::vec3 rgb = color * intensity;
+
+
+		pixels[index] = rgb.r;
+		pixels[index + 1] = rgb.g;
+		pixels[index + 2] = rgb.b;
+		pixels[index + 3] = 1.0f;
+
+
+	};
+
+
+	m_lightVolumeOrigin = glm::i64vec3(
+		cam.position.block.x
+		- LIGHT_VOLUME_WIDTH / 2,
+
+		cam.position.block.y
+		- LIGHT_VOLUME_HEIGHT / 2,
+
+		cam.position.block.z
+		- LIGHT_VOLUME_DEPTH / 2
+	);
+
+
+	for (int z = 0; z < LIGHT_VOLUME_DEPTH; ++z) {
+		for (int y = 0; y < LIGHT_VOLUME_HEIGHT; ++y) {
+			for (int x = 0; x < LIGHT_VOLUME_WIDTH; ++x) {
+
+				glm::i64vec3 texelToWorldPos = m_lightVolumeOrigin + glm::i64vec3(x, y, z);
+
+				size_t index = GetPixelsIndex(x, y, z);
+
+
+				glm::vec3 lightColor = w.GetBlockLightColorGlobal(
+					texelToWorldPos.x,
+					texelToWorldPos.y,
+					texelToWorldPos.z
+				);
+				uint8_t lightLevel = w.GetBlockLightGlobal(
+					texelToWorldPos.x,
+					texelToWorldPos.y,
+					texelToWorldPos.z
+				);
+
+
+				SetPixel(index, lightColor, lightLevel);
+
+			}
+		}
+	}
+
+
+
+	glBindTexture(GL_TEXTURE_3D, m_lightVolumeTexture);
+
+	glTexSubImage3D(
+		GL_TEXTURE_3D,
+		0,
+		0, 0, 0,
+		LIGHT_VOLUME_WIDTH,
+		LIGHT_VOLUME_HEIGHT,
+		LIGHT_VOLUME_DEPTH,
+		GL_RGBA,
+		GL_FLOAT,
+		pixels.data()
+
+	);
+
+
+	glBindTexture(GL_TEXTURE_3D, 0);
+
+}
 
 
 void WorldRenderer::ExtractBrightPixels() {
@@ -787,7 +902,7 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 
 
-void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam, World* w) {
+void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 
 
@@ -798,7 +913,7 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam, World* w) {
 	size_t count = 0;
 
 
-	shader.Use();
+	baseShader->Use();
 
 
 	glm::mat4 view = cam.GetViewMatrix();
@@ -816,22 +931,25 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam, World* w) {
 		glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f));
 
 
-	shader.SetFloat("u_skyStrength", 1.0f);
+	baseShader->SetFloat("u_skyStrength", 1.0f);
 
-	shader.SetMat4("view", view);
-	shader.SetMat4("projection", projection);
+	baseShader->SetMat4("view", view);
+	baseShader->SetMat4("projection", projection);
 
-	shader.SetVec3("sunDirection", sunDirection);
+	baseShader->SetVec3("sunDirection", sunDirection);
 
-	shader.SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
+	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
+
+	baseShader->SetVec3("uLightVolumeTexture", m_lightVolumeOrigin);
 
 
-	//TODO ‚Ó‚Â‚¤‚±‚ê‚Íinit‚Åˆê“x‚¾‚¯‚É‚µ‚½‚¢B‚»‚Ì‚½‚ß‚ÉbaseShader‚à•’Ê‚Érenderer‚ªŠ—L‚É‚·‚é.
-	shader.SetInt("shadowMap", 1);
-	//
+	blockAtlas->Bind(0);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, m_shadowDepthTexture);
+	glBindTexture(GL_TEXTURE_2D, m_shadowDepthTexture);//‚±‚Ìtexture‚à‚¢‚¸‚êTextureŒ^‚É‚·‚é
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_3D, m_lightVolumeTexture);
 
 
 	for (auto& [key, mesh] : m_chunkMeshes) {
@@ -860,9 +978,9 @@ void WorldRenderer::RenderWorld(Shader& shader, const Camera& cam, World* w) {
 
 		);
 
-		shader.SetMat4("model", model);
+		baseShader->SetMat4("model", model);
 		
-		UploadPointLights(shader, pLights, count, cam);
+		UploadPointLights(*baseShader, pLights, count, cam);
 
 		auto it = m_chunkMeshes.find(key);
 		if (it == m_chunkMeshes.end()) continue;
