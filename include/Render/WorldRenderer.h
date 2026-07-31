@@ -20,7 +20,7 @@ public:
 
 	void UploadPendingMeshData(WorldThread& wt);
 	void DeleteMeshes(WorldThread& wt);
-	void RenderWorld(Shader& shader, const Camera& cam, World* w);
+	void RenderWorld(const Camera& cam, World* w);
 	void RenderSky(const Camera& cam);
 
 
@@ -31,11 +31,16 @@ public:
 
 	void InitSkyShaderAndVAO();
 
+	void InitBaseShader();
+
 	void InitShadownMap();
 
 	void InitHDRFrameBuffer();
 	void InitBloom();
 	void InitLightVolumeTexture();
+
+
+	void UpdateLightVolume(World& w, const Camera& cam);
 
 private:
 
@@ -57,6 +62,14 @@ private:
 
 	std::unordered_map<uint64_t, ChunkMesh> m_chunkMeshes;
 
+
+	std::optional<Shader> baseShader;
+
+
+	std::unique_ptr<Texture> blockAtlas;
+	
+
+
 	unsigned int m_shadowFBO = 0;
 	unsigned int m_shadowDepthTexture = 0;
 	std::optional<Shader> m_shadowShader;
@@ -76,7 +89,7 @@ private:
 	static constexpr int LIGHT_VOLUME_HEIGHT = 32;
 	static constexpr int LIGHT_VOLUME_DEPTH = 32;
 
-	glm::ivec3 m_lightVolumeOrigin{ 0 };
+	glm::i64vec3 m_lightVolumeOrigin{ 0 };
 
 
 	unsigned int m_skyVAO = 0;
@@ -87,7 +100,6 @@ private:
 	std::optional<Shader> m_brightShader;
 	std::optional<Shader> m_blurShader;
 	std::optional<Shader> m_postShader;
-
 
 
 

@@ -18,12 +18,13 @@ class SelectionOutlineRenderer {
 public:
 
 	void Init();
-	void RenderOutline(int64_t hitX, int64_t hitY, int64_t hitZ, Camera& cam, Shader& shader) const;
+	void RenderOutline(int64_t hitX, int64_t hitY, int64_t hitZ, Camera& cam) const;
 
 private:
 
 	unsigned int vao = 0;
 	unsigned int vbo = 0;
 
+	std::optional<Shader> selectionOutlineShader;
 
 };

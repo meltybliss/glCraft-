@@ -35,7 +35,9 @@ uniform sampler2D shadowMap;
 uniform int uPointLightCount;
 uniform PointLight uPointLights[16];
 
- 
+uniform sampler2D uLightVolumeTexture; 
+uniform vec3 uLightVolumeOrigin;
+
 
 
 float CalculateShadow(vec4 fragPosLightSpace)
