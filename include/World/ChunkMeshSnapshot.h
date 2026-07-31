@@ -81,6 +81,11 @@ struct ChunkMeshSnapshot {
 	std::array<glm::vec3, Chunk::CHUNK_SIZE> centerBlockLightColors{};
 
 
+	std::array<glm::vec3, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> leftBlockLightColors{};
+	std::array<glm::vec3, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_DEPTH> rightBlockLightColors{};
+	std::array<glm::vec3, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> frontBlockLightColors{};
+	std::array<glm::vec3, Chunk::CHUNK_HEIGHT* Chunk::CHUNK_WIDTH> backBlockLightColors{};
+
 	bool hasLeft = false;
 	bool hasRight = false;
 	bool hasFront = false;
@@ -96,6 +101,68 @@ struct ChunkMeshSnapshot {
 
 		return centerBlockLightColors[IndexXYZ(x, y, z)];
 	}
+
+
+	glm::vec3 GetBlockLightColorFromYXArray(int y, int x, bool isFront) {
+		if (isFront) {
+
+			return frontBlockLightColors[IndexYX(y, x)];
+		}
+		else {
+			return backBlockLightColors[IndexYX(y, x)];
+		}
+
+
+
+	}
+
+	glm::vec3 GetBlockLightColorFromYZArray(int y, int z, bool isRight) {
+
+		if (isRight) {
+			return rightBlockLightColors[IndexYZ(y, z)];
+		}
+		else {
+			return leftBlockLightColors[IndexYZ(y, z)];
+		}
+	}
+
+	glm::vec3 GetBoundaryBlockLightColor(int x, int y, int z, bool did_X_exceed) {
+		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
+
+		int index = 0;
+		if (did_X_exceed) {
+			index = IndexYZ(y, z);
+		}
+		else {
+			index = IndexYX(y, x);
+		}
+
+		glm::vec3 color = glm::vec3(0.f);
+		if (did_X_exceed) {
+			if (x < 0) {
+				if (!hasLeft) return glm::vec3(0.f);
+				color = leftBlockLightColors[index];
+			}
+			else if (x >= Chunk::CHUNK_WIDTH) {
+				if (!hasRight) return glm::vec3(0.f);
+				color = rightBlockLightColors[index];
+			}
+		}
+		else {
+			if (z < 0) {
+				if (!hasBack) return glm::vec3(0.f);
+				color = backBlockLightColors[index];
+			}
+			else if (z >= Chunk::CHUNK_DEPTH) {
+				if (!hasFront) return glm::vec3(0.f);
+				color = frontBlockLightColors[index];
+			}
+		}
+
+
+		return color;
+	}
+
 
 
 	BlockType GetBlockFromCenter(int x, int y, int z) {

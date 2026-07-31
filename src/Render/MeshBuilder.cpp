@@ -834,35 +834,46 @@ void MeshBuilder::AddLightToVertex(
 
 
 	uint8_t emission = GetEmission(type);
+	glm::vec3 blockLightColor;
 
 	if (ty >= Chunk::CHUNK_HEIGHT ||
 		ty < 0) {
 
 		next_lightLevel = 0;
 		next_skyLightLevel = 0;
+
+		blockLightColor = glm::vec3(0.f);
 	}
 	else if (tx >= Chunk::CHUNK_WIDTH ||
 		tx < 0) {
 
 		next_lightLevel = snapShot.GetBoundaryLight(tx, ty, tz, true);
 		next_skyLightLevel = snapShot.GetBoundary_SkyLight(tx, ty, tz, true);
+
+
+		blockLightColor = snapShot.GetBoundaryBlockLightColor(tx, ty, tz, true);
 	}
 	else if (tz >= Chunk::CHUNK_DEPTH ||
 		tz < 0) {
 
 		next_lightLevel = snapShot.GetBoundaryLight(tx, ty, tz, false);
 		next_skyLightLevel = snapShot.GetBoundary_SkyLight(tx, ty, tz, false);
+
+
+		blockLightColor = snapShot.GetBoundaryBlockLightColor(tx, ty, tz, false);
 	}
 	else {
 
 		next_lightLevel = centerLights[Chunk::Index(tx, ty, tz)];
 		next_skyLightLevel = centerSkyLights[Chunk::Index(tx, ty, tz)];
+
+
+		blockLightColor = snapShot.GetBlockLightColorFromCenter(tx, ty, tz);
 	}
 	
 
 	uint8_t self_light = std::max(next_lightLevel, emission);
 
-	glm::vec3 blockLightColor = snapShot.GetBlockLightColorFromCenter(x, y, z);
 
 	for (int i = 4; i >= 1; --i) {
 		int point = i * 8;

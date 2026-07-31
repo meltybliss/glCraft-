@@ -177,7 +177,7 @@ void LightEngine::Propagate_BlockLight(
 						uint64_t key = Index(cx, cz);
 						touchedChunkKey.insert(key);
 
-						bfs_queue.push({ nx, ny, nz, targetLevel });
+						bfs_queue.push({ nx, ny, nz, targetLevel, baseNode.color });
 					}
 				}
 			}
@@ -405,7 +405,6 @@ void LightEngine::StartRemoveBlockLightTask(
 
 	if (oldLight == 0) {
 		task.dirtyChunks_geometry.insert(Index(cx, cz));
-		return;
 	}
 
 
@@ -426,15 +425,25 @@ void LightEngine::StartRemoveBlockLightTask(
 	}
 
 
+	const BlockType newBlock =
+		static_cast<BlockType>(
+			w.GetBlockGlobal(
+				worldX,
+				worldY,
+				worldZ
+			)
+	 );
+
 	if (task.emissionAfterRemove > 0) {
 
-		w.SetBlockLightGlobal(worldX, worldY, worldZ, task.emissionAfterRemove, glm::vec3(0.0f));
+		w.SetBlockLightGlobal(worldX, worldY, worldZ, task.emissionAfterRemove, lightColor[static_cast<int>(newBlock)]);
 
 		task.bfs_queue.push({
 			worldX,
 			worldY,
 			worldZ,
-			task.emissionAfterRemove
+			task.emissionAfterRemove,
+			lightColor[static_cast<int>(newBlock)]
 
 		});
 
@@ -624,12 +633,21 @@ bool LightEngine::Propagate_RemoveBlockLight(
 			const uint8_t neighborLight =
 				w.GetBlockLightGlobal(nx, ny, nz);
 
+			const glm::vec3 neighborColor =
+				w.GetBlockLightColorGlobal(
+					nx,
+					ny,
+					nz
+				);
+
+
 			if (GetEmission((BlockType)neighborBlock) != 0) {
 				task.bfs_queue.push({
 					nx,
 					ny,
 					nz,
-					neighborLight
+					neighborLight,
+					neighborColor
 				});
 
 				continue;
@@ -664,7 +682,8 @@ bool LightEngine::Propagate_RemoveBlockLight(
 					nx,
 					ny,
 					nz,
-					neighborLight
+					neighborLight,
+					neighborColor
 				});
 
 			}

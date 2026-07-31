@@ -593,7 +593,7 @@ void WorldRenderer::EndHDRScene() {
 
 	ExtractBrightPixels();
 
-	unsigned int bloomTexture = BlurBloom(4);
+	unsigned int bloomTexture = BlurBloom(10);
 
 	RenderFinalPost(bloomTexture);
 
