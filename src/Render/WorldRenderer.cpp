@@ -227,6 +227,60 @@ void WorldRenderer::InitHDRFrameBuffer() {
 
 
 
+
+void WorldRenderer::InitLightVolumeTexture() {
+
+
+	glGenTextures(1, &m_lightVolumeTexture);
+	glBindTexture(GL_TEXTURE_3D, m_lightVolumeTexture);
+
+
+	constexpr int channel_count = 4;
+
+	std::vector<float> emptyData(
+		LIGHT_VOLUME_WIDTH *
+		LIGHT_VOLUME_HEIGHT * 
+		LIGHT_VOLUME_DEPTH *
+		channel_count,
+		0.0f
+	);
+
+
+	glTexImage3D(
+		GL_TEXTURE_3D,
+		0,
+		GL_RGBA16F,
+		LIGHT_VOLUME_WIDTH,
+		LIGHT_VOLUME_HEIGHT,
+		LIGHT_VOLUME_DEPTH,
+		0,
+		GL_RGBA,
+		GL_FLOAT,
+		emptyData.data()
+	);
+
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
+
+	constexpr float borderColor[4] = {
+		0.0f,
+		0.0f,
+		0.0f,
+		0.0f
+	};
+
+	glTexParameterfv(GL_TEXTURE_3D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+	glBindTexture(GL_TEXTURE_3D, 0);
+
+}
+
+
+
 void WorldRenderer::InitBloom() {
 	
 
@@ -593,7 +647,7 @@ void WorldRenderer::EndHDRScene() {
 
 	ExtractBrightPixels();
 
-	unsigned int bloomTexture = BlurBloom(4);
+	unsigned int bloomTexture = BlurBloom(10);
 
 	RenderFinalPost(bloomTexture);
 

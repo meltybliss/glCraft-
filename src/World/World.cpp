@@ -114,7 +114,7 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 			glm::i64vec3(x, y, z),
 			lightColor[(int)b],
 			pointLightRadius[(int)b],
-			2.5f);
+			4.5f);
 
 
 
@@ -195,7 +195,7 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 			glm::i64vec3(x, y, z),
 			lightColor[(int)b],
 			pointLightRadius[(int)b],
-			2.5f);
+			4.5f);
 
 
 
@@ -348,6 +348,9 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 	// center lights
 	snapshot->centerLights = c.blockLights;
 	snapshot->centerSkyLights = c.skyLights; 
+
+	snapshot->centerBlockLightColors =
+		c.blockLightColors;
 
 	//leftFront
 	{
@@ -564,6 +567,8 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 
 	snapshot->centerSkyLights = c.skyLights;
+
+	snapshot->centerBlockLightColors = c.blockLightColors;
 
 	//leftFront
 	{

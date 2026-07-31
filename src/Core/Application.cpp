@@ -140,7 +140,7 @@ bool Application::InitGL() {
 	glEnable(GL_DEPTH_TEST);
 
 	glViewport(0, 0, WindowSize::windowWidth, WindowSize::windowHeight);
-	glClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -171,6 +171,7 @@ bool Application::InitGL() {
 	m_wRenderer.InitShadownMap();
 	m_wRenderer.InitHDRFrameBuffer();
 
+	m_wRenderer.InitLightVolumeTexture();
 
 	return true;
 
