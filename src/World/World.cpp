@@ -85,6 +85,8 @@ glm::vec3 World::GetBlockLightColorGlobal(int64_t x, int64_t y, int64_t z) const
 
 
 	auto* c = it->second.get();
+	if (!c) return glm::vec3(0.0f);
+
 	return c->GetBlockLightColor(lx, ly, lz);
 }
 

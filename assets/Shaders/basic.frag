@@ -35,9 +35,9 @@ uniform sampler2D shadowMap;
 uniform int uPointLightCount;
 uniform PointLight uPointLights[16];
 
-uniform sampler2D uLightVolumeTexture; 
+uniform sampler3D uLightVolumeTexture; 
 uniform vec3 uLightVolumeOrigin;
-
+uniform vec3 uLightVolumeSize;
 
 
 float CalculateShadow(vec4 fragPosLightSpace)
@@ -136,9 +136,40 @@ vec3 CalcPointLights(vec3 normal) {
 }
 
 
+vec3 GetLightFromLightV(vec3 fallbackLight) {
+	
+	vec3 localPos =
+        FragPos - uLightVolumeOrigin;
+
+    bool insideVolume =
+        all(greaterThanEqual(
+            localPos,
+            vec3(0.0)
+        )) &&
+        all(lessThan(
+            localPos,
+            uLightVolumeSize
+        ));
+
+    if (!insideVolume) {
+        return fallbackLight;
+    }
+
+
+	vec3 texturePos =
+        localPos / uLightVolumeSize;
+
+    return texture(
+        uLightVolumeTexture,
+        texturePos
+    ).rgb;
+}
+
+
 void main() {
 	vec4 texColor = texture(u_Texture, TexCoord);
 	
+
 
 	vec3 sunColor = vec3(1.0, 0.95, 0.85);
 
@@ -153,6 +184,12 @@ void main() {
 	float B_brightness = vBlockLightLevel / 15.0;
 	float S_brightness = sky * u_skyStrength;
 
+	
+	vec3 oldBlockLight = vLightColor * B_brightness;
+
+	vec3 blockLightFromLightV = GetLightFromLightV(oldBlockLight);
+
+
 
 	float diffuse = 
 		max(dot(normalize(vNormal), -sunDirection), 0.0);
@@ -162,9 +199,8 @@ void main() {
 
 
 	vec3 skyLight = vec3(S_brightness);
-	vec3 blockLight = B_brightness * vLightColor;
 
-	vec3 ambientLight = skyLight + blockLight;
+	vec3 ambientLight = skyLight + blockLightFromLightV;
 
 
 	vec3 normal = normalize(vNormal);
