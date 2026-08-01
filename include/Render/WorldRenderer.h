@@ -22,7 +22,7 @@ public:
 
 	void UploadPendingMeshData(WorldThread& wt);
 	void DeleteMeshes(WorldThread& wt);
-	void RenderWorld(const Camera& cam, World* w);
+	void RenderWorld(const Camera& cam, World* w, const PointLightsSnapshot& snapshot);
 	void RenderSky(const Camera& cam);
 
 
@@ -48,7 +48,7 @@ private:
 
 	void UploadPointLights(
 		Shader& shader,
-		std::array<PointLight*, 16> lights,
+		const std::vector<PointLight>& lights,
 		size_t count,
 		const Camera& cam
 	);

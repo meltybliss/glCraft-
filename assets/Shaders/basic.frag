@@ -138,8 +138,11 @@ vec3 CalcPointLights(vec3 normal) {
 
 vec3 GetLightFromLightV(vec3 fallbackLight) {
 	
+	vec3 samplePos =
+        FragPos + normalize(vNormal) * 0.501;
+
 	vec3 localPos =
-        FragPos - uLightVolumeOrigin;
+		samplePos - uLightVolumeOrigin;
 
     bool insideVolume =
         all(greaterThanEqual(
@@ -168,7 +171,12 @@ vec3 GetLightFromLightV(vec3 fallbackLight) {
 
 void main() {
 	vec4 texColor = texture(u_Texture, TexCoord);
-	
+	vec3 caveAmbient =
+		vec3(
+			0.012,
+			0.016,
+			0.024
+		);
 
 
 	vec3 sunColor = vec3(1.0, 0.95, 0.85);
@@ -187,12 +195,41 @@ void main() {
 	
 	vec3 oldBlockLight = vLightColor * B_brightness;
 
-	vec3 blockLightFromLightV = GetLightFromLightV(oldBlockLight);
 
 
+	vec3 rawBlockLight =
+        GetLightFromLightV(oldBlockLight);
+
+	float blockIntensity =
+		max(
+			rawBlockLight.r,
+			max(rawBlockLight.g, rawBlockLight.b)
+		);
+
+	//ã≠ìxÇ∆êFÇï™ó£
+    vec3 blockColor =
+        blockIntensity > 0.00001
+        ? rawBlockLight / blockIntensity
+        : vec3(0.0);
+
+	//í·ÉåÉxÉãÇÃBlock LightÇé„Ç≠Ç∑ÇÈ
+    blockIntensity =
+        pow(
+            clamp(blockIntensity, 0.0, 1.0),
+            4.0
+        );
+
+	vec3 blockLight =
+		blockColor *
+		blockIntensity *
+		1.2;
+
+
+	
+	vec3 normal = normalize(vNormal);
 
 	float diffuse = 
-		max(dot(normalize(vNormal), -sunDirection), 0.0);
+		max(dot(normal, -sunDirection), 0.0);
 
 
 	vec3 sunLight = sunColor * diffuse * sky * (1.0 - shadow);
@@ -200,17 +237,29 @@ void main() {
 
 	vec3 skyLight = vec3(S_brightness);
 
-	vec3 ambientLight = skyLight + blockLightFromLightV;
+	//ãÛÇ™ìÕÇ©Ç»Ç¢èÍèäÇŸÇ«ì¥åAAmbientÇã≠Ç≠Ç∑ÇÈ
+    float caveFactor =
+        1.0 -
+        smoothstep(
+            0.0,
+            0.25,
+            sky
+        );
 
 
-	vec3 normal = normalize(vNormal);
+	vec3 caveLight =
+        caveAmbient * caveFactor;
+
+
 	vec3 pointLight = CalcPointLights(normal);
 
 
 	vec3 finalLight =
-		ambientLight +
-		sunLight +
-		pointLight;
+        caveLight +
+        skyLight +
+        sunLight +
+        blockLight +
+        pointLight;
 
 
 	vec3 litColor =
@@ -220,12 +269,10 @@ void main() {
 
 	
 
-	vec3 hdrColor =
-		litColor;
-
-	FragColor = vec4(
-		hdrColor,
-		texColor.a
-	);
+	FragColor =
+        vec4(
+            litColor,
+            texColor.a
+        );
 
 }
