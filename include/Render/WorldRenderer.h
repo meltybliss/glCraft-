@@ -42,7 +42,7 @@ public:
 	void InitLightVolumeTexture();
 
 
-	void UpdateLightVolume(const LightVolumeSnapshot& snapshot) const;
+	void UpdateLightVolume(const LightVolumeSnapshot& snapshot);
 
 private:
 
