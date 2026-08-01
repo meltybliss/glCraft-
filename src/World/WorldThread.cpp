@@ -1,4 +1,5 @@
 #include "World/WorldThread.h"
+#include "Render/Camera.h"
 #include <iostream>
 
 
@@ -634,7 +635,9 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 		if (clock::now() >= deadline) break;
 	}
 
-
+	if (m_requestedCreateLightVSnap.load()) {
+		ProcCreateLightVSnap();
+	}
 	
 
 }
@@ -1822,5 +1825,58 @@ void WorldThread::UpdatePlrSnapshot() {
 
 		m_plrSnapshot = std::move(snap);
 	}
+
+}
+
+
+
+void WorldThread::RequestCreateLightVSnap(const Camera& cam) {
+
+	{
+		std::lock_guard<std::mutex> lock(camBlockPosMutex);
+
+		camBlockPosBuffer.x = cam.position.block.x;
+		camBlockPosBuffer.y = cam.position.block.y;
+		camBlockPosBuffer.z = cam.position.block.z;
+	}
+
+
+	m_requestedCreateLightVSnap.store(true);
+
+}
+
+
+
+void WorldThread::ProcCreateLightVSnap() {
+
+	std::unique_ptr<LightVolumeSnapshot> snap =
+		m_world.CreateLightVSnapshot(camBlockPosBuffer);
+
+	{
+		std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+
+		m_lightVSnapshot = std::move(snap);
+
+	}
+	m_requestedCreateLightVSnap.store(false);
+	m_hasCreatedLightVSnap.store(true);
+
+}
+
+
+bool WorldThread::PopCreatedLightVSnapshot(std::unique_ptr<LightVolumeSnapshot>& out) {
+
+	if (!m_hasCreatedLightVSnap.load()) return false;
+
+	{
+		std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+
+		out = std::move(m_lightVSnapshot);
+	}
+
+	
+	m_hasCreatedLightVSnap.store(false);
+
+	return true;
 
 }

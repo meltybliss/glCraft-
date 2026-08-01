@@ -492,9 +492,8 @@ void WorldRenderer::InitBloom() {
 
 
 
-void WorldRenderer::UpdateLightVolume(const std::unique_ptr<LightVolumeSnapshot> snapshot) const {
+void WorldRenderer::UpdateLightVolume(const LightVolumeSnapshot& snapshot) const {
 
-	if (!snapshot) return;
 
 	constexpr int channelCount = 4;
 
@@ -507,10 +506,10 @@ void WorldRenderer::UpdateLightVolume(const std::unique_ptr<LightVolumeSnapshot>
 		static_cast<std::size_t>(LIGHT_VOLUME_DEPTH) *
 		channelCount;
 
-	if (snapshot->pixels.size() != expectedSize) {
+	if (snapshot.pixels.size() != expectedSize) {
 		std::cerr
 			<< "Invalid LightVolumeSnapshot size: "
-			<< snapshot->pixels.size()
+			<< snapshot.pixels.size()
 			<< " expected: "
 			<< expectedSize
 			<< '\n';
@@ -531,7 +530,7 @@ void WorldRenderer::UpdateLightVolume(const std::unique_ptr<LightVolumeSnapshot>
 		LIGHT_VOLUME_DEPTH,
 		GL_RGBA,
 		GL_FLOAT,
-		snapshot->pixels.data()
+		snapshot.pixels.data()
 
 	);
 

@@ -46,7 +46,15 @@ void Application::Run() {
 		//m_wRenderer.RebuildDrityChunkMesh(m_world);
 		m_wRenderer.UploadPendingMeshData(m_worldThread);
 
-		m_wRenderer.UpdateLightVolume(m_worldThread.GetWorldPtr()->CreateLightVSnapshot(m_camera));//test
+		m_worldThread.RequestCreateLightVSnap(m_camera);
+
+		//Š®¬Ï‚İSnapshot‚ª‚ ‚ê‚Îó‚¯æ‚é
+		std::unique_ptr<LightVolumeSnapshot> lightSnapshot;
+
+		if (m_worldThread.PopCreatedLightVSnapshot(lightSnapshot)) {
+			m_wRenderer.UpdateLightVolume(*lightSnapshot);//test
+		}
+
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 

@@ -93,7 +93,7 @@ public:
 
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(uint64_t key);
 
-	std::unique_ptr<LightVolumeSnapshot> CreateLightVSnapshot(const Camera& cam) const;
+	std::unique_ptr<LightVolumeSnapshot> CreateLightVSnapshot(const glm::i64vec3 camBlockPos) const;
 
 
 	bool CanCollideBlock(int64_t x, int64_t y, int64_t z) const {
