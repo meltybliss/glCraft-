@@ -492,7 +492,7 @@ void WorldRenderer::InitBloom() {
 
 
 
-void WorldRenderer::UpdateLightVolume(const LightVolumeSnapshot& snapshot) const {
+void WorldRenderer::UpdateLightVolume(const LightVolumeSnapshot& snapshot) {
 
 
 	constexpr int channelCount = 4;
@@ -517,7 +517,7 @@ void WorldRenderer::UpdateLightVolume(const LightVolumeSnapshot& snapshot) const
 		return;
 	}
 
-
+	m_lightVolumeOrigin = snapshot.origin;
 
 	glBindTexture(GL_TEXTURE_3D, m_lightVolumeTexture);
 
@@ -888,7 +888,15 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
 
-	baseShader->SetVec3("uLightVolumeOrigin", m_lightVolumeOrigin);
+	WorldPos lightVolumePos;
+	lightVolumePos.block = m_lightVolumeOrigin;
+	lightVolumePos.local = glm::dvec3(0.0);
+
+	glm::vec3 relativeOrigin = glm::vec3(
+		GetRelativePos(cam.position, lightVolumePos)
+	);
+
+	baseShader->SetVec3("uLightVolumeOrigin", relativeOrigin);
 	baseShader->SetVec3("uLightVolumeSize", glm::vec3(LIGHT_VOLUME_WIDTH, LIGHT_VOLUME_HEIGHT, LIGHT_VOLUME_DEPTH));
 
 	blockAtlas->Bind(0);
