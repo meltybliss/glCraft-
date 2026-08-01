@@ -95,8 +95,11 @@ public:
 		return &m_world;
 	}
 
+	void RequestCreateLightVSnap(const Camera& cam);
 
+	bool PopCreatedLightVSnapshot(std::unique_ptr<LightVolumeSnapshot>& out);
 	
+
 private:
 	World m_world;
 	ChunkPipeline m_chunkPipeline;
@@ -127,6 +130,8 @@ private:
 	std::atomic<bool> m_hasSettedDesireStreamC = false;
 	std::atomic<bool> m_hasSettedInput = false;
 	std::atomic<bool> m_hasMovedMouse = false;
+	std::atomic<bool> m_requestedCreateLightVSnap = false;
+	std::atomic<bool> m_hasCreatedLightVSnap = false;
 
 	float m_xoffsetBuffer = 0.f;
 	float m_yoffsetBuffer = 0.f;
@@ -139,6 +144,9 @@ private:
 	std::mutex pendingDeleteMeshMutex;
 	std::mutex inputMutex;
 	std::mutex offsetMutex;
+	std::mutex lightVolumeSnapMutex;
+	std::mutex camBlockPosMutex;
+	
 	
 
 	std::deque<WorldCommand> m_commands;
@@ -159,8 +167,12 @@ private:
 	std::unordered_map<uint64_t, int> m_loadOffsetsRank;//dxÇ∆dzÇçáëÃÇ≥ÇπÇΩkey
 
 	size_t m_nextLoadOffset = 0;
-private:
 
+
+	std::unique_ptr<LightVolumeSnapshot> m_lightVSnapshot;
+	glm::i64vec3 camBlockPosBuffer;
+private:
+ 
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
 	static constexpr int UNLOAD_CHUNKS_DISTANCE = 14;
 
@@ -179,6 +191,8 @@ private:
 
 	void ProcChunkResults();
 	void ProcOneChunkResult();
+
+	void ProcCreateLightVSnap();
 
 	void ApplyCommand(WorldCommand& cmd);
 	void ApplyEditBlock(

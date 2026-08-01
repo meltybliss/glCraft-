@@ -864,7 +864,7 @@ RaycastHit World::Raycast(
 
 
 
-std::unique_ptr<LightVolumeSnapshot> World::CreateLightVSnapshot(const Camera& cam) const {
+std::unique_ptr<LightVolumeSnapshot> World::CreateLightVSnapshot(const glm::i64vec3 camBlockPos) const {
 
 	std::unique_ptr<LightVolumeSnapshot> out;
 
@@ -908,13 +908,13 @@ std::unique_ptr<LightVolumeSnapshot> World::CreateLightVSnapshot(const Camera& c
 
 
 	glm::i64vec3 m_lightVolumeOrigin = glm::i64vec3(
-		cam.position.block.x
+		camBlockPos.x
 		- LIGHT_VOLUME_WIDTH / 2,
 
-		cam.position.block.y
+		camBlockPos.y
 		- LIGHT_VOLUME_HEIGHT / 2,
 
-		cam.position.block.z
+		camBlockPos.z
 		- LIGHT_VOLUME_DEPTH / 2
 	);
 
