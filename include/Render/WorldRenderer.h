@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <stdint.h>
 #include <optional>
+#include "Render/Texture.h"
 
 class WorldThread;
 class World;

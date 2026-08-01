@@ -549,7 +549,10 @@ void WorldRenderer::UpdateLightVolume(World& w, const Camera& cam) {
 				glm::i64vec3 texelToWorldPos = m_lightVolumeOrigin + glm::i64vec3(x, y, z);
 
 				size_t index = GetPixelsIndex(x, y, z);
+				
 
+				if (texelToWorldPos.y >= Chunk::CHUNK_HEIGHT ||
+					texelToWorldPos.y < 0) continue;
 
 				glm::vec3 lightColor = w.GetBlockLightColorGlobal(
 					texelToWorldPos.x,
@@ -561,6 +564,7 @@ void WorldRenderer::UpdateLightVolume(World& w, const Camera& cam) {
 					texelToWorldPos.y,
 					texelToWorldPos.z
 				);
+
 
 
 				SetPixel(index, lightColor, lightLevel);
@@ -941,7 +945,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
 
 	baseShader->SetVec3("uLightVolumeTexture", m_lightVolumeOrigin);
-
+	baseShader->SetVec3("uLightVolumeSize", glm::vec3(LIGHT_VOLUME_WIDTH, LIGHT_VOLUME_HEIGHT, LIGHT_VOLUME_DEPTH));
 
 	blockAtlas->Bind(0);
 
