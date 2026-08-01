@@ -107,6 +107,7 @@ public:
 
 
 	void SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count);
+	std::unique_ptr<PointLightsSnapshot> CreatePointLightsSnapshot();
 
 private:
 

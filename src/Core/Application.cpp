@@ -68,7 +68,7 @@ void Application::Run() {
 		m_wRenderer.BeginHDRScene();
 
 		m_wRenderer.RenderSky(m_camera);
-		m_wRenderer.RenderWorld(m_camera, m_worldThread.GetWorldPtr());
+		m_wRenderer.RenderWorld(m_camera, m_worldThread.GetWorldPtr(), *m_worldThread.GetWorldPtr()->CreatePointLightsSnapshot());
 		
 
 		RenderOutline();//switch shader

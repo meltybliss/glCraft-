@@ -556,7 +556,7 @@ void WorldRenderer::ExtractBrightPixels() {
 
 	m_brightShader->Use();
 
-	m_brightShader->SetFloat("uThreshold", 1.0f);
+	m_brightShader->SetFloat("uThreshold", 1.f);
 
 
 	glActiveTexture(GL_TEXTURE0);
@@ -648,7 +648,7 @@ void WorldRenderer::RenderFinalPost(unsigned int bloomTexture) {
 
 	m_postShader->SetFloat(
 		"uBloomStrength",
-		0.1f
+		1.f
 	);
 
 
@@ -720,7 +720,7 @@ void WorldRenderer::EndHDRScene() {
 
 void WorldRenderer::UploadPointLights(
 	Shader& shader,
-	std::array<PointLight*, 16> lights,
+	const std::vector<PointLight>& lights,
 	size_t count,
 	const Camera& cam
 ) {
@@ -730,7 +730,7 @@ void WorldRenderer::UploadPointLights(
 	for (size_t i = 0; i < count; ++i) {
 
 		const auto& light = lights[i];
-		if (!light) continue;
+		
 
 		std::string uniformName =
 			"uPointLights[" +
@@ -738,7 +738,7 @@ void WorldRenderer::UploadPointLights(
 			"]";
 
 		WorldPos lightPos;
-		lightPos.block = light->position;
+		lightPos.block = light.position;
 		lightPos.local = glm::dvec3(0.5);
 
 		glm::dvec3 relative = GetRelativePos(cam.position, lightPos);
@@ -750,17 +750,17 @@ void WorldRenderer::UploadPointLights(
 
 		shader.SetVec3(
 			(uniformName + ".color").c_str(),
-			light->color
+			light.color
 		);
 
 		shader.SetFloat(
 			(uniformName + ".radius").c_str(),
-			light->radius
+			light.radius
 		);
 
 		shader.SetFloat(
 			(uniformName + ".intensity").c_str(),
-			light->intensity
+			light.intensity
 		);
 
 	}
@@ -850,7 +850,7 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 
 
-void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
+void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSnapshot& snapshot) {
 
 	using namespace LIGHT_VOLUME_SIZE;
 
@@ -926,8 +926,6 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 		glm::vec3 drawPos = glm::vec3(relative);
 
-		w->SelectOptimalPointLights(cx, cz, pLights, count);
-
 		model = glm::translate(
 			model,
 			drawPos
@@ -936,12 +934,16 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 		baseShader->SetMat4("model", model);
 		
-		UploadPointLights(*baseShader, pLights, count, cam);
 
-		auto it = m_chunkMeshes.find(key);
-		if (it == m_chunkMeshes.end()) continue;
+		auto it = snapshot.pointLightsMap.find(key);
+		if (it == snapshot.pointLightsMap.end()) continue;
 
-		it->second.Draw();
+		UploadPointLights(*baseShader, it->second.pointLights, it->second.count, cam);
+
+		auto it2 = m_chunkMeshes.find(key);
+		if (it2 == m_chunkMeshes.end()) continue;
+
+		it2->second.Draw();
 
 	}
 }
