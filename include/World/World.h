@@ -5,7 +5,7 @@
 #include "Render/PendingMesh.h"
 #include "World/RaycastHit.h"
 #include "World/ChunkMeshSnapshot.h"
-
+#include "Render/LightVolumeSnapshot.h"
 #include "Util/ThreadSafeLogUtils.h"
 #include <unordered_map>
 #include <memory>
@@ -93,7 +93,7 @@ public:
 
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(uint64_t key);
 
-
+	std::unique_ptr<LightVolumeSnapshot> CreateLightVSnapshot(const Camera& cam) const;
 
 
 	bool CanCollideBlock(int64_t x, int64_t y, int64_t z) const {

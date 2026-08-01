@@ -861,3 +861,99 @@ RaycastHit World::Raycast(
 
 	return RaycastHit{ false, x, y, z, previousX, previousY, previousZ };
 }
+
+
+
+std::unique_ptr<LightVolumeSnapshot> World::CreateLightVSnapshot(const Camera& cam) const {
+
+	std::unique_ptr<LightVolumeSnapshot> out;
+
+	constexpr int channel_count = 4;
+
+	using namespace LIGHT_VOLUME_SIZE;
+
+	std::vector<float> pixels(
+		static_cast<size_t>(LIGHT_VOLUME_WIDTH) *
+		static_cast<size_t>(LIGHT_VOLUME_HEIGHT) *
+		static_cast<size_t>(LIGHT_VOLUME_DEPTH) *
+		channel_count,
+		0.0f
+	);
+
+
+
+	auto GetPixelsIndex = [=](int x, int y, int z) -> size_t {
+
+		size_t texelIndex = (size_t)x + (size_t)y * LIGHT_VOLUME_WIDTH + (size_t)z * LIGHT_VOLUME_WIDTH * LIGHT_VOLUME_HEIGHT;
+
+		return texelIndex * channel_count;
+
+	};
+
+
+	auto SetPixel = [&](size_t index, const glm::vec3& color, uint8_t blockLightLevel) -> void {
+
+		float intensity = blockLightLevel / 15.0f;
+
+		const glm::vec3 rgb = color * intensity;
+
+
+		pixels[index] = rgb.r;
+		pixels[index + 1] = rgb.g;
+		pixels[index + 2] = rgb.b;
+		pixels[index + 3] = 1.0f;
+
+
+		};
+
+
+	glm::i64vec3 m_lightVolumeOrigin = glm::i64vec3(
+		cam.position.block.x
+		- LIGHT_VOLUME_WIDTH / 2,
+
+		cam.position.block.y
+		- LIGHT_VOLUME_HEIGHT / 2,
+
+		cam.position.block.z
+		- LIGHT_VOLUME_DEPTH / 2
+	);
+
+
+	for (int z = 0; z < LIGHT_VOLUME_DEPTH; ++z) {
+		for (int y = 0; y < LIGHT_VOLUME_HEIGHT; ++y) {
+			for (int x = 0; x < LIGHT_VOLUME_WIDTH; ++x) {
+
+				glm::i64vec3 texelToWorldPos = m_lightVolumeOrigin + glm::i64vec3(x, y, z);
+
+				size_t index = GetPixelsIndex(x, y, z);
+
+
+				if (texelToWorldPos.y >= Chunk::CHUNK_HEIGHT ||
+					texelToWorldPos.y < 0) continue;
+
+				glm::vec3 lightColor = GetBlockLightColorGlobal(
+					texelToWorldPos.x,
+					texelToWorldPos.y,
+					texelToWorldPos.z
+				);
+				uint8_t lightLevel = GetBlockLightGlobal(
+					texelToWorldPos.x,
+					texelToWorldPos.y,
+					texelToWorldPos.z
+				);
+
+
+
+				SetPixel(index, lightColor, lightLevel);
+
+			}
+		}
+	}
+
+
+	out = std::make_unique<LightVolumeSnapshot>(
+		pixels, m_lightVolumeOrigin
+	);
+
+	return out;
+}

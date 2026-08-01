@@ -46,7 +46,7 @@ void Application::Run() {
 		//m_wRenderer.RebuildDrityChunkMesh(m_world);
 		m_wRenderer.UploadPendingMeshData(m_worldThread);
 
-		m_wRenderer.UpdateLightVolume(*m_worldThread.GetWorldPtr(), m_camera);
+		m_wRenderer.UpdateLightVolume(m_worldThread.GetWorldPtr()->CreateLightVSnapshot(m_camera));//test
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
