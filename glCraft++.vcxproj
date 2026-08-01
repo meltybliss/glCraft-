@@ -145,6 +145,7 @@
     <ClInclude Include="include\Render\BlockFace.h" />
     <ClInclude Include="include\Render\Camera.h" />
     <ClInclude Include="include\Render\ChunkMesh.h" />
+    <ClInclude Include="include\Render\LightVolumeSnapshot.h" />
     <ClInclude Include="include\Render\MeshBuilder.h" />
     <ClInclude Include="include\Render\MeshData.h" />
     <ClInclude Include="include\Render\SelectionOutlineRenderer.h" />

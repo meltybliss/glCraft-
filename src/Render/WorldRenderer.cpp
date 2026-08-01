@@ -256,6 +256,8 @@ void WorldRenderer::InitLightVolumeTexture() {
 
 	constexpr int channel_count = 4;
 
+	using namespace LIGHT_VOLUME_SIZE;
+
 	std::vector<float> emptyData(
 		LIGHT_VOLUME_WIDTH *
 		LIGHT_VOLUME_HEIGHT * 
@@ -490,87 +492,30 @@ void WorldRenderer::InitBloom() {
 
 
 
-void WorldRenderer::UpdateLightVolume(World& w, const Camera& cam) {
+void WorldRenderer::UpdateLightVolume(const std::unique_ptr<LightVolumeSnapshot> snapshot) const {
 
-	constexpr int channel_count = 4;
+	if (!snapshot) return;
 
+	constexpr int channelCount = 4;
 
-	std::vector<float> pixels(
-		static_cast<size_t>(LIGHT_VOLUME_WIDTH) *
-		static_cast<size_t>(LIGHT_VOLUME_HEIGHT) *
-		static_cast<size_t>(LIGHT_VOLUME_DEPTH) *
-		channel_count,
-		0.0f
-	);
+	using namespace LIGHT_VOLUME_SIZE;
 
 
+	constexpr std::size_t expectedSize =
+		static_cast<std::size_t>(LIGHT_VOLUME_WIDTH) *
+		static_cast<std::size_t>(LIGHT_VOLUME_HEIGHT) *
+		static_cast<std::size_t>(LIGHT_VOLUME_DEPTH) *
+		channelCount;
 
-	auto GetPixelsIndex = [=](int x, int y, int z) -> size_t {
+	if (snapshot->pixels.size() != expectedSize) {
+		std::cerr
+			<< "Invalid LightVolumeSnapshot size: "
+			<< snapshot->pixels.size()
+			<< " expected: "
+			<< expectedSize
+			<< '\n';
 
-		size_t texelIndex = (size_t)x + (size_t)y * LIGHT_VOLUME_WIDTH + (size_t)z * LIGHT_VOLUME_WIDTH * LIGHT_VOLUME_HEIGHT;
-		
-		return texelIndex * channel_count;
-
-	};
-
-
-	auto SetPixel = [&](size_t index, const glm::vec3& color, uint8_t blockLightLevel) -> void {
-		
-		float intensity = blockLightLevel / 15.0f;
-
-		const glm::vec3 rgb = color * intensity;
-
-
-		pixels[index] = rgb.r;
-		pixels[index + 1] = rgb.g;
-		pixels[index + 2] = rgb.b;
-		pixels[index + 3] = 1.0f;
-
-
-	};
-
-
-	m_lightVolumeOrigin = glm::i64vec3(
-		cam.position.block.x
-		- LIGHT_VOLUME_WIDTH / 2,
-
-		cam.position.block.y
-		- LIGHT_VOLUME_HEIGHT / 2,
-
-		cam.position.block.z
-		- LIGHT_VOLUME_DEPTH / 2
-	);
-
-
-	for (int z = 0; z < LIGHT_VOLUME_DEPTH; ++z) {
-		for (int y = 0; y < LIGHT_VOLUME_HEIGHT; ++y) {
-			for (int x = 0; x < LIGHT_VOLUME_WIDTH; ++x) {
-
-				glm::i64vec3 texelToWorldPos = m_lightVolumeOrigin + glm::i64vec3(x, y, z);
-
-				size_t index = GetPixelsIndex(x, y, z);
-				
-
-				if (texelToWorldPos.y >= Chunk::CHUNK_HEIGHT ||
-					texelToWorldPos.y < 0) continue;
-
-				glm::vec3 lightColor = w.GetBlockLightColorGlobal(
-					texelToWorldPos.x,
-					texelToWorldPos.y,
-					texelToWorldPos.z
-				);
-				uint8_t lightLevel = w.GetBlockLightGlobal(
-					texelToWorldPos.x,
-					texelToWorldPos.y,
-					texelToWorldPos.z
-				);
-
-
-
-				SetPixel(index, lightColor, lightLevel);
-
-			}
-		}
+		return;
 	}
 
 
@@ -586,7 +531,7 @@ void WorldRenderer::UpdateLightVolume(World& w, const Camera& cam) {
 		LIGHT_VOLUME_DEPTH,
 		GL_RGBA,
 		GL_FLOAT,
-		pixels.data()
+		snapshot->pixels.data()
 
 	);
 
@@ -908,7 +853,7 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
-
+	using namespace LIGHT_VOLUME_SIZE;
 
 	glViewport(0, 0, WindowSize::windowWidth, WindowSize::windowHeight);
 
@@ -944,7 +889,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
 
-	baseShader->SetVec3("uLightVolumeTexture", m_lightVolumeOrigin);
+	baseShader->SetVec3("uLightVolumeOrigin", m_lightVolumeOrigin);
 	baseShader->SetVec3("uLightVolumeSize", glm::vec3(LIGHT_VOLUME_WIDTH, LIGHT_VOLUME_HEIGHT, LIGHT_VOLUME_DEPTH));
 
 	blockAtlas->Bind(0);

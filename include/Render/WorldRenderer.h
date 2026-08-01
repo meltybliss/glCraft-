@@ -9,7 +9,8 @@
 #include <unordered_map>
 #include <stdint.h>
 #include <optional>
-#include "Render/Texture.h"
+#include "Texture.h"
+#include "LightVolumeSnapshot.h"
 
 class WorldThread;
 class World;
@@ -41,7 +42,7 @@ public:
 	void InitLightVolumeTexture();
 
 
-	void UpdateLightVolume(World& w, const Camera& cam);
+	void UpdateLightVolume(const std::unique_ptr<LightVolumeSnapshot> snapshot) const;
 
 private:
 
@@ -86,9 +87,7 @@ private:
 	unsigned int m_pingPongTextures[2] = { 0, 0 };
 
 	unsigned int m_lightVolumeTexture = 0;
-	static constexpr int LIGHT_VOLUME_WIDTH = 32;
-	static constexpr int LIGHT_VOLUME_HEIGHT = 32;
-	static constexpr int LIGHT_VOLUME_DEPTH = 32;
+	
 
 	glm::i64vec3 m_lightVolumeOrigin{ 0 };
 
