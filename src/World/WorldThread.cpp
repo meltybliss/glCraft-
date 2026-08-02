@@ -639,6 +639,10 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 		ProcCreateLightVSnap();
 	}
 	
+	if (m_requestedCreatePointLightSnap.load()) {
+
+		ProcCreatePointLightsSnapshot();
+	}
 
 }
 
@@ -1879,4 +1883,198 @@ bool WorldThread::PopCreatedLightVSnapshot(std::unique_ptr<LightVolumeSnapshot>&
 
 	return true;
 
+}
+
+
+void WorldThread::RequestCreatePointLightSnap() {
+
+
+	m_requestedCreatePointLightSnap.store(true);
+}
+
+
+void WorldThread::ProcCreatePointLightsSnapshot() {
+
+
+	auto snapshot = std::make_unique<PointLightsSnapshot>();
+	auto& chunks = m_world.GetChunks();
+
+	std::vector<PointLight> candidates;
+
+	for (const auto& [key, chunkPtr] : chunks) {
+
+		candidates.clear();
+
+		int32_t cx = RestoreCxFromKey(key);
+		int32_t cz = RestoreCzFromKey(key);
+
+		const int64_t chunkMinX =
+			cx * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
+
+		const int64_t chunkMinZ =
+			cz * static_cast<int64_t>(Chunk::CHUNK_DEPTH);
+
+
+		const int64_t chunkMaxX =
+			chunkMinX + Chunk::CHUNK_WIDTH;
+
+		const int64_t chunkMaxZ =
+			chunkMinZ + Chunk::CHUNK_DEPTH;
+
+
+
+
+		for (int x = -1; x <= 1; ++x) {
+			for (int z = -1; z <= 1; ++z) {
+
+				auto it = chunks.find(Index(cx + x, cz + z));
+				if (it == chunks.end() || !it->second) continue;
+
+				auto* c = it->second.get();
+
+				for (auto& pl : c->pointLights) {
+
+					const int64_t closestX = std::clamp(
+						pl.position.x,
+						chunkMinX,
+						chunkMaxX
+					);
+
+					const int64_t closestZ = std::clamp(
+						pl.position.z,
+						chunkMinZ,
+						chunkMaxZ
+					);
+
+
+					const double dxToChunk =
+						static_cast<double>(
+							pl.position.x - closestX
+							);
+
+					const double dzToChunk =
+						static_cast<double>(
+							pl.position.z - closestZ
+							);
+
+
+					const double distanceSquared =
+						dxToChunk * dxToChunk +
+						dzToChunk * dzToChunk;
+
+					const double radiusSquared =
+						static_cast<double>(pl.radius) *
+						static_cast<double>(pl.radius);
+
+
+					if (distanceSquared > radiusSquared) continue;
+
+					candidates.push_back(pl);
+
+				}
+
+			}
+		}
+
+
+		std::sort(candidates.begin(), candidates.end(),
+			[&](const PointLight& a, const PointLight& b) {
+
+				auto distanceSquared = [&](const PointLight* light) {
+
+					const int64_t closestX = std::clamp(
+						light->position.x,
+						chunkMinX,
+						chunkMaxX
+					);
+
+
+					const int64_t closestZ = std::clamp(
+						light->position.z,
+						chunkMinZ,
+						chunkMaxZ
+					);
+
+					const double dx =
+						static_cast<double>(light->position.x - closestX);
+
+					const double dz =
+						static_cast<double>(light->position.z - closestZ);
+
+
+					return dx * dx + dz * dz;
+					};
+
+
+				return distanceSquared(&a) < distanceSquared(&b);
+			}
+		);
+
+
+		auto& lightsStruct = snapshot->pointLightsMap[key];
+		size_t c = std::min<size_t>(candidates.size(), 16);
+
+
+
+		lightsStruct.count = c;
+
+		lightsStruct.pointLights.assign(
+			candidates.begin(),
+			candidates.begin() + c
+		);
+
+	}
+
+
+	{
+		std::lock_guard<std::mutex> lock(m_pointLightSnapMutex);
+
+		m_createdPointLightsSnapshot = std::move(snapshot);
+	}
+
+
+	m_requestedCreatePointLightSnap.store(false);
+	m_createdPointLightSnap.store(true);
+	
+	if (m_firstTimeCreatePlSnap.load()) {
+		m_firstTimeCreatePlSnap.store(false);
+	}
+
+}
+
+
+
+
+bool WorldThread::PopPointLightSnap(PointLightsSnapshot& out) {
+
+	if (!m_createdPointLightSnap.load()) return false;
+
+	m_createdPointLightSnap.store(false);
+
+	{
+		std::lock_guard<std::mutex> lock(m_pointLightSnapMutex);
+
+
+
+		out = *m_createdPointLightsSnapshot;
+		m_previousPointLightSnap = *m_createdPointLightsSnapshot;
+	}
+
+	return true;
+}
+
+
+
+bool WorldThread::PopPreviousPointLSnap(PointLightsSnapshot& out) {
+
+	if (m_firstTimeCreatePlSnap.load()) return false;
+
+	{
+		std::lock_guard<std::mutex> lock(m_pointLightSnapMutex);
+
+		out = m_previousPointLightSnap;
+	}
+
+
+	return true;
 }

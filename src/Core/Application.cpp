@@ -63,12 +63,24 @@ void Application::Run() {
 
 		m_wRenderer.RenderShadowPass(m_camera);
 
-
+		m_worldThread.RequestCreatePointLightSnap();
 
 		m_wRenderer.BeginHDRScene();
 
 		m_wRenderer.RenderSky(m_camera);
-		m_wRenderer.RenderWorld(m_camera, m_worldThread.GetWorldPtr(), *m_worldThread.GetWorldPtr()->CreatePointLightsSnapshot());
+
+		PointLightsSnapshot out;
+		bool created = m_worldThread.PopPointLightSnap(out);
+		if (!created) {
+			bool ok = m_worldThread.PopPreviousPointLSnap(out);
+
+			if (!ok) {
+				std::cerr << "RequestCreatePlSnap seems to be late\n";
+				
+			}
+		}
+	
+		m_wRenderer.RenderWorld(m_camera, m_worldThread.GetWorldPtr(), out);
 		
 
 		RenderOutline();//switch shader

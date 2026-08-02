@@ -100,6 +100,10 @@ public:
 	bool PopCreatedLightVSnapshot(std::unique_ptr<LightVolumeSnapshot>& out);
 	
 
+	void RequestCreatePointLightSnap();
+	bool PopPointLightSnap(PointLightsSnapshot& out);
+	bool PopPreviousPointLSnap(PointLightsSnapshot& out);
+
 private:
 	World m_world;
 	ChunkPipeline m_chunkPipeline;
@@ -171,6 +175,18 @@ private:
 
 	std::unique_ptr<LightVolumeSnapshot> m_lightVSnapshot;
 	glm::i64vec3 camBlockPosBuffer;
+
+
+	std::atomic<bool> m_requestedCreatePointLightSnap;
+	std::atomic<bool> m_createdPointLightSnap;
+	std::atomic<bool> m_firstTimeCreatePlSnap;
+
+	std::mutex m_pointLightSnapMutex;
+
+	std::unique_ptr<PointLightsSnapshot>
+		m_createdPointLightsSnapshot;
+
+	PointLightsSnapshot	m_previousPointLightSnap;
 private:
  
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -193,6 +209,7 @@ private:
 	void ProcOneChunkResult();
 
 	void ProcCreateLightVSnap();
+	void ProcCreatePointLightsSnapshot();
 
 	void ApplyCommand(WorldCommand& cmd);
 	void ApplyEditBlock(
