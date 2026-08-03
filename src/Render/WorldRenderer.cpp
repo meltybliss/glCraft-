@@ -29,10 +29,16 @@ void WorldRenderer::InitBaseShader() {
 	);
 
 
+	UVMinMax minMax = MeshBuilder::GetTorchUVMinMax();
+
+
 	baseShader->Use();
 	baseShader->SetInt("u_Texture", 0);
 	baseShader->SetInt("shadowMap", 1);
 	baseShader->SetInt("uLightVolumeTexture", 2);
+
+	baseShader->SetVec2("torchMinUV", minMax.min);
+	baseShader->SetVec2("torchMaxUV", minMax.max);
 
 	blockAtlas = std::make_unique<Texture>("assets/textures/block_atlas2.png");
 
@@ -710,7 +716,7 @@ void WorldRenderer::EndHDRScene() {
 
 	ExtractBrightPixels();
 
-	unsigned int bloomTexture = BlurBloom(10);
+	unsigned int bloomTexture = BlurBloom(20);
 
 	RenderFinalPost(bloomTexture);
 

@@ -939,3 +939,23 @@ float MeshBuilder::GetAOBrightness(
 
 	return 1.0f - occlusion * AO_STRENGTH;
 }
+
+
+
+UVMinMax MeshBuilder::GetTorchUVMinMax() {
+
+	float tileUV_x = 1.0f / atlasTilesX;
+	float tileUV_y = 1.0f / atlasTilesY;
+
+
+	float uvXMin = tileUV_x * 5;
+	float uvYMax = 1.f - tileUV_y * 14;
+
+	float uvXMax = uvXMin + (tileUV_x / 4.0f);
+	float uvYMin = uvYMax - tileUV_y;
+
+	return { glm::vec2(uvXMin, uvYMin), glm::vec2(uvXMax, uvYMax) };
+
+}
+
+

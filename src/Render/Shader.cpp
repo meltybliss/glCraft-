@@ -97,6 +97,14 @@ void Shader::SetVec3(const char* name, const glm::vec3& vec3) const {
 }
 
 
+void Shader::SetVec2(const char* name, const glm::vec2& vec2) const {
+
+	int location = glGetUniformLocation(m_id, name);
+	glUniform2f(location, vec2.x, vec2.y);
+
+}
+
+
 void Shader::SetInt(const char* name, const int& value) const {
 	int location = glGetUniformLocation(m_id, name);
 	glUniform1i(location, value);
