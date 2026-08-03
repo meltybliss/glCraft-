@@ -14,7 +14,10 @@ void main() {
 	vec3 color = texture(uSceneTexture, TexCoord).rgb;
 
 	float brightness =
-		max(color.r, max(color.g, color.b));
+		dot(
+			color,
+			vec3(0.2126, 0.7152, 0.0722)
+		);
 
 	float threshold = uThreshold;
 	float knee = 0.5;
