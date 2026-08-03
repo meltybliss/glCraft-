@@ -29,7 +29,7 @@ uniform float u_skyStrength;//íã1.0, ñÈ0.1Ç›ÇΩÇ¢Ç»
 
 uniform vec3 sunDirection;
 
-uniform sampler2D shadowMap;
+uniform sampler2DShadow shadowMap;
 
 
 uniform int uPointLightCount;
@@ -44,9 +44,22 @@ uniform vec2 torchMinUV;
 uniform vec2 torchMaxUV;
 
 
+const vec2 disk[12] = vec2[12](
+    vec2(-0.326, -0.406),
+    vec2(-0.840, -0.074),
+    vec2(-0.696,  0.457),
+    vec2(-0.203,  0.621),
+    vec2( 0.962, -0.195),
+    vec2( 0.473, -0.480),
+    vec2( 0.519,  0.767),
+    vec2( 0.185, -0.893),
+    vec2( 0.507,  0.064),
+    vec2( 0.896,  0.412),
+    vec2(-0.322, -0.933),
+    vec2(-0.792, -0.598)
+);
 
-
-float CalculateShadow(vec4 fragPosLightSpace)
+float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 {
 
 	//ìßéãèúéZ
@@ -68,33 +81,52 @@ float CalculateShadow(vec4 fragPosLightSpace)
 	 //ç°ï`Ç¢ÇƒÇ¢ÇÈfragmenté©êgÇÃê[Ç≥
     float currentDepth = projCoords.z;
 
-    float bias = 0.001;
+
+	float normalLight =
+		max(
+			dot(normal, -sunDirection),
+			0.0
+		);
+
+	float bias =
+		mix(
+			0.00125,
+			0.00022,
+			normalLight
+		);
+   
 	vec2 texelSize =
         1.0 / vec2(textureSize(shadowMap, 0));
 	
 
-	float shadow = 0.0;
 
-    for (int x = -1; x <= 1; x++)
-    {
-        for (int y = -1; y <= 1; y++)
-        {
-			//shadow mapÇ…ï€ë∂Ç≥ÇÍÇΩÅAàÍî‘éËëOÇÃê[Ç≥
-            float closestDepth =
-                texture(
-                    shadowMap,
-                    projCoords.xy +
-                    vec2(x, y) * texelSize
-                ).r;
+	float visibility = 0.0;
 
-            shadow +=
-                currentDepth - bias > closestDepth
-                ? 1.0
-                : 0.0;
-        }
-    }
+    float filterRadius = 1.5;
 
-    return shadow / 9.0;
+	for (int i = 0; i < 12; i++) {
+		vec2 sampleUV = 
+			projCoords.xy +
+			disk[i] *
+			texelSize *
+			filterRadius;
+
+		visibility += 
+			texture(
+				shadowMap,
+				vec3(
+					sampleUV,
+					currentDepth - bias
+				)
+			);
+	}
+
+	visibility /= 12.0;
+	//visibility
+	//1.0 = ì˙å¸
+    //0.0 = âe
+
+    return 1.0 - visibility;
 
 }
 
@@ -185,22 +217,29 @@ void main() {
 		);
 
 
-	vec3 sunColor = vec3(1.0, 0.95, 0.85);
+	vec3 sunColor =
+		vec3(1.00, 0.90, 0.72);
+
+		
+	vec3 normal = normalize(vNormal);
+
+	float shadow = CalculateShadow(FragPosLightSpace, normal);
 
 
+	float skyLevel =
+		clamp(vSkyLightLevel / 15.0, 0.0, 1.0);
 
-	float shadow = CalculateShadow(FragPosLightSpace);
+	//ínï\, åäÇÃê[Ç≥Ç…ÇÊÇÈãÛåıÇÃìûíBó 
+	float skyVisibility =
+		pow(skyLevel, 1.6);
 
+	//íãñÈÇ‡ä‹ÇﬂÇΩç≈èIìIÇ»ã≠Ç≥
+	float skyAmount =
+		skyVisibility *
+		u_skyStrength;
 	
 
-
-	float sky = vSkyLightLevel / 15.0;
-
-
-
-
 	float B_brightness = vBlockLightLevel / 15.0;
-	float S_brightness = sky * u_skyStrength;
 
 	
 	vec3 oldBlockLight = vLightColor * B_brightness;
@@ -236,16 +275,42 @@ void main() {
 
 
 	
-	vec3 normal = normalize(vNormal);
 
-	float diffuse = 
-		max(dot(normal, -sunDirection), 0.0);
+	float wrappedDiffuse =
+		clamp(
+			(dot(normal, -sunDirection) + 0.08) / 1.08,
+			0.0,
+			1.0
+		);
+
+	vec3 sunLight =
+		sunColor *
+		wrappedDiffuse *
+		skyVisibility *
+		u_skyStrength *
+		(1.0 - shadow * 0.88);
+
+	// ínñ Ç©ÇÁÇÃé„Ç¢ígêFîΩéÀ
+	vec3 groundBounce =
+		vec3(0.055, 0.035, 0.020) *
+		max(-normal.y, 0.0) *
+		skyAmount;
 
 
-	vec3 sunLight = sunColor * diffuse * sky * (1.0 - shadow);
+	vec3 ambientSkyColor = vec3(0.58, 0.72, 0.92);
 
+	float hemisphere =
+		mix(
+			0.45,
+			1.0,
+			normal.y * 0.5 + 0.5
+		);
 
-	vec3 skyLight = vec3(S_brightness);
+	vec3 skyLight =
+		ambientSkyColor *
+		mix(0.035, 1.0, skyVisibility) *
+		u_skyStrength *
+		hemisphere;
 
 	//ãÛÇ™ìÕÇ©Ç»Ç¢èÍèäÇŸÇ«ì¥åAAmbientÇã≠Ç≠Ç∑ÇÈ
     float caveFactor =
@@ -253,7 +318,7 @@ void main() {
         smoothstep(
             0.0,
             0.25,
-            sky
+            skyLevel
         );
 
 
@@ -264,18 +329,21 @@ void main() {
 	vec3 pointLight = CalcPointLights(normal);
 
 
+	float ao =
+		clamp(vAO, 0.45, 1.0);
+
+
+
 	vec3 finalLight =
-        caveLight +
-        skyLight +
-        sunLight +
-        blockLight +
-        pointLight;
+		(skyLight + groundBounce + caveLight) * ao +
+		sunLight * mix(0.72, 1.0, ao) +
+		blockLight +
+		pointLight;
 
 
 	vec3 litColor =
 		texColor.rgb *
-		finalLight *
-		vAO;
+		finalLight;
 
 
 	vec2 torchLocalUV =
