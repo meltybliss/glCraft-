@@ -33,11 +33,20 @@ enum class AoPoint {
 	RightBackBottom
 };
 
+
+struct UVMinMax {
+	glm::vec2 min;
+	glm::vec2 max;
+};
+
+
 class MeshBuilder {
 public:
 
 	static MeshData BuildChunkMesh(ChunkMeshSnapshot& snapshot);
 
+	static UVMinMax GetTorchUVMinMax();
+	
 private:
 
 	static constexpr int atlasTilesX = 32;
@@ -72,6 +81,6 @@ private:
 	static float BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot, const BlockFace face, AoPoint point);
 	static void AddLightToVertex(int x, int y, int z, const BlockFace face, const BlockType type, std::vector<float>& buffer, std::vector<float>& v, std::vector<unsigned int>& indices, ChunkMeshSnapshot& snapShot);
 
-
+	
 
 };

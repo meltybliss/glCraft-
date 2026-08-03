@@ -40,6 +40,12 @@ uniform vec3 uLightVolumeOrigin;
 uniform vec3 uLightVolumeSize;
 
 
+uniform vec2 torchMinUV;
+uniform vec2 torchMaxUV;
+
+
+
+
 float CalculateShadow(vec4 fragPosLightSpace)
 {
 
@@ -185,9 +191,13 @@ void main() {
 
 	float shadow = CalculateShadow(FragPosLightSpace);
 
-
 	
+
+
 	float sky = vSkyLightLevel / 15.0;
+
+
+
 
 	float B_brightness = vBlockLightLevel / 15.0;
 	float S_brightness = sky * u_skyStrength;
@@ -267,7 +277,75 @@ void main() {
 		finalLight *
 		vAO;
 
+
+	vec2 torchLocalUV =
+		(TexCoord - torchMinUV) /
+		(torchMaxUV - torchMinUV);
+
+	float insideTorch =
+		step(0.0, torchLocalUV.x) *
+		step(torchLocalUV.x, 1.0) *
+		step(0.0, torchLocalUV.y) *
+		step(torchLocalUV.y, 1.0);
 	
+
+	float flameY = 1.0 - torchLocalUV.y;
+
+	float whiteRegionStart = 0.125;
+	float whiteRegionEnd = 0.250;
+
+	float whiteRegion =
+		step(whiteRegionStart, flameY) *
+		(1.0 - step(whiteRegionEnd, flameY));
+
+
+	float orangeRegionStart = 0.0;
+	float orangeRegionEnd = 0.125;
+
+
+
+	float orangeRegion =
+		step(orangeRegionStart, flameY) *
+		(1.0 - step(orangeRegionEnd, flameY));
+
+	float textureBrightness =
+		max(texColor.r, max(texColor.g, texColor.b));
+
+
+	float visiblePixelMask =
+		smoothstep(0.18, 0.65, textureBrightness);
+
+
+
+	float whiteMask =
+		insideTorch *
+		whiteRegion *
+		visiblePixelMask;
+
+	float orangeMask =
+		insideTorch *
+		orangeRegion *
+		visiblePixelMask;
+
+	vec3 whiteEmission =
+		texColor.rgb *
+		vec3(1.15, 1.05, 0.80) *
+		4.0 *
+		whiteMask;
+
+	vec3 orangeEmission =
+		texColor.rgb *
+		vec3(1.30, 0.95, 0.45) *
+		7.0 *
+		orangeMask;
+
+
+	litColor +=
+		whiteEmission +
+		orangeEmission;
+	
+	
+
 
 	FragColor =
         vec4(
