@@ -15,11 +15,12 @@
 #include "World/RaycastHit.h"
 #include "World/WorldThread.h"
 #include "WindowSize.h"
+#include "Core/SnapshotExchanger.h"
 
 
 class Application {
 public:
-	Application() = default;
+	Application();
 	
 
 	bool InitGL();
@@ -46,6 +47,7 @@ private:
 	WorldThread m_worldThread;
 	WorldRenderer m_wRenderer;
 	SelectionOutlineRenderer m_outlineRenderer;
+	SnapshotExchanger m_exchanger;
 
 	Camera m_camera;
 

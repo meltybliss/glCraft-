@@ -10,7 +10,8 @@
 #include "Gameplay/PlayerSnapshot.h"
 #include "Util/ThreadSafeLogUtils.h"
 #include "ChunkDirtyEntryPriority.h"
-
+#include "Render/DayNightSnapshot.h"
+#include "Core/SnapshotExchanger.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -18,6 +19,11 @@
 #include <deque>
 #include <condition_variable>
 #include <queue>
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+
 
 struct ChunkOffset {
 	int32_t dx = 0;
@@ -28,7 +34,7 @@ struct ChunkOffset {
 class WorldThread {
 public:
 
-	WorldThread() : m_chunkPipeline(&m_world, 114514) {}
+	explicit WorldThread(SnapshotExchanger& exchanger) : m_chunkPipeline(&m_world, 114514), m_exchanger(exchanger) {}
 
 	void StartLoop();
 	void StopLoop();
@@ -104,10 +110,12 @@ public:
 	bool PopPointLightSnap(PointLightsSnapshot& out);
 	bool PopPreviousPointLSnap(PointLightsSnapshot& out);
 
+
 private:
 	World m_world;
 	ChunkPipeline m_chunkPipeline;
 	LightEngine m_lightEngine;
+	SnapshotExchanger& m_exchanger;
 
 	PlayerInput m_inputBuffer{};
 
@@ -150,8 +158,6 @@ private:
 	std::mutex offsetMutex;
 	std::mutex lightVolumeSnapMutex;
 	std::mutex camBlockPosMutex;
-	
-	
 
 	std::deque<WorldCommand> m_commands;
 
@@ -187,6 +193,8 @@ private:
 		m_createdPointLightsSnapshot;
 
 	PointLightsSnapshot	m_previousPointLightSnap;
+
+
 private:
  
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -235,6 +243,8 @@ private:
 	bool HasChunkToCreate();
 
 	void UpdateChunksAround();
+
+	void UpdateDayNightState(float dt);
 	
 	void TickSimulation(float dt);
 	void TickBackground(std::chrono::steady_clock::time_point deadline);
@@ -243,6 +253,7 @@ private:
 	void EnqueueMeshJob(Chunk& c);
 
 
+	void UpdateDayNightSnap();
 	void UpdatePlrSnapshot();
 
 	void PushPendingMesh(PendingMesh& mesh);

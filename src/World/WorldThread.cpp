@@ -605,6 +605,8 @@ void WorldThread::TickSimulation(float dt) {
 
 	ApplyPlayerStatus(dt);//include Player tick inside
 
+	UpdateDayNightState(dt);
+	UpdateDayNightSnap();
 
 	UpdatePlrSnapshot();
 
@@ -615,6 +617,17 @@ void WorldThread::TickSimulation(float dt) {
 void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline) {
 
 	using clock = std::chrono::steady_clock;
+
+
+	if (m_requestedCreateLightVSnap.load()) {
+		ProcCreateLightVSnap();
+	}
+
+	if (m_requestedCreatePointLightSnap.load()) {
+
+		ProcCreatePointLightsSnapshot();
+	}
+
 
 	while (clock::now() < deadline) {
 		if (m_streamNeedsUpdate) {
@@ -635,16 +648,87 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 		if (clock::now() >= deadline) break;
 	}
 
-	if (m_requestedCreateLightVSnap.load()) {
-		ProcCreateLightVSnap();
-	}
-	
-	if (m_requestedCreatePointLightSnap.load()) {
-
-		ProcCreatePointLightsSnapshot();
-	}
 
 }
+
+
+void WorldThread::UpdateDayNightSnap() {
+
+	DayNightSnapshot snapshot;
+
+	auto& state = m_world.GetDayNightState();
+
+	constexpr float pi = 3.14159265359f;
+
+	const float sunAngle =
+		state.timeOfDay *
+		2.0f *
+		pi -
+		pi * 0.5f;
+
+	const float rawSunHeight = std::sin(sunAngle);
+
+	const glm::vec3 directionToSun =
+		glm::normalize(glm::vec3(
+			std::cos(sunAngle),
+			std::sin(sunAngle),
+			0.0f
+		));
+
+
+	const float sunHeight = rawSunHeight;
+
+	const float dayFactor =
+		glm::smoothstep(
+			-0.08f,
+			0.12f,
+			sunHeight
+		);
+
+
+	const float sunIntensity =
+		glm::smoothstep(
+			-0.02f,
+			0.20f,
+			sunHeight
+		);
+
+	const float skyStrength =
+		glm::mix(
+			0.04f,
+			1.0f,
+			dayFactor
+		);
+
+	
+	snapshot.directionToSun = directionToSun;
+	snapshot.sunHeight = sunHeight;
+
+
+	snapshot.dayFactor = dayFactor;
+	snapshot.sunIntensity = sunIntensity;
+	snapshot.skyStrength = skyStrength;
+
+
+	m_exchanger.publish(snapshot);
+}
+
+
+void WorldThread::UpdateDayNightState(float dt) {
+
+	auto& state = m_world.GetDayNightState();
+
+	if (state.paused) return;
+
+
+	state.timeOfDay +=
+		dt *
+		state.timeScale / state.dayLengthSeconds;
+
+	state.timeOfDay -= std::floor(state.timeOfDay);
+
+}
+
 
 void WorldThread::BuildLoadOffsets()
 {

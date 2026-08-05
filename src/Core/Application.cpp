@@ -2,6 +2,11 @@
 #include <iostream>
 
 
+Application::Application() : m_exchanger(), m_worldThread(m_exchanger), m_wRenderer(m_exchanger) {}
+
+
+
+
 void Application::UpdateStreamCenter() {
 
 	int32_t centerCx = static_cast<int32_t>(
