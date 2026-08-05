@@ -44,6 +44,9 @@ uniform vec2 torchMinUV;
 uniform vec2 torchMaxUV;
 
 
+uniform float uSunIntensity;
+
+
 const vec2 disk[12] = vec2[12](
     vec2(-0.326, -0.406),
     vec2(-0.840, -0.074),
@@ -84,7 +87,7 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 
 	float normalLight =
 		max(
-			dot(normal, -sunDirection),
+			dot(normal, sunDirection),
 			0.0
 		);
 
@@ -278,7 +281,7 @@ void main() {
 
 	float wrappedDiffuse =
 		clamp(
-			(dot(normal, -sunDirection) + 0.08) / 1.08,
+			(dot(normal, sunDirection) + 0.08) / 1.08,
 			0.0,
 			1.0
 		);
@@ -287,8 +290,9 @@ void main() {
 		sunColor *
 		wrappedDiffuse *
 		skyVisibility *
-		u_skyStrength *
+		uSunIntensity *
 		(1.0 - shadow * 0.88);
+
 
 	// ínñ Ç©ÇÁÇÃé„Ç¢ígêFîΩéÀ
 	vec3 groundBounce =
