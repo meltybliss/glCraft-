@@ -7,6 +7,7 @@
 #include "World/ChunkMeshSnapshot.h"
 #include "Render/LightVolumeSnapshot.h"
 #include "Util/ThreadSafeLogUtils.h"
+#include "Gameplay/DayNightState.h"
 #include <unordered_map>
 #include <memory>
 #include <unordered_set>
@@ -108,11 +109,11 @@ public:
 
 	void SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count);
 
-
+	DayNightState& GetDayNightState() { return m_dayNight; }
 private:
 private:
 
 	ChunkMap chunks;
-
+	DayNightState m_dayNight;
 
 };

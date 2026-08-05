@@ -11,6 +11,7 @@
 #include <optional>
 #include "Texture.h"
 #include "LightVolumeSnapshot.h"
+#include "Core/SnapshotExchanger.h"
 
 class WorldThread;
 class World;
@@ -18,6 +19,8 @@ class World;
 class WorldRenderer {
 public:
 	//void RebuildDrityChunkMesh(World& w);
+
+	explicit WorldRenderer(SnapshotExchanger& exchanger) : m_exchanger(exchanger) {}
 
 
 	void UploadPendingMeshData(WorldThread& wt);
@@ -61,6 +64,10 @@ private:
 	void DrawFullscreenTriangle();
 
 private:
+
+	SnapshotExchanger& m_exchanger;
+	DayNightSnapshot m_dayNightSnap;
+
 
 	std::unordered_map<uint64_t, ChunkMesh> m_chunkMeshes;
 

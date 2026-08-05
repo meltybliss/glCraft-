@@ -874,6 +874,12 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 
 	glViewport(0, 0, WindowSize::windowWidth, WindowSize::windowHeight);
 
+	DayNightSnapshot dayNight;
+	bool ok = m_exchanger.acquire(dayNight);
+	if (ok) {
+		m_dayNightSnap = std::move(dayNight);
+	}
+
 
 	std::array<PointLight*, 16> pLights;
 	size_t count = 0;
@@ -897,12 +903,12 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 		glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f));
 
 
-	baseShader->SetFloat("u_skyStrength", 1.0f);
+	baseShader->SetFloat("u_skyStrength", m_dayNightSnap.skyStrength);
 
 	baseShader->SetMat4("view", view);
 	baseShader->SetMat4("projection", projection);
 
-	baseShader->SetVec3("sunDirection", sunDirection);
+	baseShader->SetVec3("sunDirection", m_dayNightSnap.directionToSun);
 
 	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
 
