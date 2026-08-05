@@ -57,6 +57,16 @@ void WorldRenderer::InitSkyShaderAndVAO() {
 }
 
 
+void WorldRenderer::UpdateDayNightSnap() {
+
+	DayNightSnapshot dayNight;
+	bool ok = m_exchanger.acquire(dayNight);
+	if (ok) {
+		m_dayNightSnap = std::move(dayNight);
+	}
+
+}
+
 
 
 void WorldRenderer::RenderSky(const Camera& cam) {
@@ -64,7 +74,7 @@ void WorldRenderer::RenderSky(const Camera& cam) {
 	const float aspect =
 		static_cast<float>(WindowSize::windowWidth) /
 		static_cast<float>(WindowSize::windowHeight);
-	float tanHalfFov = std::tan(glm::radians(cam.fov));
+	float tanHalfFov = std::tan(glm::radians(cam.fov) * 0.5f);
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -77,8 +87,8 @@ void WorldRenderer::RenderSky(const Camera& cam) {
 	m_skyShader->SetVec3("cameraRight", cam.right);
 	m_skyShader->SetVec3("cameraUp", cam.up);
 
-
-
+	m_skyShader->SetFloat("uDayFactor", m_dayNightSnap.dayFactor);
+	m_skyShader->SetVec3("sunDirection", m_dayNightSnap.directionToSun);
 
 	glBindVertexArray(m_skyVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -874,11 +884,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 
 	glViewport(0, 0, WindowSize::windowWidth, WindowSize::windowHeight);
 
-	DayNightSnapshot dayNight;
-	bool ok = m_exchanger.acquire(dayNight);
-	if (ok) {
-		m_dayNightSnap = std::move(dayNight);
-	}
+	
 
 
 	std::array<PointLight*, 16> pLights;
@@ -898,17 +904,14 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 
 	);
 
-
-	glm::vec3 sunDirection =
-		glm::normalize(glm::vec3(-0.5f, -1.0f, -0.3f));
-
-
 	baseShader->SetFloat("u_skyStrength", m_dayNightSnap.skyStrength);
 
 	baseShader->SetMat4("view", view);
 	baseShader->SetMat4("projection", projection);
 
 	baseShader->SetVec3("sunDirection", m_dayNightSnap.directionToSun);
+
+	baseShader->SetFloat("uSunIntensity", m_dayNightSnap.sunIntensity);
 
 	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
 

@@ -70,6 +70,9 @@ void Application::Run() {
 
 		m_worldThread.RequestCreatePointLightSnap();
 
+
+		m_wRenderer.UpdateDayNightSnap();
+
 		m_wRenderer.BeginHDRScene();
 
 		m_wRenderer.RenderSky(m_camera);

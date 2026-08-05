@@ -45,6 +45,9 @@ public:
 	void InitLightVolumeTexture();
 
 
+	void UpdateDayNightSnap();
+
+
 	void UpdateLightVolume(const LightVolumeSnapshot& snapshot);
 
 private:
