@@ -135,6 +135,7 @@
     <ClInclude Include="include\Core\ChunkJob.h" />
     <ClInclude Include="include\Core\SnapshotExchanger.h" />
     <ClInclude Include="include\Core\WindowSize.h" />
+    <ClInclude Include="include\Debug\DebugUI.h" />
     <ClInclude Include="include\Gameplay\DayNightState.h" />
     <ClInclude Include="include\Gameplay\Player.h" />
     <ClInclude Include="include\Gameplay\PlayerInput.h" />
