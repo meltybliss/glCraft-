@@ -21,6 +21,19 @@ void Application::UpdateStreamCenter() {
 	m_worldThread.SetDesiredStreamCenter(centerCx, centerCz);
 }
 
+
+void Application::ApplyDebugActions(const DebugActions& actions) {
+
+	if (actions.selectedBlockId) {
+		selectedBlockId = actions.selectedBlockId.value();
+	}
+
+	
+	m_worldThread.SetDebugStateFromDebug(actions);
+
+}
+
+
 void Application::Run() {
 	
 	float lastTime = (float)glfwGetTime();
@@ -96,6 +109,14 @@ void Application::Run() {
 
 		m_wRenderer.EndHDRScene();
 
+
+
+		m_imguiRenderer.BeginFrame();
+
+		DebugActions actions = m_debugUI->Draw();
+		ApplyDebugActions(actions);
+
+		m_imguiRenderer.EndFrame();
 
 		glfwSwapBuffers(m_window);
 
@@ -186,6 +207,16 @@ bool Application::InitGL() {
 
 	m_wRenderer.InitLightVolumeTexture();
 
+
+	//Ç»ÇÒÇ©ÇøÇÂÇ¡Ç∆âòÇ¢ç\ë¢
+	DebugSettings debugSettings = 
+		m_debugBuilder.BuildDebugData(*this, *m_worldThread.GetWorldPtr());
+
+	//UI
+	m_debugUI = std::make_unique<DebugUI>(m_window);
+
+	m_debugUI->ReceiveSettings(std::move(debugSettings));
+
 	return true;
 
 }
@@ -251,6 +282,20 @@ void Application::ProcessInput() {
 	}
 
 
+	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
+		int cursorMode =
+			glfwGetInputMode(m_window, GLFW_CURSOR);
+		if (cursorMode == GLFW_CURSOR_NORMAL) {
+
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			m_debugUI->SetIsOpening(false);
+		}
+		else if (cursorMode == GLFW_CURSOR_DISABLED) {
+
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			m_debugUI->SetIsOpening(true);
+		}
+	}
 
 
 	m_worldThread.SetInput(std::move(input));
@@ -280,13 +325,15 @@ void Application::OnMouseButton(int button, int action) {
 			lastHit.previousX,
 			lastHit.previousY,
 			lastHit.previousZ,     
-			BlockType::STONE
+			(BlockType)selectedBlockId
 		);
 	}
 }
 
 
 void Application::OnMouseMove(double xpos, double ypos) {
+	if (m_debugUI->GetIsOpening()) return;
+
 	if (m_firstMouse) {
 		m_lastMouseX = static_cast<float>(xpos);
 		m_lastMouseY = static_cast<float>(ypos);

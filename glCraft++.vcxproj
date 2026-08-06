@@ -135,6 +135,10 @@
     <ClInclude Include="include\Core\ChunkJob.h" />
     <ClInclude Include="include\Core\SnapshotExchanger.h" />
     <ClInclude Include="include\Core\WindowSize.h" />
+    <ClInclude Include="include\Debugs\DebugActions.h" />
+    <ClInclude Include="include\Debugs\DebugDataBuilder.h" />
+    <ClInclude Include="include\Debugs\DebugSettings.h" />
+    <ClInclude Include="include\Debugs\DebugUI.h" />
     <ClInclude Include="include\Gameplay\DayNightState.h" />
     <ClInclude Include="include\Gameplay\Player.h" />
     <ClInclude Include="include\Gameplay\PlayerInput.h" />
@@ -148,6 +152,7 @@
     <ClInclude Include="include\Render\Camera.h" />
     <ClInclude Include="include\Render\ChunkMesh.h" />
     <ClInclude Include="include\Render\DayNightSnapshot.h" />
+    <ClInclude Include="include\Render\ImGuiRenderer.h" />
     <ClInclude Include="include\Render\LightVolumeSnapshot.h" />
     <ClInclude Include="include\Render\MeshBuilder.h" />
     <ClInclude Include="include\Render\MeshData.h" />
@@ -466,13 +471,22 @@
     <ClInclude Include="third_party\glm\vec3.hpp" />
     <ClInclude Include="third_party\glm\vec4.hpp" />
     <ClInclude Include="third_party\glm\vector_relational.hpp" />
+    <ClInclude Include="third_party\imgui\imconfig.h" />
+    <ClInclude Include="third_party\imgui\imgui.h" />
+    <ClInclude Include="third_party\imgui\imgui_impl_glfw.h" />
+    <ClInclude Include="third_party\imgui\imgui_impl_opengl3.h" />
+    <ClInclude Include="third_party\imgui\imstb_truetype.h" />
+    <ClInclude Include="third_party\imgui\stb_truetype.h" />
     <ClInclude Include="third_party\KHR\khrplatform.h" />
     <ClInclude Include="third_party\stb\stb_image.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
     <ClCompile Include="src\Core\main.cpp" />
+    <ClCompile Include="src\Debugs\DebugDataBuilder.cpp" />
+    <ClCompile Include="src\Debugs\DebugUI.cpp" />
     <ClCompile Include="src\Gameplay\Player.cpp" />
+    <ClCompile Include="src\Render\ImGuiRenderer.cpp" />
     <ClCompile Include="src\Render\MeshBuilder.cpp" />
     <ClCompile Include="src\Render\SelectionOutlineRenderer.cpp" />
     <ClCompile Include="src\Render\Shader.cpp" />
@@ -486,6 +500,12 @@
     <ClCompile Include="third_party\glad.c" />
     <ClCompile Include="third_party\glm\detail\glm.cpp" />
     <ClCompile Include="third_party\glm\glm.cppm" />
+    <ClCompile Include="third_party\imgui\imgui.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="third_party\imgui\imgui_widgets.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="lib\glfw3.lib" />

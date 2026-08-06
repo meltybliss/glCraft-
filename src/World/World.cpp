@@ -959,3 +959,40 @@ std::unique_ptr<LightVolumeSnapshot> World::CreateLightVSnapshot(const glm::i64v
 
 	return out;
 }
+
+
+
+DayNightState const World::GetDayNightStateForDebug() {
+
+	std::lock_guard<std::mutex> lock(dayNightStateMutex);
+
+	return m_dayNight;
+
+}
+
+
+void World::SetDebugStateFromDebug(const DebugActions& actions) {
+
+	DayNightState state;
+
+	if (actions.timePaused) {
+		state.paused = actions.timePaused.value();
+	}
+
+	if (actions.timeOfDay) {
+		state.timeOfDay = actions.timeOfDay.value();
+	}
+
+	if (actions.dayLengthSeconds) {
+		state.dayLengthSeconds = actions.dayLengthSeconds.value();
+	}
+
+	if (actions.timeScale) {
+		state.timeScale = actions.timeScale.value();
+	}
+
+	std::lock_guard<std::mutex> lock(dayNightStateMutex);
+
+	m_dayNight = std::move(state);
+
+}

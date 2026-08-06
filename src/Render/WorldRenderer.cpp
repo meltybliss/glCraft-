@@ -1005,3 +1005,13 @@ void WorldRenderer::DeleteMeshes(WorldThread& wt) {
 	}
 
 }
+
+
+
+DayNightSnapshot const WorldRenderer::GetDayNightSnapForDebug() {
+
+	std::lock_guard<std::mutex> lock(dayNightSnapMutex);
+
+	return m_dayNightSnap;
+
+}

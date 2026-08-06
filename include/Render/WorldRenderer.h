@@ -50,6 +50,7 @@ public:
 
 	void UpdateLightVolume(const LightVolumeSnapshot& snapshot);
 
+	DayNightSnapshot const GetDayNightSnapForDebug();
 private:
 
 	void UploadPointLights(
@@ -80,6 +81,7 @@ private:
 
 	std::unique_ptr<Texture> blockAtlas;
 	
+	std::mutex dayNightSnapMutex;
 
 
 	unsigned int m_shadowFBO = 0;
