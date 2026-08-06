@@ -11,6 +11,7 @@
 #include "Util/ThreadSafeLogUtils.h"
 #include "ChunkDirtyEntryPriority.h"
 #include "Render/DayNightSnapshot.h"
+#include "Debugs/DebugActions.h"
 #include "Core/SnapshotExchanger.h"
 #include <chrono>
 #include <thread>
@@ -110,7 +111,7 @@ public:
 	bool PopPointLightSnap(PointLightsSnapshot& out);
 	bool PopPreviousPointLSnap(PointLightsSnapshot& out);
 
-
+	void SetDebugStateFromDebug(const DebugActions& actions);
 private:
 	World m_world;
 	ChunkPipeline m_chunkPipeline;

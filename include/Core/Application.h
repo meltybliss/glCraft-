@@ -17,6 +17,9 @@
 #include "WindowSize.h"
 #include "Core/SnapshotExchanger.h"
 
+#include "Debugs/DebugDataBuilder.h"
+#include "Debugs/DebugUI.h"
+#include "Render/ImGuiRenderer.h"
 
 class Application {
 public:
@@ -25,6 +28,10 @@ public:
 
 	bool InitGL();
 	void Run();
+
+	const int GetSelectedBlock() const {
+		return selectedBlockId;//test
+	}
 private:
 
 	void OnMouseMove(double xpos, double ypos);
@@ -37,6 +44,8 @@ private:
 	void UpdateStreamCenter();
 
 	void ApplyCameraStatus();
+
+	void ApplyDebugActions(const DebugActions& actions);
 private:
 	GLFWwindow* m_window = nullptr;
 
@@ -55,6 +64,12 @@ private:
 
 	RaycastHit lastHit;
 
+
+	int selectedBlockId = 1;//‚¢‚¸‚êinventory‚ÉˆÚ‚·
+	DebugDataBuilder m_debugBuilder;
+	std::unique_ptr<DebugUI> m_debugUI;
+
+	ImGuiRenderer m_imguiRenderer;
 
 	bool wasSpacePressed = false;
 	double lastSpacePressTime = -1000.0;

@@ -2162,3 +2162,9 @@ bool WorldThread::PopPreviousPointLSnap(PointLightsSnapshot& out) {
 
 	return true;
 }
+
+
+void WorldThread::SetDebugStateFromDebug(const DebugActions& actions) {
+
+	m_world.SetDebugStateFromDebug(actions);
+}
