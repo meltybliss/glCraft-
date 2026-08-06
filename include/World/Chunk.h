@@ -127,6 +127,24 @@ struct Chunk {
 		pointLights.emplace_back(pos, color, radius, intensity);
 	}
 
+	void RemovePointLight(const glm::i64vec3& pos) {
+
+		auto it = std::find_if(
+			pointLights.begin(),
+			pointLights.end(),
+			[&](const PointLight& light) {
+
+				return light.position == pos;
+			}
+
+		);
+
+		if (it != pointLights.end()) {
+			pointLights.erase(it);
+		}
+
+	}
+
 	static bool InBounds(int x, int y, int z) {
 		return (x < CHUNK_WIDTH && x >= 0 && y < CHUNK_HEIGHT && y >= 0 &&
 			z < CHUNK_DEPTH && z >= 0);
