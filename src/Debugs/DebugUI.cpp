@@ -29,6 +29,10 @@ DebugActions DebugUI::Draw() {
 
 	DebugActions actions;
 
+	if (!m_opening) {
+		return actions;
+	}
+
 	ImGui::Begin("Debug");
 
 	ImGui::Text("Block");

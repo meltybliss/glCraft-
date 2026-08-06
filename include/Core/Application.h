@@ -65,13 +65,15 @@ private:
 	RaycastHit lastHit;
 
 
-	int selectedBlockId = 1;//‚¢‚¸‚êinventory‚ÉˆÚ‚·
+	int selectedBlockId = 3;//‚¢‚¸‚êinventory‚ÉˆÚ‚·
 	DebugDataBuilder m_debugBuilder;
 	std::unique_ptr<DebugUI> m_debugUI;
 
 	ImGuiRenderer m_imguiRenderer;
 
 	bool wasSpacePressed = false;
+	bool wasTabPressed = false;
+
 	double lastSpacePressTime = -1000.0;
 	double spectateDoubleTime = 0.5;
 };

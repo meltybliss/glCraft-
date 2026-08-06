@@ -107,10 +107,26 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	auto* c = it->second.get();
 
+
+	BlockType oldB = (BlockType)c->GetBlock(lx, ly, lz);
+
 	c->SetBlock(lx, ly, lz, b);
 
+
+	if (b == BlockType::AIR &&
+		isLightSourceBlock(oldB)) {//test
+
+		c->RemovePointLight(
+			glm::i64vec3(x, y, z)
+		);
+
+		return;
+
+	}
+
+
 	//test
-	if (b == BlockType::TORCH) {
+	if (isLightSourceBlock(b)) {
 		
 		c->SetPointLight(
 			glm::i64vec3(x, y, z),
@@ -188,10 +204,24 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 		}
 	}
 
+	BlockType oldB = (BlockType)c->GetBlock(lx, ly, lz);
+
 	c->SetBlock(lx, ly, lz, b);
 
+
+	if (b == BlockType::AIR &&
+		isLightSourceBlock(oldB)) {//test
+
+		c->RemovePointLight(
+			glm::i64vec3(x, y, z)
+		);
+
+		return;
+
+	}
+
 	//test
-	if (b == BlockType::TORCH) {
+	if (isLightSourceBlock(b)) {
 
 		c->SetPointLight(
 			glm::i64vec3(x, y, z),
@@ -973,26 +1003,24 @@ DayNightState const World::GetDayNightStateForDebug() {
 
 void World::SetDebugStateFromDebug(const DebugActions& actions) {
 
-	DayNightState state;
 
+	std::lock_guard<std::mutex> lock(dayNightStateMutex);
+	
 	if (actions.timePaused) {
-		state.paused = actions.timePaused.value();
+		m_dayNight.paused = actions.timePaused.value();
 	}
 
 	if (actions.timeOfDay) {
-		state.timeOfDay = actions.timeOfDay.value();
+		m_dayNight.timeOfDay = actions.timeOfDay.value();
 	}
 
 	if (actions.dayLengthSeconds) {
-		state.dayLengthSeconds = actions.dayLengthSeconds.value();
+		m_dayNight.dayLengthSeconds = actions.dayLengthSeconds.value();
 	}
 
 	if (actions.timeScale) {
-		state.timeScale = actions.timeScale.value();
+		m_dayNight.timeScale = actions.timeScale.value();
 	}
 
-	std::lock_guard<std::mutex> lock(dayNightStateMutex);
-
-	m_dayNight = std::move(state);
 
 }

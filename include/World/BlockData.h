@@ -69,6 +69,7 @@ inline bool isOpaque(BlockType b) {
 	return b != BlockType::AIR;
 }
 
+
 inline bool isLightSourceBlock(BlockType b) {
 	return b == BlockType::TORCH || b == BlockType::GLOWSTONE;
 }

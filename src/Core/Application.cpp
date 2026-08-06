@@ -233,6 +233,10 @@ void Application::ProcessInput() {
 
 	wasSpacePressed = pressSpace;
 
+	bool pressTab = glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS;
+	bool tabPressedThisFrame = pressTab && !wasTabPressed;
+	wasTabPressed = pressTab;
+
 
 	if (spacePressedThisFrame) {
 		double now = glfwGetTime();
@@ -282,7 +286,7 @@ void Application::ProcessInput() {
 	}
 
 
-	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
+	if (tabPressedThisFrame) {
 		int cursorMode =
 			glfwGetInputMode(m_window, GLFW_CURSOR);
 		if (cursorMode == GLFW_CURSOR_NORMAL) {
@@ -332,7 +336,7 @@ void Application::OnMouseButton(int button, int action) {
 
 
 void Application::OnMouseMove(double xpos, double ypos) {
-	if (m_debugUI->GetIsOpening()) return;
+	
 
 	if (m_firstMouse) {
 		m_lastMouseX = static_cast<float>(xpos);
@@ -350,6 +354,7 @@ void Application::OnMouseMove(double xpos, double ypos) {
 	xoffset *= m_camera.mouseSensitivity;
 	yoffset *= m_camera.mouseSensitivity;
 
+	if (m_debugUI->GetIsOpening()) return;
 	m_worldThread.AddMouseDelta(xoffset, yoffset);
 }
 
