@@ -66,10 +66,10 @@ float RenderStar(vec3 worldDirection)
 {
     const float cellCount = 300.0;
 
-    vec2 starUV =
+    vec2 curSkyUV =
         DirectionToStarUV(worldDirection);
 
-    vec2 p = starUV * cellCount;
+    vec2 p = curSkyUV * cellCount;
 
     vec2 cell = floor(p);
     vec2 local = fract(p);
