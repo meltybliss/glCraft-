@@ -23,7 +23,15 @@ float Hash21(vec2 p) {
     return fract(p.x * p.y);
 }
 
+vec2 hash22(vec2 p)
+{
+    vec2 x = vec2(
+        dot(p, vec2(127.1, 311.7)),
+        dot(p, vec2(269.5, 183.3))
+    );
 
+    return fract(sin(x) * 43758.5453);
+}
 
 float ValueNoise(vec2 p) {
     vec2 i = floor(p);
@@ -35,6 +43,51 @@ float ValueNoise(vec2 p) {
     float c = Hash21(i + vec2(0.0, 1.0));
     float d = Hash21(i + vec2(1.0, 1.0));
     return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+
+
+vec2 DirectionToStarUV(vec3 dir)
+{
+	const float PI = 3.14159265359;
+    
+	dir = normalize(dir);
+
+    float u =
+        atan(dir.z, dir.x) / (2.0 * PI) + 0.5;
+
+    float v =
+        asin(clamp(dir.y, -1.0, 1.0)) / PI + 0.5;
+
+    return vec2(u, v);
+}
+
+
+float RenderStar(vec3 worldDirection)
+{
+    const float cellCount = 300.0;
+
+    vec2 starUV =
+        DirectionToStarUV(worldDirection);
+
+    vec2 p = starUV * cellCount;
+
+    vec2 cell = floor(p);
+    vec2 local = fract(p);
+
+    float existence =
+        Hash21(cell + vec2(17.3, 91.7));
+
+    if (existence < 0.995)
+        return 0.0;
+
+    vec2 starPos = hash22(cell);
+
+    float dist =
+        length(local - starPos);
+
+    float radius = 0.07;
+
+    return 1.0 - step(radius, dist);
 }
 
 
@@ -96,8 +149,8 @@ void main() {
 		);
 
 
-
-
+	 float starDisk = RenderStar(worldDirection);
+		
 
 	 float moonTexture = 0.72 + 0.28 * ValueNoise(worldDirection.xz * 160.0 + worldDirection.y * 47.0);
 
@@ -135,7 +188,7 @@ void main() {
 	 );
 
 	 vec3 sunColor = vec3(1.0, 0.9, 0.65);
-
+	 vec3 starColor = vec3(1.0, 0.95, 0.85);
 
 	 skyColor += sunColor * (
 		sunDisk * 11.0 +
@@ -146,6 +199,8 @@ void main() {
 	skyColor += vec3(0.70, 0.82, 1.15) * moonDisk * moonTexture * nightFactor * 11.0;
     skyColor += vec3(0.12, 0.20, 0.48) * moonGlow * nightFactor * 0.35;
 
+	skyColor += starColor * starDisk * 1.1 * nightFactor;
+	
 	float noise =
 		Hash21(gl_FragCoord.xy) - 0.5;
 
