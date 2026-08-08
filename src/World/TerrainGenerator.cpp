@@ -3,6 +3,25 @@
 
 void TerrainGenerator::GenerateTerrain(Chunk& c) {
 
+	switch (VERSION) {
+
+		case 1: { 
+			GenerateTerrain_V1(c); 
+		
+			break;
+		}
+		default: break;
+
+	}
+
+
+}
+
+
+
+void TerrainGenerator::GenerateTerrain_V1(Chunk& c) {
+
+
 	for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
 		for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
 
@@ -28,7 +47,6 @@ void TerrainGenerator::GenerateTerrain(Chunk& c) {
 			}
 		}
 	}
-	
 
 }
 
