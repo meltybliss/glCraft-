@@ -150,7 +150,9 @@
     <ClInclude Include="include\Math\Vec3.h" />
     <ClInclude Include="include\Persistence\ChunkDiskStorage.h" />
     <ClInclude Include="include\Persistence\ChunkIO.h" />
+    <ClInclude Include="include\Persistence\ChunkLoadTask.h" />
     <ClInclude Include="include\Persistence\ChunkSaveData.h" />
+    <ClInclude Include="include\Persistence\ChunkSaveTask.h" />
     <ClInclude Include="include\Persistence\WorldDiskStorage.h" />
     <ClInclude Include="include\Persistence\WorldSaveData.h" />
     <ClInclude Include="include\Render\BlockFace.h" />

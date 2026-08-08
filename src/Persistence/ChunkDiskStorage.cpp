@@ -2,7 +2,56 @@
 #include "World/Chunk.h"
 
 
-bool ChunkDiskStorage::SaveToDisk(const ChunkSaveData& saveData) const {
+bool ChunkDiskStorage::SaveToDisk(ChunkSaveTask& task) const {
+
+	ChunkSaveData& saveData = task.saveData;
+
+	std::filesystem::create_directories(chunksPath);
+
+	std::filesystem::path filePath =
+		chunksPath /
+		(
+			"c_" +
+			std::to_string(saveData.cx) +
+			"_" +
+			std::to_string(saveData.cz) +
+			".bin"
+		);
+
+
+	std::ofstream file(filePath, std::ios::binary);
+	if (!file) return false;
+
+	constexpr char magic[4] = {
+		'G', 'L', 'C', 'K'
+	};
+
+
+	file.write(magic, sizeof(magic));
+
+	file.write(
+		reinterpret_cast<const char*>(&saveData.cx),
+		sizeof(saveData.cx)
+	);
+
+	file.write(
+		reinterpret_cast<const char*>(&saveData.cz),
+		sizeof(saveData.cz)
+	);
+
+
+	file.write(
+		reinterpret_cast<const char*>(saveData.blocks.data()),
+		sizeof(BlockType) * saveData.blocks.size()
+	);
+
+
+	return file.good();
+}
+
+bool ChunkDiskStorage::SaveToDisk(ChunkSaveTask& task) const {
+
+	ChunkSaveData& saveData = task.saveData;
 
 	std::filesystem::create_directories(chunksPath);
 
@@ -49,66 +98,126 @@ bool ChunkDiskStorage::SaveToDisk(const ChunkSaveData& saveData) const {
 
 
 
-std::optional<ChunkSaveData>
-ChunkDiskStorage::LoadFromDisk(int32_t cx, int32_t cz) {
+ChunkDiskLoadResult ChunkDiskStorage::LoadFromDisk(const ChunkLoadTask& task) {
 
-	std::ifstream file(GetChunkPath(cx, cz), std::ios::binary);
+    const auto path = GetChunkPath(task.cx, task.cz);
 
-	if (!file) return std::nullopt;
+	 if (!std::filesystem::exists(path))
+    {
+        return {
+            .status = ChunkLoadStatus::NotFound,
+            .data = std::nullopt
+        };
+    }
 
-	ChunkSaveData data;
+    std::ifstream file(path, std::ios::binary);
 
-	constexpr char expectedMagic[4] = {
-		'G', 'L', 'C', 'K'
-	};
+    if (!file)
+    {
+        return {
+            .status = ChunkLoadStatus::IOError,
+            .data = std::nullopt
+        };
+    }
 
-	const int expectedBlockCount = Chunk::CHUNK_SIZE;
+    ChunkSaveData data{};
+
+    constexpr char expectedMagic[4] = {
+        'G', 'L', 'C', 'K'
+    };
+
+    char loadedMagic[4]{};
+
+    file.read(loadedMagic, sizeof(loadedMagic));
+
+    if (!file)
+    {
+        return {
+            .status = ChunkLoadStatus::Corrupted,
+            .data = std::nullopt
+        };
+    }
+
+    if (std::memcmp(
+            expectedMagic,
+            loadedMagic,
+            sizeof(expectedMagic)
+        ) != 0)
+    {
+        return {
+            .status = ChunkLoadStatus::Corrupted,
+            .data = std::nullopt
+        };
+    }
+
+    file.read(
+        reinterpret_cast<char*>(&data.cx),
+        sizeof(data.cx)
+    );
+
+    file.read(
+        reinterpret_cast<char*>(&data.cz),
+        sizeof(data.cz)
+    );
+
+    if (!file)
+    {
+        return {
+            .status = ChunkLoadStatus::Corrupted,
+            .data = std::nullopt
+        };
+    }
+
+    if (data.cx != task.cx || data.cz != task.cz)
+    {
+        return {
+            .status = ChunkLoadStatus::Corrupted,
+            .data = std::nullopt
+        };
+    }
+
+    constexpr uint32_t expectedBlockCount =
+        Chunk::CHUNK_SIZE;
+
+    data.blocks.resize(expectedBlockCount);
+
+    file.read(
+        reinterpret_cast<char*>(data.blocks.data()),
+        static_cast<std::streamsize>(
+            sizeof(BlockType) * data.blocks.size()
+        )
+    );
+
+    if (!file)
+    {
+        return {
+            .status = ChunkLoadStatus::Corrupted,
+            .data = std::nullopt
+        };
+    }
+
+    return {
+        .status = ChunkLoadStatus::Loaded,
+        .data = std::move(data)
+    };
+}
 
 
-	char loadedMagic[4]{};
 
-	file.read(
-		&loadedMagic[0],
-		sizeof(loadedMagic)
-	);
+bool ChunkDiskStorage::CheckDataExistence(int32_t cx, int32_t cz) const {
 
-	if (!file) return std::nullopt;
-
-	if (memcmp(
-		expectedMagic,
-		loadedMagic,
-		sizeof(expectedMagic)) != 0) {
-
-		return std::nullopt;
-
-	}
+	std::filesystem::path filePath =
+		chunksPath /
+		(
+			"c_" +
+			std::to_string(cx) +
+			"_" +
+			std::to_string(cz) +
+			".bin"
+			);
 
 
-	file.read(
-		reinterpret_cast<char*>(&data.cx),
-		sizeof(data.cx)
-	);
+	return std::filesystem::exists(filePath);
 
 
-	file.read(
-		reinterpret_cast<char*>(&data.cz),
-		sizeof(data.cz)
-	);
-
-
-	if (data.cx != cx || data.cz != cz)
-		return std::nullopt;
-
-
-	data.blocks.resize(expectedBlockCount);
-
-	file.read(
-		reinterpret_cast<char*>(data.blocks.data()),
-		sizeof(BlockType) * expectedBlockCount
-	);
-
-	if (!file) return std::nullopt;
-
-
-	return data;
 }

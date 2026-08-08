@@ -16,3 +16,17 @@ struct ChunkSaveData {
 
 
 };
+
+enum class ChunkLoadStatus
+{
+    Loaded,
+    NotFound,
+    Corrupted,
+    IOError
+};
+
+struct ChunkDiskLoadResult
+{
+    ChunkLoadStatus status;
+    std::optional<ChunkSaveData> data;
+};

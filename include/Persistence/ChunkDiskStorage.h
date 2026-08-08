@@ -5,15 +5,19 @@
 #include <fstream>
 #include <vector>
 #include <optional>
+#include <cstring>
 
-#include "ChunkSaveData.h"
+#include "ChunkLoadTask.h"
+#include "ChunkSaveTask.h"
 
 class ChunkDiskStorage {
 public:
 
-	bool SaveToDisk(const ChunkSaveData& saveData) const;
+	bool SaveToDisk(ChunkSaveTask& task) const;
 
-	std::optional<ChunkSaveData> LoadFromDisk(int32_t cx, int32_t cz);
+	ChunkDiskLoadResult LoadFromDisk(const ChunkLoadTask& task);
+
+	bool CheckDataExistence(int32_t cx, int32_t cz) const;
 
 private:
 
