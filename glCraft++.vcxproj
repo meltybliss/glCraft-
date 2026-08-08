@@ -148,6 +148,11 @@
     <ClInclude Include="include\Math\UV.h" />
     <ClInclude Include="include\Math\Vec2.h" />
     <ClInclude Include="include\Math\Vec3.h" />
+    <ClInclude Include="include\Persistence\ChunkDiskStorage.h" />
+    <ClInclude Include="include\Persistence\ChunkIO.h" />
+    <ClInclude Include="include\Persistence\ChunkSaveData.h" />
+    <ClInclude Include="include\Persistence\WorldDiskStorage.h" />
+    <ClInclude Include="include\Persistence\WorldSaveData.h" />
     <ClInclude Include="include\Render\BlockFace.h" />
     <ClInclude Include="include\Render\Camera.h" />
     <ClInclude Include="include\Render\ChunkMesh.h" />
@@ -486,6 +491,9 @@
     <ClCompile Include="src\Debugs\DebugDataBuilder.cpp" />
     <ClCompile Include="src\Debugs\DebugUI.cpp" />
     <ClCompile Include="src\Gameplay\Player.cpp" />
+    <ClCompile Include="src\Persistence\ChunkDiskStorage.cpp" />
+    <ClCompile Include="src\Persistence\ChunkIO.cpp" />
+    <ClCompile Include="src\Persistence\WorldDiskStorage.cpp" />
     <ClCompile Include="src\Render\ImGuiRenderer.cpp" />
     <ClCompile Include="src\Render\MeshBuilder.cpp" />
     <ClCompile Include="src\Render\SelectionOutlineRenderer.cpp" />
