@@ -9,11 +9,11 @@ public:
 
 	void GenerateTerrain(Chunk& c);
 
-	uint32_t GetVersion() const {return VERSION;}
+	static uint32_t GetVersion() {return VERSION;}
 private:
 	PerlinNoise2D m_perlinNoise;
 
-	uint32_t VERSION = 1;
+	static constexpr uint32_t VERSION = 1;
 
 private:
 	int GetHeight(int64_t worldX, int64_t worldZ) const;

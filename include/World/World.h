@@ -111,14 +111,20 @@ public:
 	void SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count);
 
 	DayNightState& GetDayNightState() { return m_dayNight; }
+	const DayNightState& GetDayNightState() const { return m_dayNight; }
 
 	DayNightState const GetDayNightStateForDebug();
 	void SetDebugStateFromDebug(const DebugActions& actions);
+
+
+	[[nodiscard]] uint64_t GetWorldSeed() const { return seed; }
 private:
 private:
 
 	ChunkMap chunks;
 	DayNightState m_dayNight;
+
+	uint64_t seed = 114514;
 
 	std::mutex dayNightStateMutex;
 

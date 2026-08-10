@@ -18,11 +18,24 @@ struct Chunk {
 		blocks.fill(BlockType::AIR);
 	}
 	
+
+	void ReceiveBlocksVector(std::vector<BlockType> blocksVector) {
+
+		std::copy_n(
+			blocksVector.begin(),
+			CHUNK_SIZE,
+			blocks.begin()
+
+		);
+
+	}
+
 	int32_t cx = 0;
 	int32_t cz = 0;
 
 
 	bool dirty = false;
+	bool dirtyToSave = false;
 	bool urgentUpdateMesh = false;
 
 

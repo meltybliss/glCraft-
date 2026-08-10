@@ -1,14 +1,7 @@
-#include "Persistence/ChunkIO.h"
+#include "Persistence/PersistenceIO.h"
+#include <iostream>
 
-
-ChunkIO::~ChunkIO() {
-
-	StopThread();
-
-}
-
-
-void ChunkIO::StartThread() {
+void PersistenceIO::StartThread() {
 
 	if (threadRunning.load()) return;
 
@@ -24,7 +17,7 @@ void ChunkIO::StartThread() {
 }
 
 
-void ChunkIO::StopThread() {
+void PersistenceIO::StopThread() {
 
 	threadRunning.store(false);
 
@@ -41,32 +34,35 @@ void ChunkIO::StopThread() {
 
 
 
-void ChunkIO::StartThreadLoop() {
+void PersistenceIO::StartThreadLoop() {
 
-	while (threadRunning.load()) {
+	while (true) {//StopThreradÇµÇΩÇ∆Ç´Ç…saveÇ»Ç«ÇÇ∑Ç◊ÇƒçsÇ¡ÇƒÇ©ÇÁthreadÇèIóπÇ≥ÇπÇΩÇ¢ÇÃÇ≈trueÇ≈âÒÇ∑
 
-		if (Check_HasItTasks()) {
+	
+		{
+			std::unique_lock<std::mutex> lock(m_TaskMutex);
+
+			m_threadCv.wait(lock, [this]() {
+
+				return !threadRunning.load()
+					|| !m_chunkLoadTasks.empty()
+					|| !m_chunkSaveTasks.empty();
+			});
 
 
-			ProcLoadTasks();
-			ProcSaveTasks();
 
-		}
-		else {
+			if (!threadRunning.load()
+				&& m_chunkLoadTasks.empty()
+				&& m_chunkSaveTasks.empty())
 			{
-				std::unique_lock<std::mutex> lock(m_TaskMutex);
-
-				m_threadCv.wait(lock, [this]() {
-
-					return !threadRunning.load()
-						|| !m_chunkLoadTasks.empty()
-						|| !m_chunkSaveTasks.empty();
-				});
+				break;
 			}
+
 		}
+		
 
-		if (!threadRunning.load()) break;
-
+		ProcLoadTasks();
+		ProcSaveTasks();
 
 	}
 
@@ -75,37 +71,39 @@ void ChunkIO::StartThreadLoop() {
 
 
 
-void ChunkIO::RequestToSaveChunk(ChunkSaveData&& data) {
+void PersistenceIO::RequestToSaveChunk(ChunkSaveData&& data) {
 
+	{
+		std::lock_guard<std::mutex> lock(m_TaskMutex);
 
-	std::lock_guard<std::mutex> lock(m_TaskMutex);
-
-	m_chunkSaveTasks.push_back(
-		ChunkSaveTask{
-			.saveData = std::move(data)
-		}
-	);
+		m_chunkSaveTasks.push_back(
+			ChunkSaveTask{
+				.saveData = std::move(data)
+			}
+		);
+	}
 	m_threadCv.notify_one();
 }
 
 
-void ChunkIO::RequestToLoadChunk(int32_t cx, int32_t cz) {
+void PersistenceIO::RequestToLoadChunk(int32_t cx, int32_t cz) {
 
-	
-	std::lock_guard<std::mutex> lock(m_TaskMutex);
+	{
+		std::lock_guard<std::mutex> lock(m_TaskMutex);
 
-	m_chunkLoadTasks.push_back(
-		ChunkLoadTask{
-			.cx = cx,
-			.cz = cz
-		}
-	);
+		m_chunkLoadTasks.push_back(
+			ChunkLoadTask{
+				.cx = cx,
+				.cz = cz
+			}
+		);
+	}
 	m_threadCv.notify_one();
 }
 
 
 
-bool ChunkIO::Check_HasItTasks() {
+bool PersistenceIO::Check_HasItTasks() {
 
 	std::scoped_lock lock(
 		m_TaskMutex
@@ -117,7 +115,7 @@ bool ChunkIO::Check_HasItTasks() {
 
 
 
-void ChunkIO::ProcSaveTasks() {
+void PersistenceIO::ProcSaveTasks() {
 
 
 	std::vector<ChunkSaveTask> pendingResaveTasks;
@@ -164,7 +162,7 @@ void ChunkIO::ProcSaveTasks() {
 
 
 
-void ChunkIO::ProcLoadTasks() {
+void PersistenceIO::ProcLoadTasks() {
 
 	std::vector<ChunkLoadTask> pendingReloadTasks;
 
@@ -236,4 +234,55 @@ void ChunkIO::ProcLoadTasks() {
 		}
 	}
 
+}
+
+
+bool PersistenceIO::CheckDataExistence(int32_t cx, int32_t cz) const {
+
+	return c_diskStorage.CheckDataExistence(cx, cz);
+
+}
+
+
+std::optional<ChunkSaveData> 
+PersistenceIO::PopChunkLoadedResult() {
+
+	ChunkSaveData data;
+
+	{
+		std::lock_guard<std::mutex> lock(m_loadResultMutex);
+		if (m_chunkLoadedResult.empty()) {
+			return std::nullopt;
+		}
+
+		data = std::move(m_chunkLoadedResult.front());
+
+		m_chunkLoadedResult.pop_front();
+	}
+	
+
+
+	return std::move(data);
+
+}
+
+
+
+void PersistenceIO::SaveWorld(WorldSaveData&& data) {
+
+	bool ok = w_diskStorage.SaveToDisk(data);
+
+	if (!ok) {
+		std::cerr << "failed to save world\n";
+	}
+
+}
+
+
+std::optional<WorldSaveData> PersistenceIO::LoadWorld() {
+
+	std::optional<WorldSaveData> data =
+		w_diskStorage.LoadFromDisk();
+
+	return data;
 }

@@ -20,6 +20,7 @@
 #include "Debugs/DebugDataBuilder.h"
 #include "Debugs/DebugUI.h"
 #include "Render/ImGuiRenderer.h"
+#include "Persistence/PersistenceIO.h"
 
 class Application {
 public:
@@ -57,6 +58,8 @@ private:
 	WorldRenderer m_wRenderer;
 	SelectionOutlineRenderer m_outlineRenderer;
 	SnapshotExchanger m_exchanger;
+
+	PersistenceIO m_persistenceIO;
 
 	Camera m_camera;
 
