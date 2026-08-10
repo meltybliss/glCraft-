@@ -26,7 +26,6 @@ private:
 
 	std::filesystem::path GetChunkPath(int32_t cx, int32_t cz) const {
 		return 
-			worldPath /
 			chunksPath /
 			(
 				"c_" +
