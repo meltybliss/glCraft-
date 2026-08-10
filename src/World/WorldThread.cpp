@@ -77,15 +77,17 @@ void WorldThread::StopThread() {
 
 	runningWorldThread.store(false);
 
-	//ここで強制的にworldをsaveし、dirtyToSaveのchunksをtask化する。
-	ForcedSave_World();
-	ForcedSave_Chunks();
-
 	Wake();
 
 	if (worldThread.joinable()) {
 		worldThread.join();
 	}
+
+
+	//ここで強制的にworldをsaveし、dirtyToSaveのchunksをtask化する。
+	ForcedSave_World();
+	ForcedSave_Chunks();
+
 
 
 	m_chunkPipeline.StopWorkerThread();
