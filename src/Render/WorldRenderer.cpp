@@ -933,7 +933,6 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_3D, m_lightVolumeTexture);
 
-
 	for (auto& [key, mesh] : m_chunkMeshes) {
 
 		count = 0;

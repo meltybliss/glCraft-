@@ -437,10 +437,7 @@ void Application::ProcessInput() {
 	}
 
 
-	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
-		m_session.GetWorldThread().Debug_CurStreamCenter();
-	}
-
+	
 
 	if (tabPressedThisFrame) {
 		int cursorMode =

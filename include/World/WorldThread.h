@@ -97,7 +97,6 @@ public:
 
 	void Rebuild_allChunks();
 
-	void Debug_CurStreamCenter();
 
 	[[nodiscard]] PlayerSnapshot GetPlrSnapshot() {
 		std::lock_guard<std::mutex> lock(snapshotMutex);
