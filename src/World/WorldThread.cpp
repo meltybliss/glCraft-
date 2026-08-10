@@ -1330,15 +1330,6 @@ void WorldThread::ProcOneChunkResult() {
 
 
 
-void WorldThread::Debug_CurStreamCenter() {
-
-	std::lock_guard<std::mutex> lock(streamCenterMutex);
-
-	std::cout << m_streamCx << ", " << m_streamCz << "\n";
-
-}
-
-
 void WorldThread::ProcChunkResults() {
 	MeshChunkResult meshResult;
 	GeneratedChunkResult genResult;
@@ -1564,7 +1555,7 @@ void WorldThread::FinishLightTask(LightTask& task) {
 			MarkChunkDirty(*c);
 		}
 
-		MarkNeighborChunksUrgentDirty(c->cx, c->cz);
+		MarkNeighborChunksDirty(c->cx, c->cz);
 
 	}
 
@@ -1584,7 +1575,7 @@ void WorldThread::FinishLightTask(LightTask& task) {
 			MarkChunkDirty(*c);
 		}
 
-		MarkNeighborChunksUrgentDirty(c->cx, c->cz);
+		MarkNeighborChunksDirty(c->cx, c->cz);
 
 	}
 
@@ -1608,7 +1599,7 @@ void WorldThread::ProcLightTasks() {
 
 	bool frontBudgetUsed = false;
 
-	{
+	/* {
 		size_t i = 0;
 
 		while (i < m_urgentLightTasks.size() &&
@@ -1650,9 +1641,75 @@ void WorldThread::ProcLightTasks() {
 
 		}
 
+	}*/
+
+	{
+	
+		while (budget > 0 && !m_urgentLightTasks.empty()) {
+
+			int usedBudget = normalBudget;
+			auto& task = m_urgentLightTasks.front();
+
+			
+
+			ProcessLightTask(task, budget);
+
+
+			bool finished = false;
+
+			if (task.phase == Phase::ADD) {
+				finished = task.bfs_queue.empty();
+			}
+			else if (task.phase == Phase::REMOVE) {
+				finished = task.remove_queue.empty();
+			}
+
+			if (finished) {
+
+				FinishLightTask(task);
+
+				m_urgentLightTasks.pop_front();
+				continue;//erase‚µ‚Ä‚é‚Ì‚Å‹l‚ß‚é‚Ì‚Å++i”ò‚Î‚·
+			}
+
+		}
+
 	}
 
-	size_t i = 0;
+
+	while (budget > 0 && !m_lightTasks.empty()) {
+
+		int usedBudget = normalBudget;
+		auto& task = m_lightTasks.front();
+
+
+
+		ProcessLightTask(task, budget);
+
+
+
+		bool finished = false;
+
+		if (task.phase == Phase::ADD) {
+			finished = task.bfs_queue.empty();
+		}
+		else if (task.phase == Phase::REMOVE) {
+			finished = task.remove_queue.empty();
+		}
+
+		if (finished) {
+
+			FinishLightTask(task);
+
+			m_lightTasks.pop_front();
+			continue;//erase‚µ‚Ä‚é‚Ì‚Å‹l‚ß‚é‚Ì‚Å++i”ò‚Î‚·
+		}
+
+
+	}
+
+
+	/*size_t i = 0;
 	while (i < m_lightTasks.size() &&
 		   budget > 0 &&
 		   !m_lightTasks.empty()) {
@@ -1693,7 +1750,7 @@ void WorldThread::ProcLightTasks() {
 
 		++i;
 
-	}
+	}*/
 
 
 
