@@ -10,16 +10,21 @@
 #include <condition_variable>
 #include <deque>
 
-class ChunkIO {
+class PersistenceIO {
 public:
-
-	~ChunkIO();
 
 	void StartThread();
 	void StopThread();
 
 	void RequestToSaveChunk(ChunkSaveData&& c);
 	void RequestToLoadChunk(int32_t cx, int32_t cz);
+
+	void SaveWorld(WorldSaveData&& data);
+	std::optional<WorldSaveData> LoadWorld();
+
+	bool CheckDataExistence(int32_t cx, int32_t cz) const;
+
+	std::optional<ChunkSaveData> PopChunkLoadedResult();
 private:
 
 	void StartThreadLoop();
@@ -47,7 +52,7 @@ private:
 
 	
 
-	std::vector<ChunkSaveData> m_chunkLoadedResult;
+	std::deque<ChunkSaveData> m_chunkLoadedResult;
 
 	std::condition_variable m_threadCv;
 

@@ -1,10 +1,12 @@
 #include "World/WorldThread.h"
+#include "Persistence/PersistenceIO.h"
 #include "Render/Camera.h"
+#include "World/TerrainGenerator.h"
 #include <iostream>
 
 
 
-void WorldThread::StartLoop() {
+void WorldThread::StartThread() {
 
 	if (runningWorldThread.load()) {
 		return;
@@ -71,10 +73,13 @@ void WorldThread::StartLoop() {
 
 
 
-void WorldThread::StopLoop() {
+void WorldThread::StopThread() {
 
 	runningWorldThread.store(false);
 
+	//Ç±Ç±Ç≈ã≠êßìIÇ…worldÇsaveÇµÅAdirtyToSaveÇÃchunksÇtaskâªÇ∑ÇÈÅB
+	ForcedSave_World();
+	ForcedSave_Chunks();
 
 	Wake();
 
@@ -84,6 +89,7 @@ void WorldThread::StopLoop() {
 
 
 	m_chunkPipeline.StopWorkerThread();
+	m_persistenceIO.StopThread();
 }
 
 void WorldThread::SubmitEditBlock(
@@ -110,6 +116,51 @@ void WorldThread::SubmitEditBlock(
 
 	Wake();
 
+}
+
+
+void WorldThread::ForcedSave_World() {
+
+	m_persistenceIO.SaveWorld(CreateWorldSaveData());
+
+
+}
+
+void WorldThread::ForcedSave_Chunks() {
+
+	QueueChunksToAutoSave();
+
+}
+
+
+void WorldThread::CheckAutoSave() {
+
+	const auto now = Clock::now();
+
+	if (now < m_nextAutoSaveTime) return;
+
+	//kokode save
+	QueueChunksToAutoSave();
+	m_persistenceIO.SaveWorld(CreateWorldSaveData());
+
+	m_nextAutoSaveTime += AUTO_SAVE_INTERVAL;
+}
+
+
+WorldSaveData WorldThread::CreateWorldSaveData() const {
+
+	WorldSaveData data;
+
+	const DayNightState& state = m_world.GetDayNightState();
+
+	data.playerPos = m_plr.GetPos();
+	data.worldTime = state.timeOfDay;
+	data.seed = m_world.GetWorldSeed();
+
+	data.generatorVersion = TerrainGenerator::GetVersion();
+	
+
+	return data;
 }
 
 
@@ -618,6 +669,8 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 	using clock = std::chrono::steady_clock;
 
+	CheckAutoSave();
+
 
 	if (m_requestedCreateLightVSnap.load()) {
 		ProcCreateLightVSnap();
@@ -627,6 +680,7 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 		ProcCreatePointLightsSnapshot();
 	}
+
 
 
 	while (clock::now() < deadline) {
@@ -639,6 +693,10 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 		if (clock::now() >= deadline) break;
 
 		ProcOneChunkResult();
+		if (clock::now() >= deadline) break;
+
+		ProcOne_Disk_ChunkLoadResult();
+
 		if (clock::now() >= deadline) break;
 
 		ProcLightTasks();
@@ -805,20 +863,60 @@ bool WorldThread::RequestOneMissingChunkAround() {
 
 		}
 
-		ChunkJob job;
-		job.cx = cx;
-		job.cz = cz;
-		job.type = JobType::CREATE_CHUNK;
+
+		if (m_persistenceIO.CheckDataExistence(cx, cz)) {
+
+			m_persistenceIO.RequestToLoadChunk(cx, cz);
+
+		}
+		else {
+			ChunkJob job;
+			job.cx = cx;
+			job.cz = cz;
+			job.type = JobType::CREATE_CHUNK;
 
 
-		m_pendingChunkKeys.insert(key);
-		m_chunkPipeline.EnqueueJob(std::move(job));
-
+			m_pendingChunkKeys.insert(key);
+			m_chunkPipeline.EnqueueJob(std::move(job));
+		}
 		return true;
 	}
 
 	return false;
 }
+
+
+
+void WorldThread::ProcOne_Disk_ChunkLoadResult() {
+	auto& chunks = m_world.GetChunks();
+
+	std::optional<ChunkSaveData> saveData =
+		m_persistenceIO.PopChunkLoadedResult();
+
+	if (!saveData) return;
+
+	int32_t& cx = saveData->cx;
+	int32_t& cz = saveData->cz;
+
+	auto it = chunks.find(Index(cx, cz));
+
+	if (it == chunks.end()) {
+
+		std::unique_ptr<Chunk> c = std::make_unique<Chunk>(cx, cz);
+
+		c->ReceiveBlocksVector(saveData->blocks);
+		c->cx = cx;
+		c->cz = cz;
+
+		chunks[Index(cx, cz)] = std::move(c);
+
+
+
+		Start_SkyLightTaskForNewChunk(*chunks[Index(cx, cz)]);
+
+	}
+}
+
 
 
 bool WorldThread::HasChunkToErase() {
@@ -1573,6 +1671,36 @@ void WorldThread::ProcLightTasks() {
 
 
 
+
+void WorldThread::QueueChunksToAutoSave() {
+
+
+	auto& chunks = m_world.GetChunks();
+
+	for (auto& [key, c_ptr] : chunks) {
+		if (!c_ptr) continue;
+		if (!c_ptr->dirtyToSave) continue;
+		
+
+		ChunkSaveData data;
+		data.cx = c_ptr->cx;
+		data.cz = c_ptr->cz;
+
+		data.blocks.assign(
+			c_ptr->blocks.begin(),
+			c_ptr->blocks.end()
+		);
+
+		m_persistenceIO.RequestToSaveChunk(std::move(data));
+
+		c_ptr->dirtyToSave = false;
+
+	}
+
+}
+
+
+
 void WorldThread::DispatchDirtyMeshJobs() {
 
 	auto& chunks = m_world.GetChunks();
@@ -1666,7 +1794,7 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 
 
 	c.dirty = true;
-
+	c.dirtyToSave = true;
 
 	const int32_t cx = c.cx;
 	const int32_t cz = c.cz;

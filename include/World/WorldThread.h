@@ -12,6 +12,7 @@
 #include "ChunkDirtyEntryPriority.h"
 #include "Render/DayNightSnapshot.h"
 #include "Debugs/DebugActions.h"
+#include "Persistence/WorldSaveData.h"
 #include "Core/SnapshotExchanger.h"
 #include <chrono>
 #include <thread>
@@ -20,6 +21,7 @@
 #include <deque>
 #include <condition_variable>
 #include <queue>
+
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -32,13 +34,17 @@ struct ChunkOffset {
 };
 
 
+class PersistenceIO;
+
+
 class WorldThread {
 public:
 
-	explicit WorldThread(SnapshotExchanger& exchanger) : m_chunkPipeline(&m_world, 114514), m_exchanger(exchanger) {}
+	WorldThread(SnapshotExchanger& exchanger, PersistenceIO& pIO)
+		: m_chunkPipeline(&m_world, m_world.GetWorldSeed()), m_persistenceIO(pIO), m_exchanger(exchanger)  {}
 
-	void StartLoop();
-	void StopLoop();
+	void StartThread();
+	void StopThread();
 
 	void SubmitEditBlock(
 		int64_t worldX,
@@ -117,6 +123,7 @@ private:
 	ChunkPipeline m_chunkPipeline;
 	LightEngine m_lightEngine;
 	SnapshotExchanger& m_exchanger;
+	PersistenceIO& m_persistenceIO;
 
 	PlayerInput m_inputBuffer{};
 
@@ -181,7 +188,7 @@ private:
 
 
 	std::unique_ptr<LightVolumeSnapshot> m_lightVSnapshot;
-	glm::i64vec3 camBlockPosBuffer;
+	glm::i64vec3 camBlockPosBuffer{};
 
 
 	std::atomic<bool> m_requestedCreatePointLightSnap;
@@ -195,6 +202,13 @@ private:
 
 	PointLightsSnapshot	m_previousPointLightSnap;
 
+
+	using Clock = std::chrono::steady_clock;
+
+	Clock::time_point m_nextAutoSaveTime;
+
+	static constexpr auto AUTO_SAVE_INTERVAL =
+		std::chrono::seconds(30);
 
 private:
  
@@ -217,6 +231,8 @@ private:
 	void ProcChunkResults();
 	void ProcOneChunkResult();
 
+	void ProcOne_Disk_ChunkLoadResult();
+
 	void ProcCreateLightVSnap();
 	void ProcCreatePointLightsSnapshot();
 
@@ -227,6 +243,16 @@ private:
 		int64_t z,
 		BlockType b
 	);
+
+	void QueueChunksToAutoSave();
+	void ForcedSave_World();
+	void ForcedSave_Chunks();
+
+	void CheckAutoSave();
+
+	void SaveWorldData();
+
+	WorldSaveData CreateWorldSaveData() const;
 
 	void ApplyStreamCenter();
 

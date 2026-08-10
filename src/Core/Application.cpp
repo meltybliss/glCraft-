@@ -2,7 +2,7 @@
 #include <iostream>
 
 
-Application::Application() : m_exchanger(), m_worldThread(m_exchanger), m_wRenderer(m_exchanger) {}
+Application::Application() : m_exchanger(), m_worldThread(m_exchanger, m_persistenceIO), m_wRenderer(m_exchanger) {}
 
 
 
@@ -42,7 +42,8 @@ void Application::Run() {
 	int frameCount = 0;
 
 
-	m_worldThread.StartLoop();
+	m_worldThread.StartThread();
+	m_persistenceIO.StartThread();
 
 	while (!glfwWindowShouldClose(m_window)) {
 		float curTime = (float)glfwGetTime();
@@ -138,7 +139,7 @@ void Application::Run() {
 
 	}
 
-	m_worldThread.StopLoop();
+	m_worldThread.StopThread();
 
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
