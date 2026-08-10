@@ -6,6 +6,30 @@
 
 
 
+void WorldThread::CreateNewWorld(uint64_t seed) {
+
+	m_world.SetWorldSeed(seed);
+
+	m_chunkPipeline.SetWorldSeed(seed);
+}
+
+void WorldThread::ApplyLoadedWorld(WorldSaveData& saveData) {
+
+	m_world.SetWorldSeed(saveData.seed);
+	m_chunkPipeline.SetWorldSeed(saveData.seed);
+	m_world.SetWorldTime(saveData.worldTime);
+
+	m_plr.SetPosition(saveData.playerPos);
+	
+
+}
+
+
+void WorldThread::SetWorldSelectionResult(WorldSelectionResult& info) {
+
+	m_world.SetWorldSelectionResult(info);
+}
+
 void WorldThread::StartThread() {
 
 	if (runningWorldThread.load()) {
@@ -837,6 +861,8 @@ bool WorldThread::RequestOneMissingChunkAround() {
 
 	auto& chunks = m_world.GetChunks();
 
+	auto worldInfo = m_world.GetWorldInfo();
+
 	while (m_nextLoadOffset < m_loadOffsets.size()) {
 
 		auto& offset = m_loadOffsets[m_nextLoadOffset];
@@ -866,7 +892,9 @@ bool WorldThread::RequestOneMissingChunkAround() {
 		}
 
 
-		if (m_persistenceIO.CheckDataExistence(cx, cz)) {
+		if (worldInfo.action == WorldSelectionAction::LoadWorld && 
+			m_persistenceIO.CheckDataExistence(cx, cz)) {
+
 
 			m_persistenceIO.RequestToLoadChunk(cx, cz);
 

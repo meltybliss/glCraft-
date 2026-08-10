@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ChunkDiskStorage.h"
 #include "WorldDiskStorage.h"
 #include "ChunkSaveTask.h"

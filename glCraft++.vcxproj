@@ -132,7 +132,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\Core\Application.h" />
+    <ClInclude Include="include\Core\AppState.h" />
     <ClInclude Include="include\Core\ChunkJob.h" />
+    <ClInclude Include="include\Core\GameSession.h" />
     <ClInclude Include="include\Core\SnapshotExchanger.h" />
     <ClInclude Include="include\Core\WindowSize.h" />
     <ClInclude Include="include\Debugs\DebugActions.h" />
@@ -167,6 +169,8 @@
     <ClInclude Include="include\Render\Shader.h" />
     <ClInclude Include="include\Render\Texture.h" />
     <ClInclude Include="include\Render\WorldRenderer.h" />
+    <ClInclude Include="include\UI\WorldSelectionUI.h" />
+    <ClInclude Include="include\Util\RandomUtil.h" />
     <ClInclude Include="include\Util\ThreadSafeLogUtils.h" />
     <ClInclude Include="include\World\BlockData.h" />
     <ClInclude Include="include\World\Chunk.h" />
@@ -185,6 +189,7 @@
     <ClInclude Include="include\World\World.h" />
     <ClInclude Include="include\World\WorldCommand.h" />
     <ClInclude Include="include\World\WorldPos.h" />
+    <ClInclude Include="include\World\WorldSelectionResult.h" />
     <ClInclude Include="include\World\WorldThread.h" />
     <ClInclude Include="third_party\glad\glad.h" />
     <ClInclude Include="third_party\GLFW\glfw3.h" />
@@ -489,6 +494,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Core\Application.cpp" />
+    <ClCompile Include="src\Core\GameSession.cpp" />
     <ClCompile Include="src\Core\main.cpp" />
     <ClCompile Include="src\Debugs\DebugDataBuilder.cpp" />
     <ClCompile Include="src\Debugs\DebugUI.cpp" />
@@ -502,6 +508,8 @@
     <ClCompile Include="src\Render\Shader.cpp" />
     <ClCompile Include="src\Render\Texture.cpp" />
     <ClCompile Include="src\Render\WorldRenderer.cpp" />
+    <ClCompile Include="src\UI\WorldSelectionUI.cpp" />
+    <ClCompile Include="src\Util\RandomUtil.cpp" />
     <ClCompile Include="src\World\ChunkPipeline.cpp" />
     <ClCompile Include="src\World\LightEngine.cpp" />
     <ClCompile Include="src\World\TerrainGenerator.cpp" />

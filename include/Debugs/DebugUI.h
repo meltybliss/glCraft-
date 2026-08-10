@@ -13,10 +13,7 @@
 
 class DebugUI {
 public:
-
-	explicit DebugUI(GLFWwindow* window);
-	~DebugUI();
-
+	DebugUI() = default;
 	DebugUI(const DebugUI& ui) = delete;
 	DebugUI& operator=(const DebugUI& ui) = delete;
 	
@@ -26,8 +23,6 @@ public:
 	bool GetIsOpening() const { return m_opening; }
 	void SetIsOpening(bool value) { m_opening = value; }
 private:
-
-	GLFWwindow* m_window;
 
 	DebugSettings m_settings;
 	bool m_opening = false;

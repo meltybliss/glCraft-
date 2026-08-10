@@ -41,7 +41,13 @@ class WorldThread {
 public:
 
 	WorldThread(SnapshotExchanger& exchanger, PersistenceIO& pIO)
-		: m_chunkPipeline(&m_world, m_world.GetWorldSeed()), m_persistenceIO(pIO), m_exchanger(exchanger)  {}
+		: m_chunkPipeline(&m_world), m_persistenceIO(pIO), m_exchanger(exchanger)  {}
+
+
+	void SetWorldSelectionResult(WorldSelectionResult& info);
+
+	void CreateNewWorld(uint64_t seed);
+	void ApplyLoadedWorld(WorldSaveData& saveData);
 
 	void StartThread();
 	void StopThread();
@@ -119,6 +125,8 @@ public:
 
 	void SetDebugStateFromDebug(const DebugActions& actions);
 private:
+	
+
 	World m_world;
 	ChunkPipeline m_chunkPipeline;
 	LightEngine m_lightEngine;
@@ -250,7 +258,6 @@ private:
 
 	void CheckAutoSave();
 
-	void SaveWorldData();
 
 	WorldSaveData CreateWorldSaveData() const;
 

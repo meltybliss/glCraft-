@@ -1024,3 +1024,9 @@ void World::SetDebugStateFromDebug(const DebugActions& actions) {
 
 
 }
+
+
+
+void World::SetWorldSeed(uint64_t seed) {
+	m_seed = seed;
+}

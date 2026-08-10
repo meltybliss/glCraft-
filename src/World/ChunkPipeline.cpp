@@ -64,7 +64,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 			if (it != m_buildingChunks.end()) {
 				auto& c = it->second;
 
-				m_terrainGen.GenerateTerrain(*c);
+				m_terrainGen->GenerateTerrain(*c);
 
 
 

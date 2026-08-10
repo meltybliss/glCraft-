@@ -2,7 +2,7 @@
 #include <iostream>
 
 
-Application::Application() : m_exchanger(), m_worldThread(m_exchanger, m_persistenceIO), m_wRenderer(m_exchanger) {}
+Application::Application() : m_exchanger(), m_session(m_exchanger, m_persistenceIO), m_wRenderer(m_exchanger) {}
 
 
 
@@ -18,7 +18,7 @@ void Application::UpdateStreamCenter() {
 	);
 
 
-	m_worldThread.SetDesiredStreamCenter(centerCx, centerCz);
+	m_session.GetWorldThread().SetDesiredStreamCenter(centerCx, centerCz);
 }
 
 
@@ -29,7 +29,7 @@ void Application::ApplyDebugActions(const DebugActions& actions) {
 	}
 
 	
-	m_worldThread.SetDebugStateFromDebug(actions);
+	m_session.GetWorldThread().SetDebugStateFromDebug(actions);
 
 }
 
@@ -42,7 +42,6 @@ void Application::Run() {
 	int frameCount = 0;
 
 
-	m_worldThread.StartThread();
 	m_persistenceIO.StartThread();
 
 	while (!glfwWindowShouldClose(m_window)) {
@@ -52,72 +51,14 @@ void Application::Run() {
 
 		glfwPollEvents();
 
-		ProcessInput();
+		Tick_main();
 
-
-		ApplyCameraStatus();
-
-		UpdateRayHit();//raycast
-		UpdateStreamCenter();
-
-
-
-		//m_wRenderer.RebuildDrityChunkMesh(m_world);
-		m_wRenderer.UploadPendingMeshData(m_worldThread);
-
-		m_worldThread.RequestCreateLightVSnap(m_camera);
-
-		//äÆê¨çœÇ›SnapshotÇ™Ç†ÇÍÇŒéÛÇØéÊÇÈ
-		std::unique_ptr<LightVolumeSnapshot> lightSnapshot;
-
-		if (m_worldThread.PopCreatedLightVSnapshot(lightSnapshot)) {
-			m_wRenderer.UpdateLightVolume(*lightSnapshot);//test
-		}
-
-
+	
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-		m_wRenderer.DeleteMeshes(m_worldThread);
-
-		m_wRenderer.RenderShadowPass(m_camera);
-
-		m_worldThread.RequestCreatePointLightSnap();
-
-
-		m_wRenderer.UpdateDayNightSnap();
-
-		m_wRenderer.BeginHDRScene();
-
-		m_wRenderer.RenderSky(m_camera);
-
-		PointLightsSnapshot out;
-		bool created = m_worldThread.PopPointLightSnap(out);
-		if (!created) {
-			bool ok = m_worldThread.PopPreviousPointLSnap(out);
-
-			if (!ok) {
-				std::cerr << "RequestCreatePlSnap seems to be late\n";
-				
-			}
-		}
+		Render_main();
 	
-		m_wRenderer.RenderWorld(m_camera, m_worldThread.GetWorldPtr(), out);
-		
-
-		RenderOutline();//switch shader
-		
-
-		m_wRenderer.EndHDRScene();
-
-
-
-		m_imguiRenderer.BeginFrame();
-
-		DebugActions actions = m_debugUI->Draw();
-		ApplyDebugActions(actions);
-
-		m_imguiRenderer.EndFrame();
 
 		glfwSwapBuffers(m_window);
 
@@ -139,10 +80,228 @@ void Application::Run() {
 
 	}
 
-	m_worldThread.StopThread();
+	m_session.Stop();
+
+	m_imguiRenderer.Shutdown();
+
 
 	glfwDestroyWindow(m_window);
 	glfwTerminate();
+
+}
+
+
+void Application::EnterWorld() {
+
+	glfwSetInputMode(
+		m_window,
+		GLFW_CURSOR,
+		GLFW_CURSOR_DISABLED
+	);
+
+	m_firstMouse = true;
+
+
+
+	m_state = AppState::PLAY;
+}
+
+
+void Application::Tick_main() {
+
+	switch (m_state) {
+		case AppState::TITLE: break;
+
+		case AppState::WORLD_SELECTION: {
+
+			//receive the action from the ui lets the user choose between LOAD the exsisting world and CREATE new world
+			auto worldInfo =
+				m_selectionUI.Get_SelectionResult();
+
+
+			if (worldInfo.action == WorldSelectionAction::LoadWorld) {
+
+				std::optional<WorldSaveData> data = m_persistenceIO.LoadWorld();
+
+				if (data) {
+
+
+					m_session.LoadWorld(*data);
+
+
+					CreateWorldDebugUI();
+
+
+					EnterWorld();
+					m_session.Start(worldInfo);//start worldThread
+
+				}
+				else {
+					std::cerr << "failed to load the world\n";
+
+					//create new world
+
+					m_session.CreateNewWorld();
+				
+					CreateWorldDebugUI();
+					
+					EnterWorld();
+					m_session.Start(worldInfo);
+
+				}				
+
+			}
+			else if (worldInfo.action == WorldSelectionAction::CreateNew) {
+
+				m_session.CreateNewWorld();
+
+				CreateWorldDebugUI();
+				
+
+				EnterWorld();
+				m_session.Start(worldInfo);
+
+			}
+
+
+			break;
+		}
+
+		case AppState::PLAY: {
+
+			Tick_playing();
+
+			break;
+		}
+
+
+	}
+
+
+}
+
+
+void Application::Render_main() {
+
+
+	m_imguiRenderer.BeginFrame();
+
+
+	switch (m_state) {
+		case AppState::TITLE: break;
+
+		case AppState::WORLD_SELECTION: {
+
+			//render the ui lets the user choose between LOAD the exsisting world and CREATE new world
+
+			m_selectionUI.Render();
+
+			break;
+		}
+
+		case AppState::PLAY: {
+
+			Render_playing();
+
+			break;
+
+		}
+	}
+
+
+	m_imguiRenderer.EndFrame();
+
+}
+
+
+
+void Application::Tick_playing() {
+
+
+	ProcessInput();
+
+
+	ApplyCameraStatus();
+
+	UpdateRayHit();//raycast
+	UpdateStreamCenter();
+
+
+
+	//m_wRenderer.RebuildDrityChunkMesh(m_world);
+	m_wRenderer.UploadPendingMeshData(m_session.GetWorldThread());
+
+	m_session.GetWorldThread().RequestCreateLightVSnap(m_camera);
+
+	//äÆê¨çœÇ›SnapshotÇ™Ç†ÇÍÇŒéÛÇØéÊÇÈ
+	std::unique_ptr<LightVolumeSnapshot> lightSnapshot;
+
+	if (m_session.GetWorldThread().PopCreatedLightVSnapshot(lightSnapshot)) {
+		m_wRenderer.UpdateLightVolume(*lightSnapshot);//test
+	}
+
+
+
+}
+
+
+
+void Application::Render_playing() {
+
+	m_wRenderer.DeleteMeshes(m_session.GetWorldThread());
+
+	m_wRenderer.RenderShadowPass(m_camera);
+
+	m_session.GetWorldThread().RequestCreatePointLightSnap();
+
+
+	m_wRenderer.UpdateDayNightSnap();
+
+	m_wRenderer.BeginHDRScene();
+
+	m_wRenderer.RenderSky(m_camera);
+
+	PointLightsSnapshot out;
+	bool created = m_session.GetWorldThread().PopPointLightSnap(out);
+	if (!created) {
+		bool ok = m_session.GetWorldThread().PopPreviousPointLSnap(out);
+
+		if (!ok) {
+			std::cerr << "RequestCreatePlSnap seems to be late\n";
+
+		}
+	}
+
+	m_wRenderer.RenderWorld(
+		m_camera,
+		m_session.GetWorldThread().GetWorldPtr(),
+		out
+	);
+
+
+	RenderOutline();//switch shader
+
+
+	m_wRenderer.EndHDRScene();
+
+
+	DebugActions actions = m_debugUI->Draw();
+	ApplyDebugActions(actions);
+
+}
+
+
+void Application::CreateWorldDebugUI() {
+
+	//Ç»ÇÒÇ©ÇøÇÂÇ¡Ç∆âòÇ¢ç\ë¢
+	DebugSettings debugSettings =
+		m_debugBuilder.BuildDebugData(*this, *m_session.GetWorldThread().GetWorldPtr());
+
+	//UI
+	m_debugUI = std::make_unique<DebugUI>();
+
+	m_debugUI->ReceiveSettings(std::move(debugSettings));
+
 
 }
 
@@ -185,8 +344,11 @@ bool Application::InitGL() {
 
 	});
 
-
-	glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetInputMode(
+		m_window,
+		GLFW_CURSOR,
+		GLFW_CURSOR_NORMAL
+	);
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -208,15 +370,8 @@ bool Application::InitGL() {
 
 	m_wRenderer.InitLightVolumeTexture();
 
-
-	//Ç»ÇÒÇ©ÇøÇÂÇ¡Ç∆âòÇ¢ç\ë¢
-	DebugSettings debugSettings = 
-		m_debugBuilder.BuildDebugData(*this, *m_worldThread.GetWorldPtr());
-
 	//UI
-	m_debugUI = std::make_unique<DebugUI>(m_window);
-
-	m_debugUI->ReceiveSettings(std::move(debugSettings));
+	m_imguiRenderer.Init(m_window);
 
 	return true;
 
@@ -283,7 +438,7 @@ void Application::ProcessInput() {
 
 
 	if (glfwGetKey(m_window, GLFW_KEY_TAB) == GLFW_PRESS) {
-		m_worldThread.Debug_CurStreamCenter();
+		m_session.GetWorldThread().Debug_CurStreamCenter();
 	}
 
 
@@ -303,20 +458,22 @@ void Application::ProcessInput() {
 	}
 
 
-	m_worldThread.SetInput(std::move(input));
+	m_session.GetWorldThread().SetInput(std::move(input));
 
 
 }
 
 
 void Application::OnMouseButton(int button, int action) {
+	if (m_state != AppState::PLAY) return;
+
 	if (action != GLFW_PRESS) {
 		return;
 	}
 
 	if (button == GLFW_MOUSE_BUTTON_LEFT && lastHit.isHit) {
 
-		m_worldThread.SubmitEditBlock(
+		m_session.GetWorldThread().SubmitEditBlock(
 			lastHit.hitX,
 			lastHit.hitY,
 			lastHit.hitZ,
@@ -326,7 +483,7 @@ void Application::OnMouseButton(int button, int action) {
 	}
 	if (button == GLFW_MOUSE_BUTTON_RIGHT && lastHit.isHit) {
 
-		m_worldThread.SubmitEditBlock(
+		m_session.GetWorldThread().SubmitEditBlock(
 			lastHit.previousX,
 			lastHit.previousY,
 			lastHit.previousZ,     
@@ -337,7 +494,7 @@ void Application::OnMouseButton(int button, int action) {
 
 
 void Application::OnMouseMove(double xpos, double ypos) {
-	
+	if (m_state != AppState::PLAY) return;
 
 	if (m_firstMouse) {
 		m_lastMouseX = static_cast<float>(xpos);
@@ -355,8 +512,8 @@ void Application::OnMouseMove(double xpos, double ypos) {
 	xoffset *= m_camera.mouseSensitivity;
 	yoffset *= m_camera.mouseSensitivity;
 
-	if (m_debugUI->GetIsOpening()) return;
-	m_worldThread.AddMouseDelta(xoffset, yoffset);
+	if (m_debugUI && m_debugUI->GetIsOpening()) return;
+	m_session.GetWorldThread().AddMouseDelta(xoffset, yoffset);
 }
 
 
@@ -368,7 +525,7 @@ void Application::UpdateRayHit() {
 
 	float distance = 4.0f;
 
-	lastHit = m_worldThread.RequestRaycast(origin, rayDir, distance);
+	lastHit = m_session.GetWorldThread().RequestRaycast(origin, rayDir, distance);
 
 }
 
@@ -390,7 +547,7 @@ void Application::RenderOutline() {
 
 void Application::ApplyCameraStatus() {
 
-	PlayerSnapshot snap = m_worldThread.GetPlrSnapshot();
+	PlayerSnapshot snap = m_session.GetWorldThread().GetPlrSnapshot();
 
 	m_camera.position = snap.pos;
 	m_camera.front = snap.front;
