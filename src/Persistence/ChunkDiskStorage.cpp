@@ -49,54 +49,6 @@ bool ChunkDiskStorage::SaveToDisk(ChunkSaveTask& task) const {
 	return file.good();
 }
 
-bool ChunkDiskStorage::SaveToDisk(ChunkSaveTask& task) const {
-
-	ChunkSaveData& saveData = task.saveData;
-
-	std::filesystem::create_directories(chunksPath);
-
-	std::filesystem::path filePath =
-		chunksPath /
-		(
-			"c_" +
-			std::to_string(saveData.cx) +
-			"_" +
-			std::to_string(saveData.cz) +
-			".bin"
-		);
-
-
-	std::ofstream file(filePath, std::ios::binary);
-	if (!file) return false;
-
-	constexpr char magic[4] = {
-		'G', 'L', 'C', 'K'
-	};
-
-
-	file.write(magic, sizeof(magic));
-
-	file.write(
-		reinterpret_cast<const char*>(&saveData.cx),
-		sizeof(saveData.cx)
-	);
-
-	file.write(
-		reinterpret_cast<const char*>(&saveData.cz),
-		sizeof(saveData.cz)
-	);
-
-
-	file.write(
-		reinterpret_cast<const char*>(saveData.blocks.data()),
-		sizeof(BlockType) * saveData.blocks.size()
-	);
-
-
-	return file.good();
-}
-
-
 
 ChunkDiskLoadResult ChunkDiskStorage::LoadFromDisk(const ChunkLoadTask& task) {
 

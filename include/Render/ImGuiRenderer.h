@@ -8,9 +8,14 @@
 
 class ImGuiRenderer {
 public:
+	void Shutdown();
+
+	void Init(GLFWwindow* window);
 
 	void BeginFrame();
 	void EndFrame();
+
+private:
 
 
 };

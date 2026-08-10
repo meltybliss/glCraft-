@@ -23,7 +23,12 @@ class World;
 
 class ChunkPipeline {
 public:
-	explicit ChunkPipeline(World* w, uint64_t seed) : m_world(w), m_terrainGen(seed) {}
+
+	ChunkPipeline(World* w) : m_world(w) {}
+
+	void SetWorldSeed(uint64_t seed) {
+		m_terrainGen = std::make_unique<TerrainGenerator>(seed);
+	}
 
 	void StartWorkerThread();
 	void StopWorkerThread();
@@ -60,7 +65,7 @@ private:
 	static constexpr int JOB_CANCEL_BUDGET = 8;
 private:
 	World* m_world = nullptr;
-	TerrainGenerator m_terrainGen;
+	std::unique_ptr<TerrainGenerator> m_terrainGen;
 
 	std::thread workerThread;
 	std::atomic<bool> runningWorker = false;

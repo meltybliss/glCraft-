@@ -9,6 +9,9 @@
 #include "Util/ThreadSafeLogUtils.h"
 #include "Gameplay/DayNightState.h"
 #include "Debugs/DebugActions.h"
+
+#include "WorldSelectionResult.h"
+
 #include <unordered_map>
 #include <memory>
 #include <unordered_set>
@@ -26,7 +29,7 @@ class ChunkPipeline;
 
 class World {
 public:
-	
+
 	World() = default;
 
 	using ChunkMap = std::unordered_map<ChunkMapKey, std::unique_ptr<Chunk>>;
@@ -60,7 +63,7 @@ public:
 	}
 
 	[[nodiscard]] Chunk* GetTargetChunkFromKey(uint64_t key) {
-		
+
 		auto it = chunks.find(key);
 
 		if (it == chunks.end()) return nullptr;
@@ -87,7 +90,7 @@ public:
 	}
 
 	[[nodiscard]] RaycastHit Raycast(const WorldPos& origin, const glm::vec3& direction, float distance) const;
-	
+
 	void DebugChunkInfo();
 
 
@@ -101,7 +104,7 @@ public:
 	bool CanCollideBlock(int64_t x, int64_t y, int64_t z) const {
 		BlockType block = static_cast<BlockType>(
 			GetBlockGlobal(x, y, z)
-		);
+			);
 
 
 		return block != BlockType::AIR && block != BlockType::TORCH;
@@ -110,22 +113,32 @@ public:
 
 	void SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count);
 
+
+	void SetWorldTime(double time) {
+		m_dayNight.timeOfDay = time;
+	}
+
 	DayNightState& GetDayNightState() { return m_dayNight; }
 	const DayNightState& GetDayNightState() const { return m_dayNight; }
 
 	DayNightState const GetDayNightStateForDebug();
 	void SetDebugStateFromDebug(const DebugActions& actions);
 
+	void SetWorldSeed(uint64_t seed);
+	[[nodiscard]] uint64_t GetWorldSeed() const { return m_seed; }
 
-	[[nodiscard]] uint64_t GetWorldSeed() const { return seed; }
+
+	void SetWorldSelectionResult(WorldSelectionResult& info) { m_worldInfo = info; }
+	[[nodiscard]] WorldSelectionResult GetWorldInfo() const { return m_worldInfo; }
 private:
 private:
 
 	ChunkMap chunks;
 	DayNightState m_dayNight;
 
-	uint64_t seed = 114514;
+	uint64_t m_seed = 114514;
 
 	std::mutex dayNightStateMutex;
 
+	WorldSelectionResult m_worldInfo;
 };

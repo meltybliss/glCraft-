@@ -22,6 +22,11 @@
 #include "Render/ImGuiRenderer.h"
 #include "Persistence/PersistenceIO.h"
 
+#include "UI/WorldSelectionUI.h"
+
+#include "AppState.h"
+#include "GameSession.h"
+
 class Application {
 public:
 	Application();
@@ -47,14 +52,28 @@ private:
 	void ApplyCameraStatus();
 
 	void ApplyDebugActions(const DebugActions& actions);
+
+	void CreateWorldDebugUI();
+
+	void EnterWorld();
+
+	void Tick_main();
+	void Tick_playing();
+
+	
+	void Render_main();
+	void Render_playing();
 private:
 	GLFWwindow* m_window = nullptr;
+	AppState m_state = AppState::WORLD_SELECTION;
 
 	bool m_firstMouse = true;
 	float m_lastMouseX = 400.0f;
 	float m_lastMouseY = 300.0f;
 
-	WorldThread m_worldThread;
+	GameSession m_session;
+	WorldSelectionUI m_selectionUI;
+
 	WorldRenderer m_wRenderer;
 	SelectionOutlineRenderer m_outlineRenderer;
 	SnapshotExchanger m_exchanger;
