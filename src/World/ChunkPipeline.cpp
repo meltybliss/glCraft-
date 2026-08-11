@@ -178,7 +178,7 @@ void ChunkPipeline::StartLoop() {
 }
 
 
-void ChunkPipeline::StopWorkerThread() {
+void ChunkPipeline::StopWorkerThreads() {
 	runningWorker = false;
 
 	workerCv.notify_all();
@@ -255,7 +255,7 @@ void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
 
 
 
-	workerCv.notify_all();
+	workerCv.notify_one();
 }
 
 

@@ -228,6 +228,10 @@ private:
 
 	static constexpr int MAX_LIGHT_PROPAGATE_BFS_PER_TICK = 2000;
 
+
+	static constexpr int MAX_CHUNK_TERRAIN_PER_TICK = 7;
+	static constexpr int MAX_CHUNK_MESH_PER_TICK = 8;
+
 private:
 
 private:

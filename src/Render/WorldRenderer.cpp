@@ -807,17 +807,23 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 	
 
 
+
 	glm::vec3 sunDirection = m_dayNightSnap.directionToSun;
+	glm::vec3 sunDir =
+		glm::normalize(sunDirection);
+
+	glm::vec3 up(0.0f, 1.0f, 0.0f);
+
 
 	glm::vec3 shadowCenter = { 0.f, 0.f, 0.f };
 
 	glm::vec3 lightPos =
-		shadowCenter - sunDirection * 100.0f;
+		shadowCenter + sunDir * 100.0f;
 
 	glm::mat4 lightView = glm::lookAt(
 		lightPos,
 		shadowCenter,
-		glm::vec3(0.0f, 1.0f, 0.0f)
+		up
 	);
 
 	constexpr float shadowRange = 80.0f;

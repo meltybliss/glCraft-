@@ -114,7 +114,7 @@ void WorldThread::StopThread() {
 
 
 
-	m_chunkPipeline.StopWorkerThread();
+	m_chunkPipeline.StopWorkerThreads();
 	m_persistenceIO.StopThread();
 }
 

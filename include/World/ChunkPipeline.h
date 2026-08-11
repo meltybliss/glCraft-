@@ -31,7 +31,7 @@ public:
 	}
 
 	void StartWorkerThreads();
-	void StopWorkerThread();
+	void StopWorkerThreads();
 
 	void EnqueueJob(ChunkJob&& job);
 
@@ -55,16 +55,9 @@ private:
 
 private:
 
-	static constexpr int MAX_CHUNK_CREATE_PER_TICK = 7;
-	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 8;
-
-	static constexpr int MAX_CHUNK_TERRAIN_PER_TICK = 7;
-	static constexpr int MAX_CHUNK_MESH_PER_TICK = 8;
-
-
 	static constexpr int JOB_CANCEL_BUDGET = 8;
 
-	static constexpr int WorkerCount = 8;
+	static constexpr int WorkerCount = 4;
 private:
 	World* m_world = nullptr;
 	std::unique_ptr<TerrainGenerator> m_terrainGen;
