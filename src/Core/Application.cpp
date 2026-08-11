@@ -250,12 +250,16 @@ void Application::Render_playing() {
 
 	m_wRenderer.DeleteMeshes(m_session.GetWorldThread());
 
+
+
+	m_wRenderer.UpdateDayNightSnap();
+
+
+
 	m_wRenderer.RenderShadowPass(m_camera);
 
 	m_session.GetWorldThread().RequestCreatePointLightSnap();
 
-
-	m_wRenderer.UpdateDayNightSnap();
 
 	m_wRenderer.BeginHDRScene();
 
