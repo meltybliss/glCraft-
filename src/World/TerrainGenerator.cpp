@@ -43,7 +43,7 @@ void TerrainGenerator::GenerateTerrain_V1(Chunk& c) {
 					b = BlockType::STONE;
 				}
 
-				c.SetBlockForGenerator(x, y, z, b);
+				c.SetBlockForGenerator(x, y, z, b);//‚±‚±‚ÌŽž“_‚ÅworldThread‚É‚Íchunk‚Í‚È‚¢‚Ì‚Åthread safe‚Å‚·
 			}
 		}
 	}

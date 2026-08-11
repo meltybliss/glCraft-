@@ -30,7 +30,7 @@ public:
 		m_terrainGen = std::make_unique<TerrainGenerator>(seed);
 	}
 
-	void StartWorkerThread();
+	void StartWorkerThreads();
 	void StopWorkerThread();
 
 	void EnqueueJob(ChunkJob&& job);
@@ -47,11 +47,11 @@ public:
 	}
 
 
-	void RemoveQueuedMeshJob(uint64_t targetKey);
-
 private:
 	void StartLoop();
 	
+
+	void RemoveQueuedMeshJob_NoLock(uint64_t targetKey);
 
 private:
 
@@ -63,16 +63,20 @@ private:
 
 
 	static constexpr int JOB_CANCEL_BUDGET = 8;
+
+	static constexpr int WorkerCount = 4;
 private:
 	World* m_world = nullptr;
 	std::unique_ptr<TerrainGenerator> m_terrainGen;
 
-	std::thread workerThread;
+	std::vector<std::thread> m_workers;
+
 	std::atomic<bool> runningWorker = false;
 
 	std::mutex jobsMutex;
 	std::mutex meshResultMutex;
 	std::mutex genResultMutex;
+	std::mutex buildingChunksMutex;
 
 	std::condition_variable workerCv;
 
