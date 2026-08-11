@@ -7,18 +7,20 @@
 #include <iostream>
 #include "Util/ThreadSafeLogUtils.h"
 
-void ChunkPipeline::StartWorkerThread() {
+void ChunkPipeline::StartWorkerThreads() {
 	if (runningWorker) {
 		return;
 	}
 
 	runningWorker = true;
 
-	workerThread = std::thread([this]() {
-		
-		StartLoop();
 
-	});
+	for (int i = 0; i < WorkerCount; ++i) {
+		m_workers.emplace_back([this]() {
+
+			StartLoop();
+		});
+	}
 
 
 }
@@ -34,22 +36,31 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 			const int32_t& cz = targetJob.cz;
 
 			uint64_t key = Index(cx, cz);
-			if (m_buildingChunks.find(key) == m_buildingChunks.end()) {//todo Šù‚É‚ ‚Á‚½‚ç‚»‚ê‚ðÁ‚µ‚Ä‚©‚ç‚â‚é‚æ‚¤‚É‚·‚é
+			//todo Šù‚É‚ ‚Á‚½‚ç‚»‚ê‚ðÁ‚µ‚Ä‚©‚ç‚â‚é‚æ‚¤‚É‚·‚é
+			
+			{
+				std::lock_guard<std::mutex> lock(buildingChunksMutex);
+
+				auto it = m_buildingChunks.find(key);
+				if (it != m_buildingChunks.end()) return;
+
 				std::unique_ptr<Chunk> c = std::make_unique<Chunk>(cx, cz);
 
 				c->cx = cx;
 				c->cz = cz;
 
-				
+
 				m_buildingChunks[key] = std::move(c);
 
-
-
-				ChunkJob newJob = std::move(targetJob);
-				newJob.type = JobType::GENERATE_TERRAIN;
-
-				EnqueueJob(std::move(newJob));
 			}
+				
+
+
+			ChunkJob newJob = std::move(targetJob);
+			newJob.type = JobType::GENERATE_TERRAIN;
+
+			EnqueueJob(std::move(newJob));
+			
 
 			break;
 
@@ -60,31 +71,41 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 			uint64_t key = Index(cx, cz);
 
-			auto it = m_buildingChunks.find(key);
-			if (it != m_buildingChunks.end()) {
-				auto& c = it->second;
+			std::unique_ptr<Chunk> chunk;
 
-				m_terrainGen->GenerateTerrain(*c);
-
+			{
+				std::lock_guard<std::mutex> lock(buildingChunksMutex);
 
 
-				{
-					std::lock_guard<std::mutex> lock(genResultMutex);
+				auto it = m_buildingChunks.find(key);
+				if (it == m_buildingChunks.end()) return;
 
-					m_genChunkResult.push_back({
-						key,
-						std::move(c)
-					});
-				}
-
-
+				chunk = std::move(it->second);
 				m_buildingChunks.erase(it);
-
-				if (m_resultReadyCallback) {
-					m_resultReadyCallback();//wake
-				}
-				
 			}
+
+
+
+			m_terrainGen->GenerateTerrain(*chunk);
+
+
+
+			{
+				std::lock_guard<std::mutex> lock(genResultMutex);
+
+				m_genChunkResult.push_back({
+					key,
+					std::move(chunk)
+				});
+			}
+
+
+
+			if (m_resultReadyCallback) {
+				m_resultReadyCallback();//wake
+			}
+				
+			
 
 			break;
 		}
@@ -161,10 +182,12 @@ void ChunkPipeline::StopWorkerThread() {
 	runningWorker = false;
 
 	workerCv.notify_all();
-	if (workerThread.joinable()) {
-		workerThread.join();
-	}
 
+	for (auto& worker : m_workers) {
+		if (worker.joinable()) {
+			worker.join();
+		}
+	}
 }
 
 
@@ -207,15 +230,20 @@ void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
 
 
 	uint64_t key = Index(job.cx, job.cz);
-	if (m_pendingMeshJobs_ChunkKeys.contains(key)) {
-		RemoveQueuedMeshJob(key);
-	}
-
-	m_pendingMeshJobs_ChunkKeys.insert(key);
+	
 
 
 	{
 		std::lock_guard<std::mutex> lock(jobsMutex);
+
+		if (job.type == JobType::BUILD_MESH) {
+			if (m_pendingMeshJobs_ChunkKeys.contains(key)) {
+				RemoveQueuedMeshJob_NoLock(key);
+			}
+
+			m_pendingMeshJobs_ChunkKeys.insert(key);
+		}
+
 
 		if (job.urgent) {
 			m_jobQueue.push_front(std::move(job));
@@ -278,27 +306,16 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 }
 
 
-void ChunkPipeline::RemoveQueuedMeshJob(uint64_t targetKey) {
-
-	std::lock_guard<std::mutex> lock(jobsMutex);
+void ChunkPipeline::RemoveQueuedMeshJob_NoLock(uint64_t targetKey) {
 
 	auto newEnd = std::remove_if(
 		m_jobQueue.begin(),
 		m_jobQueue.end(),
-
 		[targetKey](const ChunkJob& job) {
-			if (job.type != JobType::BUILD_MESH) {
-				return false;
-			}
-
-			uint64_t key = Index(job.cx, job.cz);
-
-			return targetKey == key;
-
+			return job.type == JobType::BUILD_MESH &&
+				Index(job.cx, job.cz) == targetKey;
 		}
-
 	);
-		
 
 	m_jobQueue.erase(newEnd, m_jobQueue.end());
 }

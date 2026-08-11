@@ -44,7 +44,7 @@ void WorldThread::StartThread() {
 		}
 
 	);
-	m_chunkPipeline.StartWorkerThread();
+	m_chunkPipeline.StartWorkerThreads();
 
 
 	BuildLoadOffsets();
