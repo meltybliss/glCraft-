@@ -892,7 +892,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 	
 
 
-	std::array<PointLight*, 16> pLights;
+	std::array<PointLight*, 16> pLights{};
 	size_t count = 0;
 
 
@@ -967,9 +967,17 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 		
 
 		auto it = snapshot.pointLightsMap.find(key);
-		if (it == snapshot.pointLightsMap.end()) continue;
-
-		UploadPointLights(*baseShader, it->second.pointLights, it->second.count, cam);
+		if (it != snapshot.pointLightsMap.end()) {
+			UploadPointLights(
+				*baseShader,
+				it->second.pointLights,
+				it->second.count,
+				cam
+			);
+		}
+		else {
+			baseShader->SetInt("uPointLightCount", 0);
+		}
 
 		auto it2 = m_chunkMeshes.find(key);
 		if (it2 == m_chunkMeshes.end()) continue;

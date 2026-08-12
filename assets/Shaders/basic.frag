@@ -91,13 +91,15 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 			0.0
 		);
 
+	float ndotl =
+		max(dot(normal, sunDirection), 0.0);
+
 	float bias =
-		mix(
-			0.00125,
-			0.00022,
-			normalLight
+		max(
+			0.0008,
+			0.0030 * (1.0 - ndotl)
 		);
-   
+
 	vec2 texelSize =
         1.0 / vec2(textureSize(shadowMap, 0));
 	
@@ -417,8 +419,7 @@ void main() {
 		orangeEmission;
 	
 	
-
-
+	
 	FragColor =
         vec4(
             litColor,
