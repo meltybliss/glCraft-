@@ -52,30 +52,13 @@ void TerrainGenerator::GenerateTerrain_V1(Chunk& c) {
 
 
 int TerrainGenerator::GetHeight(int64_t worldX, int64_t worldZ) const {
-	constexpr double frequency = 0.01;
-	constexpr double baseHeight = 64.0;
-	constexpr double amplitude = 18.0;
 
-	double x = static_cast<double>(worldX);
-	double z = static_cast<double>(worldZ);
 
-	const double n = m_perlinNoise.Noise(
-		x * frequency,
-		z * frequency
-	) * amplitude;
-
-	const double region = m_perlinNoise.Noise(x * 0.0008, z * 0.0008);
-	const double mountainMask = MountainMask(region);
-	
-	const double mountains = m_perlinNoise.Noise(x * 0.015, z * 0.015) * 60.0;
-
+	double height = m_perlinNoise.GetHeight(worldX, worldZ);
 
 	return static_cast<int>(
-		std::lround(
-			baseHeight
-			+ n
-			+ mountainMask * mountains
-	));
+		std::lround(height)
+	);
 }
 
 

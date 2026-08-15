@@ -11,7 +11,7 @@ public:
 
 	static uint32_t GetVersion() {return VERSION;}
 private:
-	PerlinNoise2D m_perlinNoise;
+	RealisticTerrain2D m_perlinNoise;
 
 	static constexpr uint32_t VERSION = 1;
 

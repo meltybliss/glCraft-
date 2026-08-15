@@ -398,7 +398,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				unsigned int b =
-					neighbor->GetBlock(Chunk::CHUNK_WIDTH, y, 0);
+					neighbor->GetBlock(Chunk::CHUNK_WIDTH-1, y, 0);
 
 				snapshot->leftFrontCorner[y] = (BlockType)b;
 			}
@@ -417,7 +417,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				unsigned int b =
-					neighbor->GetBlock(Chunk::CHUNK_WIDTH, y, Chunk::CHUNK_DEPTH);
+					neighbor->GetBlock(Chunk::CHUNK_WIDTH-1, y, Chunk::CHUNK_DEPTH-1);
 
 				snapshot->leftBackCorner[y] = (BlockType)b;
 			}
@@ -455,7 +455,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				unsigned int b =
-					neighbor->GetBlock(0, y, Chunk::CHUNK_DEPTH);
+					neighbor->GetBlock(0, y, Chunk::CHUNK_DEPTH-1);
 
 				snapshot->rightBackCorner[y] = (BlockType)b;
 			}
@@ -581,6 +581,8 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 		}
 	}
 
+
+
 	return snapshot;
 }
 
@@ -616,7 +618,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				unsigned int b =
-					neighbor->GetBlock(Chunk::CHUNK_WIDTH, y, 0);
+					neighbor->GetBlock(Chunk::CHUNK_WIDTH-1, y, 0);
 
 				snapshot->leftFrontCorner[y] = (BlockType)b;
 			}
@@ -635,7 +637,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				unsigned int b =
-					neighbor->GetBlock(Chunk::CHUNK_WIDTH, y, Chunk::CHUNK_DEPTH);
+					neighbor->GetBlock(Chunk::CHUNK_WIDTH-1, y, Chunk::CHUNK_DEPTH-1);
 
 				snapshot->leftBackCorner[y] = (BlockType)b;
 			}
@@ -673,7 +675,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 			for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
 				unsigned int b =
-					neighbor->GetBlock(0, y, Chunk::CHUNK_DEPTH);
+					neighbor->GetBlock(0, y, Chunk::CHUNK_DEPTH-1);
 
 				snapshot->rightBackCorner[y] = (BlockType)b;
 			}

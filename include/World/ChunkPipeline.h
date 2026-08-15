@@ -57,7 +57,7 @@ private:
 
 	static constexpr int JOB_CANCEL_BUDGET = 8;
 
-	static constexpr int WorkerCount = 1;
+	static constexpr int WorkerCount = 2;
 private:
 	World* m_world = nullptr;
 	std::unique_ptr<TerrainGenerator> m_terrainGen;

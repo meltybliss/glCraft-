@@ -16,35 +16,7 @@ struct ChunkMeshSnapshot {
 		back.fill(BlockType::AIR);
 	}
 
-	ChunkMeshSnapshot& operator=(const ChunkMeshSnapshot& other) {
-		//assert(&c == &other.c);
-
-		center = other.center;
-		left = other.left;
-		right = other.right;
-		front = other.front;
-		back = other.back;
-
-		centerLights = other.centerLights;
-		leftLights = other.leftSkyLights;
-		rightLights = other.rightLights;
-		frontLights = other.frontSkyLights;
-		backLights = other.backSkyLights;
-
-		centerSkyLights = other.centerSkyLights;
-		leftSkyLights = other.leftSkyLights;
-		rightSkyLights = other.rightSkyLights;
-		frontSkyLights = other.frontSkyLights;
-		backSkyLights = other.backSkyLights;
-
-		hasLeft = other.hasLeft;
-		hasRight = other.hasRight;
-		hasFront = other.hasFront;
-		hasBack = other.hasBack;
-
-		return *this;
-	}
-
+	ChunkMeshSnapshot& operator=(const ChunkMeshSnapshot& other) = default;
 
 	//blocks
 	std::array<BlockType, Chunk::CHUNK_SIZE> center;
