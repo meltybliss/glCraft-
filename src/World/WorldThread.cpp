@@ -1471,6 +1471,7 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 	
 
 
+
 	
 	m_lightTasks.push_back(task);
 	
@@ -1935,6 +1936,8 @@ void WorldThread::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 		auto it = chunks.find(key);
 
 		if (it == chunks.end() || !it->second) {
+
+			std::cout << "the chunk doesnt exist: " << x << ", " << cz << "\n";
 			continue;
 		}
 
@@ -1949,6 +1952,8 @@ void WorldThread::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 		auto it = chunks.find(key);
 
 		if (it == chunks.end() || !it->second) {
+
+			std::cout << "the chunk doesnt exist: " << cx << ", " << z << "\n";
 			continue;
 		}
 
