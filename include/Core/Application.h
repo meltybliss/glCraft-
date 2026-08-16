@@ -95,7 +95,9 @@ private:
 
 	bool wasSpacePressed = false;
 	bool wasTabPressed = false;
+	bool wasAltPressed = false;
 
 	double lastSpacePressTime = -1000.0;
 	double spectateDoubleTime = 0.5;
+	
 };

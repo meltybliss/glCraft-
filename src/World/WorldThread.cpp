@@ -1203,6 +1203,8 @@ void WorldThread::UpdateChunksAround() {
 void WorldThread::Rebuild_allChunks() {
 	auto& chunks = m_world.GetChunks();
 
+	std::cout << "aaa\n";
+
 	for (auto& [key, chunkPtr] : chunks) {
 		if (!chunkPtr) {
 			continue;
@@ -1937,7 +1939,7 @@ void WorldThread::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 
 		if (it == chunks.end() || !it->second) {
 
-			std::cout << "the chunk doesnt exist: " << x << ", " << cz << "\n";
+			//std::cout << "the chunk doesnt exist: " << x << ", " << cz << "\n";
 			continue;
 		}
 
@@ -1953,7 +1955,7 @@ void WorldThread::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 
 		if (it == chunks.end() || !it->second) {
 
-			std::cout << "the chunk doesnt exist: " << cx << ", " << z << "\n";
+			//std::cout << "the chunk doesnt exist: " << cx << ", " << z << "\n";
 			continue;
 		}
 

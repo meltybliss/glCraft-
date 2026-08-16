@@ -567,12 +567,15 @@ BlockType MeshBuilder::GetBlockForAO(int x, int y, int z, ChunkMeshSnapshot& sna
 		return BlockType::AIR;
 	}
 
+	
+
 	if (x < Chunk::CHUNK_WIDTH && x >= 0 &&
 		z < Chunk::CHUNK_DEPTH && z >= 0) {
 
 		return snapShot.GetBlockFromCenter(x, y, z);
 
 	}
+
 
 	if (x >= Chunk::CHUNK_WIDTH &&
 		z >= Chunk::CHUNK_DEPTH) {
@@ -655,6 +658,7 @@ float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot
 		break;
 	}
 
+	
 	auto opaqueAt = [&](int dx, int dy, int dz) {
 		return isOpaque(GetBlockForAO(
 			x + dx,
@@ -669,7 +673,8 @@ float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot
 	bool corner = false;
 
 	switch (face) {
-	case BlockFace::TOP:
+	case BlockFace::TOP: 
+
 		side1 = opaqueAt(sx, +1, 0);
 		side2 = opaqueAt(0, +1, sz);
 		corner = opaqueAt(sx, +1, sz);
@@ -709,6 +714,23 @@ float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot
 	
 
 	float value = GetAOBrightness(side1, side2, corner);
+
+	if (face == BlockFace::TOP &&
+		x == Chunk::CHUNK_WIDTH - 1 &&
+		y == 65) {
+
+		std::cout
+			<< "TOP BORDER "
+			<< "x=" << x
+			<< " y=" << y
+			<< " z=" << z
+			<< " "
+			<< "s1=" << side1
+			<< " s2=" << side2
+			<< " corner=" << corner
+			<< " ao=" << GetAOBrightness(side1, side2, corner)
+			<< "\n";
+	}
 
 	return value;
 

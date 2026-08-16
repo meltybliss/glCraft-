@@ -419,7 +419,6 @@ void main() {
 		orangeEmission;
 	
 	
-	
 	FragColor =
         vec4(
             litColor,

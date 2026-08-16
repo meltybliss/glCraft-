@@ -1,5 +1,6 @@
 #include "World/TerrainGenerator.h"
 #include <algorithm>
+#include <iostream>
 
 void TerrainGenerator::GenerateTerrain(Chunk& c) {
 
@@ -29,6 +30,8 @@ void TerrainGenerator::GenerateTerrain_V1(Chunk& c) {
 			int64_t worldZ = static_cast<int64_t>(c.cz) * Chunk::CHUNK_DEPTH + z;
 			int ground = GetHeight(worldX, worldZ);
 
+
+
 			for (int y = Chunk::CHUNK_HEIGHT - 1; y >= 0; --y) {
 
 				BlockType b = BlockType::AIR;
@@ -55,10 +58,18 @@ int TerrainGenerator::GetHeight(int64_t worldX, int64_t worldZ) const {
 
 
 	double height = m_perlinNoise.GetHeight(worldX, worldZ);
-
-	return static_cast<int>(
+	int h = static_cast<int>(
 		std::lround(height)
-	);
+		);
+
+	if (worldZ == 0 && worldX >= 12 && worldX <= 20) {
+		std::cout
+			<< "worldX=" << worldX
+			<< " height=" << h
+			<< "\n";
+	}
+
+	return h;
 }
 
 
