@@ -66,7 +66,14 @@ inline uint8_t GetEmission(BlockType b) {
 
 
 inline bool isOpaque(BlockType b) {
-	return b != BlockType::AIR;
+	switch (b) {
+	case BlockType::AIR: 
+	case BlockType::TORCH: return false;
+
+	default: return true;
+
+
+	}
 }
 
 

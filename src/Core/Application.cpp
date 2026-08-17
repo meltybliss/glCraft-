@@ -397,6 +397,11 @@ void Application::ProcessInput() {
 	bool tabPressedThisFrame = pressTab && !wasTabPressed;
 	wasTabPressed = pressTab;
 
+	bool pressAlt = glfwGetKey(m_window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS;
+	bool altPressedThisFrame = pressAlt && !wasAltPressed;
+	wasAltPressed = pressAlt;
+
+
 
 	if (spacePressedThisFrame) {
 		double now = glfwGetTime();
@@ -456,6 +461,13 @@ void Application::ProcessInput() {
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			m_debugUI->SetIsOpening(true);
 		}
+	}
+
+
+	if (altPressedThisFrame) {
+
+		//m_session.GetWorldThread().Rebuild_allChunks();
+
 	}
 
 

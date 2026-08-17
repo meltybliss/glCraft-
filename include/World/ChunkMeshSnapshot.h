@@ -8,12 +8,16 @@
 struct ChunkMeshSnapshot {
 	ChunkMeshSnapshot() {
 		center.fill(BlockType::AIR);
-		
 
 		left.fill(BlockType::AIR);
 		right.fill(BlockType::AIR);
 		front.fill(BlockType::AIR);
 		back.fill(BlockType::AIR);
+
+		rightFrontCorner.fill(BlockType::AIR);
+		rightBackCorner.fill(BlockType::AIR);
+		leftFrontCorner.fill(BlockType::AIR);
+		leftBackCorner.fill(BlockType::AIR);
 	}
 
 	ChunkMeshSnapshot& operator=(const ChunkMeshSnapshot& other) = default;
