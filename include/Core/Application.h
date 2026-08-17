@@ -55,6 +55,8 @@ private:
 
 	void CreateWorldDebugUI();
 
+	float CalcInterpolationAlpha(const PlayerSnapshot& previous, const PlayerSnapshot& current) const;
+
 	void EnterWorld();
 
 	void Tick_main();

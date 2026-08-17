@@ -65,7 +65,7 @@ void WorldThread::StartThread() {
 			auto now = clock::now();
 
 			if (now >= nextSimTime) {
-				TickSimulation(FIXED_DT);
+				TickSimulation(FIXED_DT, nextSimTime);
 
 				nextSimTime += std::chrono::duration_cast<clock::duration>(SIM_INTERVAL);
 			}
@@ -671,10 +671,10 @@ void WorldThread::Add_SkylightTask(
 
 
 
-void WorldThread::TickSimulation(float dt) {
+void WorldThread::TickSimulation(float dt, std::chrono::steady_clock::time_point simTime) {
 
 	ApplyStreamCenter();
-
+	
 
 	if (m_hasMovedMouse.load()) {
 		ApplyMouseMovement();
@@ -685,7 +685,7 @@ void WorldThread::TickSimulation(float dt) {
 	UpdateDayNightState(dt);
 	UpdateDayNightSnap();
 
-	UpdatePlrSnapshot();
+	UpdatePlrSnapshot(simTime);
 
 
 }
@@ -2121,20 +2121,30 @@ void WorldThread::ApplyMouseMovement() {
 
 
 
-void WorldThread::UpdatePlrSnapshot() {
+void WorldThread::UpdatePlrSnapshot(std::chrono::steady_clock::time_point simTime) {
 
-	PlayerSnapshot snap;
+	PlayerSnapshot newSnap;
 
-	snap.front = m_plr.GetFront();
-	snap.pos = m_plr.GetEyePos();
-	snap.right = m_plr.GetRight();
-	snap.up = m_plr.GetUp();
+	newSnap.front = m_plr.GetFront();
+	newSnap.pos = m_plr.GetEyePos();
+	newSnap.right = m_plr.GetRight();
+	newSnap.up = m_plr.GetUp();
 
-	{
-		std::lock_guard<std::mutex> lock(snapshotMutex);
+	newSnap.simTime = simTime;
 
-		m_plrSnapshot = std::move(snap);
+	std::lock_guard<std::mutex> lock(snapshotMutex);
+
+	if (!m_hasRenderSnap) {
+		
+		m_plrRenderSnap.previous = newSnap;
+		m_plrRenderSnap.current = newSnap;
+
+		m_hasRenderSnap = true;
+		return;
 	}
+
+	m_plrRenderSnap.previous = m_plrRenderSnap.current;
+	m_plrRenderSnap.current = newSnap;
 
 }
 

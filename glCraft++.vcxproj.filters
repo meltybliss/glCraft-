@@ -1104,6 +1104,9 @@
     <ClInclude Include="include\World\WorldSelectionResult.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="include\Math\WorldPosMath.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="third_party\glad.c">

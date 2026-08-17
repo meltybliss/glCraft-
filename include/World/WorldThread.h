@@ -98,10 +98,10 @@ public:
 	void Rebuild_allChunks();
 
 
-	[[nodiscard]] PlayerSnapshot GetPlrSnapshot() {
+	[[nodiscard]] PlayerRenderSnapshot GetPlrRenderSnapshot() {
 		std::lock_guard<std::mutex> lock(snapshotMutex);
 
-		return m_plrSnapshot;
+		return m_plrRenderSnap;
 	}
 
 
@@ -135,7 +135,8 @@ private:
 	PlayerInput m_inputBuffer{};
 
 
-	PlayerSnapshot m_plrSnapshot{};
+	PlayerRenderSnapshot m_plrRenderSnap{};
+	bool m_hasRenderSnap = false;
 
 	Player m_plr;
 
@@ -153,6 +154,7 @@ private:
 	std::atomic<bool> runningWorldThread;
 
 	bool m_streamNeedsUpdate = false;
+
 
 	std::atomic<bool> m_hasSettedDesireStreamC = false;
 	std::atomic<bool> m_hasSettedInput = false;
@@ -283,7 +285,7 @@ private:
 
 	void UpdateDayNightState(float dt);
 	
-	void TickSimulation(float dt);
+	void TickSimulation(float dt, std::chrono::steady_clock::time_point simTime);
 	void TickBackground(std::chrono::steady_clock::time_point deadline);
 
 
@@ -291,7 +293,7 @@ private:
 
 
 	void UpdateDayNightSnap();
-	void UpdatePlrSnapshot();
+	void UpdatePlrSnapshot(std::chrono::steady_clock::time_point simTime);
 
 	void PushPendingMesh(PendingMesh& mesh);
 	

@@ -1,6 +1,7 @@
 #include "Core/Application.h"
+#include "Math/WorldPosMath.h"
 #include <iostream>
-
+#include <cmath>
 
 Application::Application() : m_exchanger(), m_session(m_exchanger, m_persistenceIO), m_wRenderer(m_exchanger) {}
 
@@ -560,12 +561,56 @@ void Application::RenderOutline() {
 
 void Application::ApplyCameraStatus() {
 
-	PlayerSnapshot snap = m_session.GetWorldThread().GetPlrSnapshot();
+	PlayerRenderSnapshot snap = m_session.GetWorldThread().GetPlrRenderSnapshot();
+	auto& previous = snap.previous;
+	auto& cur = snap.current;
 
-	m_camera.position = snap.pos;
-	m_camera.front = snap.front;
-	m_camera.right = snap.right;
-	m_camera.up = snap.up;
+	float alpha = CalcInterpolationAlpha(previous, cur);
 
+
+	
+
+	m_camera.position = WorldPosLerp(previous.pos, cur.pos, static_cast<double>(alpha));
+	/*m_camera.front = glm::mix(previous.front, cur.front, alpha);
+	m_camera.right = glm::mix(previous.right, cur.right, alpha);
+	m_camera.up = glm::mix(previous.up, cur.up, alpha);
+	*/
+
+	m_camera.front = cur.front;
+	m_camera.right = cur.right;
+	m_camera.up = cur.up;
+
+}
+
+
+float Application::CalcInterpolationAlpha(const PlayerSnapshot& previous, const PlayerSnapshot& current) const {
+
+	using clock = std::chrono::steady_clock;
+
+	constexpr double FIXED_DT = 1.0 / 60.0;
+	
+	const auto renderTime = 
+		clock::now() -
+		std::chrono::duration_cast<clock::duration>(
+			std::chrono::duration<double>(FIXED_DT)
+		);
+
+	const double stateInterval =
+		std::chrono::duration<double>(
+			current.simTime - previous.simTime
+		).count();
+
+	if (stateInterval <= 0.0) return 0.0f;
+
+	const double elapsed =
+		std::chrono::duration<double>(
+			renderTime - previous.simTime
+		).count();
+
+	return std::clamp(
+		static_cast<float>(elapsed / stateInterval),
+		0.0f,
+		1.0f
+	);
 
 }
