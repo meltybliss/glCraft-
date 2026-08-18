@@ -415,6 +415,15 @@ void WorldThread::Start_RemoveBlockLightTask(
 
 	if (task.remove_queue.empty()) return;
 
+
+
+
+	if (IsInsideLightVolume(x, y, z)) {//LightVolume textureの範囲内に入るであろうブロックのブロックライトが変更されたらlight volume snapshotを更新する
+
+		m_lightVolumeDirty.store(true);
+	}
+
+
 	if (!urgent) {
 		
 		m_lightTasks.push_back(std::move(task));
@@ -455,6 +464,15 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 		z,
 		task
 	);
+
+
+
+
+	if (IsInsideLightVolume(x, y, z)) {//LightVolume textureの範囲内に入るであろうブロックのブロックライトが変更されたらlight volume snapshotを更新する
+
+		m_lightVolumeDirty.store(true);
+	}
+
 
 	if (!task.remove_queue.empty() || !task.bfs_queue.empty()) {
 		if (urgent) {
@@ -543,6 +561,13 @@ void WorldThread::Start_BlockLightTask(
 		color,
 		task
 	);
+
+
+	if (IsInsideLightVolume(x, y, z)) {//LightVolume textureの範囲内に入るであろうブロックのブロックライトが変更されたらlight volume snapshotを更新する
+
+		m_lightVolumeDirty.store(true);
+	}
+
 
 	if (urgent) {
 		m_urgentLightTasks.push_back(std::move(task));
@@ -698,9 +723,13 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 	CheckAutoSave();
 
 
+	if (clock::now() >= deadline) return;
+
 	if (m_requestedCreateLightVSnap.load()) {
 		ProcCreateLightVSnap();
 	}
+
+	if (clock::now() >= deadline) return;
 
 	if (m_requestedCreatePointLightSnap.load()) {
 
@@ -708,6 +737,7 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 	}
 
 
+	if (clock::now() >= deadline) return;
 
 	while (clock::now() < deadline) {
 		if (m_streamNeedsUpdate) {
@@ -725,7 +755,7 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 		if (clock::now() >= deadline) break;
 
-		ProcLightTasks();
+		ProcLightTasks(deadline);
 		if (clock::now() >= deadline) break;
 
 		DispatchOneDirtyMeshJob();
@@ -1481,7 +1511,7 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 
 
 
-void WorldThread::ProcessLightTask(LightTask& task, int& budget) {
+void WorldThread::ProcessLightTask(LightTask& task, int budget) {
 	if (task.lightType == LightType::SKY) {
 		if (task.phase == Phase::ADD) {
 			m_lightEngine.Propagate_SkyLight(
@@ -1542,6 +1572,8 @@ void WorldThread::ProcessLightTask(LightTask& task, int& budget) {
 
 
 void WorldThread::FinishLightTask(LightTask& task) {
+
+
 	for (auto& key : task.dirtyChunks_light) {
 
 		Chunk* c = m_world.GetTargetChunkFromKey(key);
@@ -1583,80 +1615,28 @@ void WorldThread::FinishLightTask(LightTask& task) {
 	}
 
 
+
 }
 
 
-void WorldThread::ProcLightTasks() {
+void WorldThread::ProcLightTasks(std::chrono::steady_clock::time_point deadline) {
 
 	if (m_lightTasks.empty() && m_urgentLightTasks.empty()) return;
 
-	int budget = MAX_LIGHT_PROPAGATE_BFS_PER_TICK;
+	using clock = std::chrono::steady_clock;
 
-	const size_t taskCount = m_lightTasks.size() + m_urgentLightTasks.size();
-	const int weightSum = 2 + (taskCount - 1);
-	const int normalBudget = budget / weightSum;
-	int frontBudget = normalBudget * 2;
-
-	int remainder = budget - normalBudget * (taskCount + 1);
-	frontBudget += remainder;
-
-	bool frontBudgetUsed = false;
-
-	/* {
-		size_t i = 0;
-
-		while (i < m_urgentLightTasks.size() &&
-			budget > 0 &&
-			!m_urgentLightTasks.empty()) {
-
-			int usedBudget = normalBudget;
-			auto& task = m_urgentLightTasks[i];
-
-			if (i == 0) {
-				if (!frontBudgetUsed) {
-					usedBudget = frontBudget;
-					frontBudgetUsed = true;
-				}
-			}
-
-			ProcessLightTask(task, usedBudget);
-
-
-			bool finished = false;
-
-			if (task.phase == Phase::ADD) {
-				finished = task.bfs_queue.empty();
-			}
-			else if (task.phase == Phase::REMOVE) {
-				finished = task.remove_queue.empty();
-			}
-
-			if (finished) {
-				
-				FinishLightTask(task);
-
-				m_urgentLightTasks.erase(m_urgentLightTasks.begin() + i);
-				continue;//eraseしてるので詰めるので++i飛ばす
-			}
-
-
-			++i;
-
-		}
-
-	}*/
-
+	constexpr int CHECK_INTERVAL = 64;
+	int processed = 0;
 	{
 	
-		while (budget > 0 && !m_urgentLightTasks.empty()) {
+		while (!m_urgentLightTasks.empty()) {
 
-			int usedBudget = normalBudget;
 			auto& task = m_urgentLightTasks.front();
 
-			
+		
+			ProcessLightTask(task, 1);//proc 1 node
 
-			ProcessLightTask(task, budget);
-
+			processed++;
 
 			bool finished = false;
 
@@ -1672,7 +1652,12 @@ void WorldThread::ProcLightTasks() {
 				FinishLightTask(task);
 
 				m_urgentLightTasks.pop_front();
-				continue;//eraseしてるので詰めるので++i飛ばす
+			}
+
+			if (processed % CHECK_INTERVAL == 0) {
+				if (clock::now() >= deadline) {
+					return;
+				}
 			}
 
 		}
@@ -1680,16 +1665,18 @@ void WorldThread::ProcLightTasks() {
 	}
 
 
-	while (budget > 0 && !m_lightTasks.empty()) {
+	if (clock::now() >= deadline) return;
 
-		int usedBudget = normalBudget;
+
+	while (!m_lightTasks.empty()) {
+
 		auto& task = m_lightTasks.front();
 
 
 
-		ProcessLightTask(task, budget);
+		ProcessLightTask(task, 1);
 
-
+		processed++;
 
 		bool finished = false;
 
@@ -1705,56 +1692,15 @@ void WorldThread::ProcLightTasks() {
 			FinishLightTask(task);
 
 			m_lightTasks.pop_front();
-			continue;//eraseしてるので詰めるので++i飛ばす
+		}
+
+
+		if (processed % CHECK_INTERVAL == 0) {
+			if (clock::now() >= deadline) return;
 		}
 
 
 	}
-
-
-	/*size_t i = 0;
-	while (i < m_lightTasks.size() &&
-		   budget > 0 &&
-		   !m_lightTasks.empty()) {
-		
-		int usedBudget = normalBudget;
-		auto& task = m_lightTasks[i];
-
-		
-		if (i == 0) {
-			if (!frontBudgetUsed) {
-				usedBudget = frontBudget;
-				frontBudgetUsed = true;
-			}
-		}
-
-
-		ProcessLightTask(task, usedBudget);
-
-
-
-		bool finished = false;
-
-		if (task.phase == Phase::ADD) {
-			finished = task.bfs_queue.empty();
-		}
-		else if (task.phase == Phase::REMOVE) {
-			finished = task.remove_queue.empty();
-		}
-
-		if (finished) {
-			
-			FinishLightTask(task);
-
-			m_lightTasks.erase(m_lightTasks.begin() + i);
-			continue;//eraseしてるので詰めるので++i飛ばす
-		}
-
-
-		++i;
-
-	}*/
-
 
 
 }
@@ -2399,4 +2345,44 @@ bool WorldThread::PopPreviousPointLSnap(PointLightsSnapshot& out) {
 void WorldThread::SetDebugStateFromDebug(const DebugActions& actions) {
 
 	m_world.SetDebugStateFromDebug(actions);
+}
+
+
+
+void WorldThread::SetLightVolumeCenter(const glm::i64vec3& origin) {
+
+
+	std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+
+
+	if (m_lightVolumeCenter == origin) return;
+
+	m_lightVolumeDirty.store(true);
+	m_lightVolumeCenter = origin;
+
+}
+
+
+
+bool WorldThread::IsInsideLightVolume(int64_t x, int64_t y, int64_t z) {
+
+	using namespace LIGHT_VOLUME_SIZE;
+
+	glm::i64vec3 o;
+
+	{
+		std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+		
+		o = m_lightVolumeCenter;
+	}
+
+	return
+		x >= o.x &&
+		x <= o.x + LIGHT_VOLUME_WIDTH &&
+		y >= o.y &&
+		y <= o.y + LIGHT_VOLUME_HEIGHT &&
+		z >= o.z &&
+		z <= o.z + LIGHT_VOLUME_DEPTH;
+	
+
 }

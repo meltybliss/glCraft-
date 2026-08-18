@@ -1054,7 +1054,7 @@ std::unique_ptr<LightVolumeSnapshot> World::CreateLightVSnapshot(const glm::i64v
 		pixels[index + 3] = 1.0f;
 
 
-		};
+	};
 
 
 	glm::i64vec3 m_lightVolumeOrigin = glm::i64vec3(

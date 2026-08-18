@@ -123,6 +123,9 @@ public:
 	bool PopPreviousPointLSnap(PointLightsSnapshot& out);
 
 	void SetDebugStateFromDebug(const DebugActions& actions);
+
+
+	void SetLightVolumeCenter(const glm::i64vec3& origin);
 private:
 	
 
@@ -162,6 +165,7 @@ private:
 	std::atomic<bool> m_requestedCreateLightVSnap = false;
 	std::atomic<bool> m_hasCreatedLightVSnap = false;
 
+
 	float m_xoffsetBuffer = 0.f;
 	float m_yoffsetBuffer = 0.f;
 
@@ -173,7 +177,6 @@ private:
 	std::mutex pendingDeleteMeshMutex;
 	std::mutex inputMutex;
 	std::mutex offsetMutex;
-	std::mutex lightVolumeSnapMutex;
 	std::mutex camBlockPosMutex;
 
 	std::deque<WorldCommand> m_commands;
@@ -219,6 +222,13 @@ private:
 	static constexpr auto AUTO_SAVE_INTERVAL =
 		std::chrono::seconds(30);
 
+
+
+	std::mutex lightVolumeSnapMutex;
+	std::atomic<bool> m_lightVolumeDirty = false;
+	std::atomic<bool> m_pointLightDirty = false;
+
+	glm::i64vec3 m_lightVolumeCenter;
 private:
  
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -350,8 +360,8 @@ private:
 		bool urgent
 	);
 
-	void ProcLightTasks();
-	void ProcessLightTask(LightTask& task, int& budget);
+	void ProcLightTasks(std::chrono::steady_clock::time_point deadline);
+	void ProcessLightTask(LightTask& task, int budget);
 	void FinishLightTask(LightTask& task);
 
 	void DispatchDirtyMeshJobs();
@@ -365,4 +375,8 @@ private:
 
 	bool HasImmediateTask();
 	void Wake();
+
+
+	bool IsInsideLightVolume(int64_t x, int64_t y, int64_t z);
+
 };

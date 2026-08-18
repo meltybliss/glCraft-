@@ -218,6 +218,7 @@ void Application::Render_main() {
 
 void Application::Tick_playing() {
 
+	auto& worldThread = m_session.GetWorldThread();
 
 	ProcessInput();
 
@@ -227,12 +228,12 @@ void Application::Tick_playing() {
 	UpdateRayHit();//raycast
 	UpdateStreamCenter();
 
-
+	worldThread.SetLightVolumeCenter(m_camera.position.block);//cameraの位置が以前のworldThread内で保存されてるlightVolumeOriginと違う値になったときだけoriginを更新してsnapshotつくる。
 
 	//m_wRenderer.RebuildDrityChunkMesh(m_world);
 	m_wRenderer.UploadPendingMeshData(m_session.GetWorldThread());
 
-	m_session.GetWorldThread().RequestCreateLightVSnap(m_camera);
+	worldThread.RequestCreateLightVSnap(m_camera);
 
 	//完成済みSnapshotがあれば受け取る
 	std::unique_ptr<LightVolumeSnapshot> lightSnapshot;
