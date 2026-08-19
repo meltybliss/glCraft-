@@ -154,6 +154,13 @@ bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level, 
 		return false;
 	}
 
+	auto oldLevel = GetBlockLightGlobal(x, y, z);
+	auto oldColor = GetBlockLightColorGlobal(x, y, z);
+
+	if (oldLevel == level && oldColor == lightColor) {
+		return false;
+	}
+
 	auto* c = it->second.get();
 
 

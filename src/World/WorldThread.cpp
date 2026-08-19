@@ -416,14 +416,6 @@ void WorldThread::Start_RemoveBlockLightTask(
 	if (task.remove_queue.empty()) return;
 
 
-
-
-	if (IsInsideLightVolume(x, y, z)) {//LightVolume textureの範囲内に入るであろうブロックのブロックライトが変更されたらlight volume snapshotを更新する
-
-		m_lightVolumeDirty.store(true);
-	}
-
-
 	if (!urgent) {
 		
 		m_lightTasks.push_back(std::move(task));
@@ -464,14 +456,6 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 		z,
 		task
 	);
-
-
-
-
-	if (IsInsideLightVolume(x, y, z)) {//LightVolume textureの範囲内に入るであろうブロックのブロックライトが変更されたらlight volume snapshotを更新する
-
-		m_lightVolumeDirty.store(true);
-	}
 
 
 	if (!task.remove_queue.empty() || !task.bfs_queue.empty()) {
@@ -563,10 +547,6 @@ void WorldThread::Start_BlockLightTask(
 	);
 
 
-	if (IsInsideLightVolume(x, y, z)) {//LightVolume textureの範囲内に入るであろうブロックのブロックライトが変更されたらlight volume snapshotを更新する
-
-		m_lightVolumeDirty.store(true);
-	}
 
 
 	if (urgent) {
@@ -763,6 +743,32 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 	}
 
 
+}
+
+
+
+void WorldThread::CheckBlockLightChangesForLightVolume(
+	LightTask& task
+) {
+	if (!task.changedBlockLight) {
+		return;
+	}
+
+	for (const auto& pos : task.changedBlockLightsPos) {
+
+		if (IsInsideLightVolume(
+			pos.x,
+			pos.y,
+			pos.z))
+		{
+			m_lightVolumeDirty.store(true);
+			break;
+		}
+	}
+
+	//今回確認した変更は消す
+	task.changedBlockLight = false;
+	task.changedBlockLightsPos.clear();
 }
 
 
@@ -1614,7 +1620,7 @@ void WorldThread::FinishLightTask(LightTask& task) {
 
 	}
 
-
+	CheckBlockLightChangesForLightVolume(task);
 
 }
 

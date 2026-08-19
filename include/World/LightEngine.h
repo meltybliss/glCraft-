@@ -84,6 +84,12 @@ public:
 		int64_t worldZ,
 		LightTask& task);
 
+	static void RecordBlockLightChange(
+		LightTask& task,
+		int64_t x,
+		int64_t y,
+		int64_t z);
+
 private:
 
 

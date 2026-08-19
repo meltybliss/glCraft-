@@ -229,6 +229,9 @@ private:
 	std::atomic<bool> m_pointLightDirty = false;
 
 	glm::i64vec3 m_lightVolumeCenter;
+
+
+
 private:
  
 	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
@@ -378,5 +381,7 @@ private:
 
 
 	bool IsInsideLightVolume(int64_t x, int64_t y, int64_t z);
+
+	void CheckBlockLightChangesForLightVolume(LightTask& task);
 
 };

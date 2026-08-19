@@ -38,6 +38,9 @@ void LightEngine::AddLightLevel(
 	if (oldLevel >= level) return;
 
 
+	RecordBlockLightChange(task, worldX, worldY, worldZ);
+
+
 	c->SetBlockLight(lx, ly, lz, level, lightColor);
 	task.bfs_queue.push({ worldX, worldY, worldZ, level, lightColor });
 
@@ -112,6 +115,15 @@ void LightEngine::AddSkyLightLevel(
 }
 
 
+void LightEngine::RecordBlockLightChange(
+	LightTask& task,
+	int64_t x,
+	int64_t y,
+	int64_t z)
+{
+	task.changedBlockLight = true;
+	task.changedBlockLightsPos.push_back({ x, y, z });
+}
 
 
 void LightEngine::Propagate_BlockLight(
@@ -178,6 +190,8 @@ void LightEngine::Propagate_BlockLight(
 						touchedChunkKey.insert(key);
 
 						bfs_queue.push({ nx, ny, nz, targetLevel, baseNode.color });
+
+						RecordBlockLightChange(task, nx, ny, nz);
 					}
 				}
 			}
