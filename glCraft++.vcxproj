@@ -135,7 +135,6 @@
     <ClInclude Include="include\Core\AppState.h" />
     <ClInclude Include="include\Core\ChunkJob.h" />
     <ClInclude Include="include\Core\GameSession.h" />
-    <ClInclude Include="include\Core\SnapshotExchanger.h" />
     <ClInclude Include="include\Core\WindowSize.h" />
     <ClInclude Include="include\Debugs\DebugActions.h" />
     <ClInclude Include="include\Debugs\DebugDataBuilder.h" />
@@ -144,7 +143,6 @@
     <ClInclude Include="include\Gameplay\DayNightState.h" />
     <ClInclude Include="include\Gameplay\Player.h" />
     <ClInclude Include="include\Gameplay\PlayerInput.h" />
-    <ClInclude Include="include\Gameplay\PlayerSnapshot.h" />
     <ClInclude Include="include\Math\AABB.h" />
     <ClInclude Include="include\Math\PerlinNoise2D.h" />
     <ClInclude Include="include\Math\UV.h" />
@@ -161,15 +159,19 @@
     <ClInclude Include="include\Render\BlockFace.h" />
     <ClInclude Include="include\Render\Camera.h" />
     <ClInclude Include="include\Render\ChunkMesh.h" />
-    <ClInclude Include="include\Render\DayNightSnapshot.h" />
     <ClInclude Include="include\Render\ImGuiRenderer.h" />
-    <ClInclude Include="include\Render\LightVolumeSnapshot.h" />
     <ClInclude Include="include\Render\MeshBuilder.h" />
     <ClInclude Include="include\Render\MeshData.h" />
     <ClInclude Include="include\Render\SelectionOutlineRenderer.h" />
     <ClInclude Include="include\Render\Shader.h" />
     <ClInclude Include="include\Render\Texture.h" />
     <ClInclude Include="include\Render\WorldRenderer.h" />
+    <ClInclude Include="include\Snapshot\ChunkMeshSnapshot.h" />
+    <ClInclude Include="include\Snapshot\DayNightSnapshot.h" />
+    <ClInclude Include="include\Snapshot\LightVolumeSnapshot.h" />
+    <ClInclude Include="include\Snapshot\PlayerSnapshot.h" />
+    <ClInclude Include="include\Snapshot\SnapshotChannel.h" />
+    <ClInclude Include="include\Snapshot\SnapshotExchanger.h" />
     <ClInclude Include="include\UI\WorldSelectionUI.h" />
     <ClInclude Include="include\Util\RandomUtil.h" />
     <ClInclude Include="include\Util\ThreadSafeLogUtils.h" />
@@ -177,7 +179,6 @@
     <ClInclude Include="include\World\Chunk.h" />
     <ClInclude Include="include\World\ChunkDirtyEntryPriority.h" />
     <ClInclude Include="include\World\ChunkUtil.h" />
-    <ClInclude Include="include\World\ChunkMeshSnapshot.h" />
     <ClInclude Include="include\World\ChunkPipeline.h" />
     <ClInclude Include="include\World\ChunkResult.h" />
     <ClInclude Include="include\World\LightEngine.h" />

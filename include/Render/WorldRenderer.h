@@ -10,8 +10,7 @@
 #include <stdint.h>
 #include <optional>
 #include "Texture.h"
-#include "LightVolumeSnapshot.h"
-#include "Core/SnapshotExchanger.h"
+#include "Snapshot/SnapshotExchanger.h"
 
 class WorldThread;
 class World;
@@ -67,10 +66,19 @@ private:
 
 	void DrawFullscreenTriangle();
 
+
+
+
+	void UpdateSnapshots();
 private:
 
 	SnapshotExchanger& m_exchanger;
 	DayNightSnapshot m_dayNightSnap;
+
+
+	DayNightSnapshot m_dayNightSnapshot;
+	PlayerRenderSnapshot m_playerSnapshot;
+	std::unique_ptr<PointLightsSnapshot> m_pointLightsSnap;
 
 
 	std::unordered_map<uint64_t, ChunkMesh> m_chunkMeshes;

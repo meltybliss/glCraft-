@@ -7,13 +7,11 @@
 #include "ChunkPipeline.h"
 #include "Gameplay/Player.h"
 #include "Gameplay/PlayerInput.h"
-#include "Gameplay/PlayerSnapshot.h"
 #include "Util/ThreadSafeLogUtils.h"
 #include "ChunkDirtyEntryPriority.h"
-#include "Render/DayNightSnapshot.h"
 #include "Debugs/DebugActions.h"
 #include "Persistence/WorldSaveData.h"
-#include "Core/SnapshotExchanger.h"
+#include "Snapshot/SnapshotExchanger.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -98,13 +96,6 @@ public:
 	void Rebuild_allChunks();
 
 
-	[[nodiscard]] PlayerRenderSnapshot GetPlrRenderSnapshot() {
-		std::lock_guard<std::mutex> lock(snapshotMutex);
-
-		return m_plrRenderSnap;
-	}
-
-
 	[[nodiscard]] World* GetWorldPtr() {
 		return &m_world;
 	}
@@ -113,19 +104,12 @@ public:
 		return &m_world;
 	}
 
-	void RequestCreateLightVSnap(const Camera& cam);
-
-	bool PopCreatedLightVSnapshot(std::unique_ptr<LightVolumeSnapshot>& out);
 	
-
-	void RequestCreatePointLightSnap();
-	bool PopPointLightSnap(PointLightsSnapshot& out);
-	bool PopPreviousPointLSnap(PointLightsSnapshot& out);
-
 	void SetDebugStateFromDebug(const DebugActions& actions);
 
 
 	void SetLightVolumeCenter(const glm::i64vec3& origin);
+
 private:
 	
 
@@ -162,14 +146,12 @@ private:
 	std::atomic<bool> m_hasSettedDesireStreamC = false;
 	std::atomic<bool> m_hasSettedInput = false;
 	std::atomic<bool> m_hasMovedMouse = false;
-	std::atomic<bool> m_requestedCreateLightVSnap = false;
-	std::atomic<bool> m_hasCreatedLightVSnap = false;
 
 
 	float m_xoffsetBuffer = 0.f;
 	float m_yoffsetBuffer = 0.f;
 
-	std::mutex snapshotMutex;
+
 	std::mutex streamCenterMutex;
 	std::mutex commandMutex;
 	std::mutex pendingMeshMutex;
@@ -199,20 +181,7 @@ private:
 	size_t m_nextLoadOffset = 0;
 
 
-	std::unique_ptr<LightVolumeSnapshot> m_lightVSnapshot;
-	glm::i64vec3 camBlockPosBuffer{};
-
-
-	std::atomic<bool> m_requestedCreatePointLightSnap;
-	std::atomic<bool> m_createdPointLightSnap;
 	std::atomic<bool> m_firstTimeCreatePlSnap;
-
-	std::mutex m_pointLightSnapMutex;
-
-	std::unique_ptr<PointLightsSnapshot>
-		m_createdPointLightsSnapshot;
-
-	PointLightsSnapshot	m_previousPointLightSnap;
 
 
 	using Clock = std::chrono::steady_clock;

@@ -746,6 +746,53 @@ void WorldRenderer::EndHDRScene() {
 }
 
 
+void WorldRenderer::UpdateSnapshots() {
+
+
+	DayNightSnapshot dayNight;
+
+	if (m_exchanger.AcquireDayNightSnap(dayNight)) {
+
+		m_dayNightSnapshot =
+			std::move(dayNight);
+	}
+
+
+	PlayerRenderSnapshot player;
+
+	if (m_exchanger.AcquirePlrRenderSnap(player)) {
+
+		m_playerSnapshot =
+			std::move(player);
+	}
+
+
+	std::unique_ptr<PointLightsSnapshot>
+		pointLights;
+
+	if (m_exchanger.AcquirePointLightSnap(
+		pointLights))
+	{
+		m_pointLightsSnap =
+			std::move(pointLights);
+	}
+
+
+	std::unique_ptr<LightVolumeSnapshot>
+		lightVolume;
+
+	if (m_exchanger.AcquireLightVolumeSnap(
+		lightVolume))
+	{
+		UpdateLightVolume(
+			*lightVolume
+		);
+
+	}
+
+}
+
+
 void WorldRenderer::UploadPointLights(
 	Shader& shader,
 	const std::vector<PointLight>& lights,
