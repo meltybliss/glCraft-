@@ -98,10 +98,10 @@ public:
 	void Rebuild_allChunks();
 
 
-	[[nodiscard]] PlayerSnapshot GetPlrSnapshot() {
+	[[nodiscard]] PlayerRenderSnapshot GetPlrRenderSnapshot() {
 		std::lock_guard<std::mutex> lock(snapshotMutex);
 
-		return m_plrSnapshot;
+		return m_plrRenderSnap;
 	}
 
 
@@ -123,6 +123,9 @@ public:
 	bool PopPreviousPointLSnap(PointLightsSnapshot& out);
 
 	void SetDebugStateFromDebug(const DebugActions& actions);
+
+
+	void SetLightVolumeCenter(const glm::i64vec3& origin);
 private:
 	
 
@@ -135,7 +138,8 @@ private:
 	PlayerInput m_inputBuffer{};
 
 
-	PlayerSnapshot m_plrSnapshot{};
+	PlayerRenderSnapshot m_plrRenderSnap{};
+	bool m_hasRenderSnap = false;
 
 	Player m_plr;
 
@@ -154,11 +158,13 @@ private:
 
 	bool m_streamNeedsUpdate = false;
 
+
 	std::atomic<bool> m_hasSettedDesireStreamC = false;
 	std::atomic<bool> m_hasSettedInput = false;
 	std::atomic<bool> m_hasMovedMouse = false;
 	std::atomic<bool> m_requestedCreateLightVSnap = false;
 	std::atomic<bool> m_hasCreatedLightVSnap = false;
+
 
 	float m_xoffsetBuffer = 0.f;
 	float m_yoffsetBuffer = 0.f;
@@ -171,7 +177,6 @@ private:
 	std::mutex pendingDeleteMeshMutex;
 	std::mutex inputMutex;
 	std::mutex offsetMutex;
-	std::mutex lightVolumeSnapMutex;
 	std::mutex camBlockPosMutex;
 
 	std::deque<WorldCommand> m_commands;
@@ -216,6 +221,16 @@ private:
 
 	static constexpr auto AUTO_SAVE_INTERVAL =
 		std::chrono::seconds(30);
+
+
+
+	std::mutex lightVolumeSnapMutex;
+	std::atomic<bool> m_lightVolumeDirty = false;
+	std::atomic<bool> m_pointLightDirty = false;
+
+	glm::i64vec3 m_lightVolumeCenter;
+
+
 
 private:
  
@@ -283,7 +298,7 @@ private:
 
 	void UpdateDayNightState(float dt);
 	
-	void TickSimulation(float dt);
+	void TickSimulation(float dt, std::chrono::steady_clock::time_point simTime);
 	void TickBackground(std::chrono::steady_clock::time_point deadline);
 
 
@@ -291,7 +306,7 @@ private:
 
 
 	void UpdateDayNightSnap();
-	void UpdatePlrSnapshot();
+	void UpdatePlrSnapshot(std::chrono::steady_clock::time_point simTime);
 
 	void PushPendingMesh(PendingMesh& mesh);
 	
@@ -348,8 +363,8 @@ private:
 		bool urgent
 	);
 
-	void ProcLightTasks();
-	void ProcessLightTask(LightTask& task, int& budget);
+	void ProcLightTasks(std::chrono::steady_clock::time_point deadline);
+	void ProcessLightTask(LightTask& task, int budget);
 	void FinishLightTask(LightTask& task);
 
 	void DispatchDirtyMeshJobs();
@@ -363,4 +378,10 @@ private:
 
 	bool HasImmediateTask();
 	void Wake();
+
+
+	bool IsInsideLightVolume(int64_t x, int64_t y, int64_t z);
+
+	void CheckBlockLightChangesForLightVolume(LightTask& task);
+
 };

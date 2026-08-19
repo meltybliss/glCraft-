@@ -150,6 +150,7 @@
     <ClInclude Include="include\Math\UV.h" />
     <ClInclude Include="include\Math\Vec2.h" />
     <ClInclude Include="include\Math\Vec3.h" />
+    <ClInclude Include="include\Math\WorldPosMath.h" />
     <ClInclude Include="include\Persistence\ChunkDiskStorage.h" />
     <ClInclude Include="include\Persistence\ChunkLoadTask.h" />
     <ClInclude Include="include\Persistence\ChunkSaveData.h" />

@@ -715,23 +715,6 @@ float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot
 
 	float value = GetAOBrightness(side1, side2, corner);
 
-	if (face == BlockFace::TOP &&
-		x == Chunk::CHUNK_WIDTH - 1 &&
-		y == 65) {
-
-		std::cout
-			<< "TOP BORDER "
-			<< "x=" << x
-			<< " y=" << y
-			<< " z=" << z
-			<< " "
-			<< "s1=" << side1
-			<< " s2=" << side2
-			<< " corner=" << corner
-			<< " ao=" << GetAOBrightness(side1, side2, corner)
-			<< "\n";
-	}
-
 	return value;
 
 }

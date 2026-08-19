@@ -15,6 +15,15 @@ void ChunkPipeline::StartWorkerThreads() {
 	runningWorker = true;
 
 
+	unsigned hw = std::thread::hardware_concurrency();
+
+	WorkerCount = std::clamp<int>(
+		static_cast<int>(hw) - 2,
+		1,
+		4
+	);
+
+
 	for (int i = 0; i < WorkerCount; ++i) {
 		m_workers.emplace_back([this]() {
 

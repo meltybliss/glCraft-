@@ -13,4 +13,12 @@ struct PlayerSnapshot {
 	glm::vec3 right{0.f};
 	glm::vec3 up{0.f};
 
+	std::chrono::steady_clock::time_point simTime;
+};
+
+
+struct PlayerRenderSnapshot {
+	PlayerSnapshot current;
+	PlayerSnapshot previous;
+
 };

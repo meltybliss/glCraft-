@@ -56,18 +56,11 @@ void TerrainGenerator::GenerateTerrain_V1(Chunk& c) {
 
 int TerrainGenerator::GetHeight(int64_t worldX, int64_t worldZ) const {
 
-
 	double height = m_perlinNoise.GetHeight(worldX, worldZ);
 	int h = static_cast<int>(
 		std::lround(height)
 		);
 
-	if (worldZ == 0 && worldX >= 12 && worldX <= 20) {
-		std::cout
-			<< "worldX=" << worldX
-			<< " height=" << h
-			<< "\n";
-	}
 
 	return h;
 }
