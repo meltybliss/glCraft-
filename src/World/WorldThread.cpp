@@ -275,7 +275,10 @@ void WorldThread::ApplyEditBlock(
 	const bool oldIsAir = (oldBlock == BlockType::AIR);
 	const bool newIsAir = (b == BlockType::AIR);
 
-	m_world.SetBlockGlobal_User(x, y, z, b);
+	auto result = m_world.SetBlockGlobal_User(x, y, z, b);
+	if (result.pointLightChanged) {
+		m_pointLightDirty = true;
+	}
 
 
 	if (oldIsAir && !newIsAir) {
@@ -705,13 +708,13 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 	if (clock::now() >= deadline) return;
 
-	if (m_requestedCreateLightVSnap.load()) {
+	if (m_lightVolumeDirty.exchange(false)) {
 		ProcCreateLightVSnap();
 	}
 
 	if (clock::now() >= deadline) return;
 
-	if (m_requestedCreatePointLightSnap.load()) {
+	if (m_pointLightDirty.exchange(false)) {
 
 		ProcCreatePointLightsSnapshot();
 	}
@@ -830,7 +833,7 @@ void WorldThread::UpdateDayNightSnap() {
 	snapshot.skyStrength = skyStrength;
 
 
-	m_exchanger.publish(snapshot);
+	m_exchanger.PublishDaynightSnap(snapshot);
 }
 
 
@@ -1239,7 +1242,6 @@ void WorldThread::UpdateChunksAround() {
 void WorldThread::Rebuild_allChunks() {
 	auto& chunks = m_world.GetChunks();
 
-	std::cout << "aaa\n";
 
 	for (auto& [key, chunkPtr] : chunks) {
 		if (!chunkPtr) {
@@ -2084,81 +2086,48 @@ void WorldThread::UpdatePlrSnapshot(std::chrono::steady_clock::time_point simTim
 
 	newSnap.simTime = simTime;
 
-	std::lock_guard<std::mutex> lock(snapshotMutex);
-
 	if (!m_hasRenderSnap) {
 		
 		m_plrRenderSnap.previous = newSnap;
 		m_plrRenderSnap.current = newSnap;
 
 		m_hasRenderSnap = true;
-		return;
+		
 	}
+	else {
 
-	m_plrRenderSnap.previous = m_plrRenderSnap.current;
-	m_plrRenderSnap.current = newSnap;
+		m_plrRenderSnap.previous = m_plrRenderSnap.current;
+		m_plrRenderSnap.current = newSnap;
 
-}
-
-
-
-void WorldThread::RequestCreateLightVSnap(const Camera& cam) {
-
-	{
-		std::lock_guard<std::mutex> lock(camBlockPosMutex);
-
-		camBlockPosBuffer.x = cam.position.block.x;
-		camBlockPosBuffer.y = cam.position.block.y;
-		camBlockPosBuffer.z = cam.position.block.z;
 	}
 
 
-	m_requestedCreateLightVSnap.store(true);
-
+	m_exchanger.PublishPlrRenderSnap(m_plrRenderSnap);
 }
 
 
 
 void WorldThread::ProcCreateLightVSnap() {
 
-	std::unique_ptr<LightVolumeSnapshot> snap =
-		m_world.CreateLightVSnapshot(camBlockPosBuffer);
+	glm::i64vec3 center{};
 
 	{
-		std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+		std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
 
-		m_lightVSnapshot = std::move(snap);
-
-	}
-	m_requestedCreateLightVSnap.store(false);
-	m_hasCreatedLightVSnap.store(true);
-
-}
-
-
-bool WorldThread::PopCreatedLightVSnapshot(std::unique_ptr<LightVolumeSnapshot>& out) {
-
-	if (!m_hasCreatedLightVSnap.load()) return false;
-
-	{
-		std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
-
-		out = std::move(m_lightVSnapshot);
+		center = m_lightVolumeCenter;
 	}
 
-	
-	m_hasCreatedLightVSnap.store(false);
 
-	return true;
+
+	std::unique_ptr<LightVolumeSnapshot> snap = m_world.CreateLightVSnapshot(std::move(center));
+
+
+	m_exchanger.PublishLightVolumeSnap(std::move(snap));
 
 }
 
 
-void WorldThread::RequestCreatePointLightSnap() {
 
-
-	m_requestedCreatePointLightSnap.store(true);
-}
 
 
 void WorldThread::ProcCreatePointLightsSnapshot() {
@@ -2294,58 +2263,17 @@ void WorldThread::ProcCreatePointLightsSnapshot() {
 	}
 
 
-	{
-		std::lock_guard<std::mutex> lock(m_pointLightSnapMutex);
-
-		m_createdPointLightsSnapshot = std::move(snapshot);
-	}
-
-
-	m_requestedCreatePointLightSnap.store(false);
-	m_createdPointLightSnap.store(true);
 	
 	if (m_firstTimeCreatePlSnap.load()) {
 		m_firstTimeCreatePlSnap.store(false);
 	}
 
+
+	m_exchanger.PublishPointLightSnap(std::move(snapshot));
 }
 
 
 
-
-bool WorldThread::PopPointLightSnap(PointLightsSnapshot& out) {
-
-	if (!m_createdPointLightSnap.load()) return false;
-
-	m_createdPointLightSnap.store(false);
-
-	{
-		std::lock_guard<std::mutex> lock(m_pointLightSnapMutex);
-
-
-
-		out = *m_createdPointLightsSnapshot;
-		m_previousPointLightSnap = *m_createdPointLightsSnapshot;
-	}
-
-	return true;
-}
-
-
-
-bool WorldThread::PopPreviousPointLSnap(PointLightsSnapshot& out) {
-
-	if (m_firstTimeCreatePlSnap.load()) return false;
-
-	{
-		std::lock_guard<std::mutex> lock(m_pointLightSnapMutex);
-
-		out = m_previousPointLightSnap;
-	}
-
-
-	return true;
-}
 
 
 void WorldThread::SetDebugStateFromDebug(const DebugActions& actions) {
@@ -2358,7 +2286,7 @@ void WorldThread::SetDebugStateFromDebug(const DebugActions& actions) {
 void WorldThread::SetLightVolumeCenter(const glm::i64vec3& origin) {
 
 
-	std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+	std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
 
 
 	if (m_lightVolumeCenter == origin) return;
@@ -2377,7 +2305,7 @@ bool WorldThread::IsInsideLightVolume(int64_t x, int64_t y, int64_t z) {
 	glm::i64vec3 o;
 
 	{
-		std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+		std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
 		
 		o = m_lightVolumeCenter;
 	}

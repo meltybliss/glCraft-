@@ -2,7 +2,7 @@
 #include "World/WorldThread.h"
 #include "Util/RandomUtil.h"
 
-#include "SnapshotExchanger.h"
+#include "Snapshot/SnapshotExchanger.h"
 #include "Persistence/PersistenceIO.h"
 
 class GameSession {

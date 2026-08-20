@@ -4,8 +4,8 @@
 #include "World/ChunkResult.h"
 #include "Render/PendingMesh.h"
 #include "World/RaycastHit.h"
-#include "World/ChunkMeshSnapshot.h"
-#include "Render/LightVolumeSnapshot.h"
+#include "Snapshot/ChunkMeshSnapshot.h"
+#include "Snapshot/LightVolumeSnapshot.h"
 #include "Util/ThreadSafeLogUtils.h"
 #include "Gameplay/DayNightState.h"
 #include "Debugs/DebugActions.h"
@@ -27,6 +27,16 @@ using namespace ChunkUtil;
 struct Camera;
 class ChunkPipeline;
 
+
+struct SetBlockResult {
+
+	bool blockChanged = false;
+	bool pointLightChanged = false;
+
+
+};
+
+
 class World {
 public:
 
@@ -40,8 +50,8 @@ public:
 	[[nodiscard]] glm::vec3 GetBlockLightColorGlobal(int64_t x, int64_t y, int64_t z) const;
 
 
-	void SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b);
-	void SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b);
+	SetBlockResult SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b);
+	SetBlockResult SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b);
 	bool SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level, const glm::vec3& lightColor);
 	bool SetSkyLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level);
 

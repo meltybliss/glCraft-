@@ -15,7 +15,7 @@
 #include "World/RaycastHit.h"
 #include "World/WorldThread.h"
 #include "WindowSize.h"
-#include "Core/SnapshotExchanger.h"
+#include "Snapshot/SnapshotExchanger.h"
 
 #include "Debugs/DebugDataBuilder.h"
 #include "Debugs/DebugUI.h"
@@ -26,6 +26,8 @@
 
 #include "AppState.h"
 #include "GameSession.h"
+
+
 
 class Application {
 public:
@@ -57,6 +59,9 @@ private:
 
 	float CalcInterpolationAlpha(const PlayerSnapshot& previous, const PlayerSnapshot& current) const;
 
+	
+	void UpdateSnapshots();
+
 	void EnterWorld();
 
 	void Tick_main();
@@ -73,18 +78,20 @@ private:
 	float m_lastMouseX = 400.0f;
 	float m_lastMouseY = 300.0f;
 
+
 	GameSession m_session;
 	WorldSelectionUI m_selectionUI;
 
 	WorldRenderer m_wRenderer;
 	SelectionOutlineRenderer m_outlineRenderer;
 	SnapshotExchanger m_exchanger;
-
 	PersistenceIO m_persistenceIO;
 
 	Camera m_camera;
 
-
+	//snapshots
+	std::optional<PlayerRenderSnapshot> m_plrRenderSnap;
+	//
 
 	RaycastHit lastHit;
 

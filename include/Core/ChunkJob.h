@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <memory>
-#include "World/ChunkMeshSnapshot.h"
+#include "Snapshot/ChunkMeshSnapshot.h"
 
 enum JobType {
 	CREATE_CHUNK,

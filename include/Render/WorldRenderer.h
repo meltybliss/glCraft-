@@ -10,8 +10,7 @@
 #include <stdint.h>
 #include <optional>
 #include "Texture.h"
-#include "LightVolumeSnapshot.h"
-#include "Core/SnapshotExchanger.h"
+#include "Snapshot/SnapshotExchanger.h"
 
 class WorldThread;
 class World;
@@ -25,7 +24,7 @@ public:
 
 	void UploadPendingMeshData(WorldThread& wt);
 	void DeleteMeshes(WorldThread& wt);
-	void RenderWorld(const Camera& cam, World* w, const PointLightsSnapshot& snapshot);
+	void RenderWorld(const Camera& cam, World* w);
 	void RenderSky(const Camera& cam);
 
 
@@ -45,12 +44,8 @@ public:
 	void InitLightVolumeTexture();
 
 
-	void UpdateDayNightSnap();
+	void UpdateSnapshots();
 
-
-	void UpdateLightVolume(const LightVolumeSnapshot& snapshot);
-
-	DayNightSnapshot const GetDayNightSnapForDebug();
 private:
 
 	void UploadPointLights(
@@ -67,10 +62,25 @@ private:
 
 	void DrawFullscreenTriangle();
 
+
+
+
+	void UpdateLightVolume(const LightVolumeSnapshot& snapshot);
+
+
 private:
 
 	SnapshotExchanger& m_exchanger;
-	DayNightSnapshot m_dayNightSnap;
+
+	std::optional<DayNightSnapshot> m_dayNightSnapshot =
+		DayNightSnapshot{
+			.directionToSun = {0.0f, 1.0f, 0.0f},
+			.dayFactor = 1.0f,
+			.sunHeight = 1.0f,
+			.sunIntensity = 1.0f,
+			.skyStrength = 1.0f
+		};
+	std::unique_ptr<PointLightsSnapshot> m_pointLightsSnap;
 
 
 	std::unordered_map<uint64_t, ChunkMesh> m_chunkMeshes;
@@ -81,8 +91,6 @@ private:
 
 	std::unique_ptr<Texture> blockAtlas;
 	
-	std::mutex dayNightSnapMutex;
-
 
 	unsigned int m_shadowFBO = 0;
 	unsigned int m_shadowDepthTexture = 0;

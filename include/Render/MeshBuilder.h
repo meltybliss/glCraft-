@@ -7,7 +7,7 @@
 #include "World/Chunk.h"
 #include "MeshData.h"
 #include "World/World.h"
-#include "World/ChunkMeshSnapshot.h"
+#include "Snapshot/ChunkMeshSnapshot.h"
 #include "BlockFace.h"
 #include "Math/UV.h"
 #include "Math/Vec3.h"

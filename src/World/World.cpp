@@ -92,7 +92,10 @@ glm::vec3 World::GetBlockLightColorGlobal(int64_t x, int64_t y, int64_t z) const
 
 
 
-void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
+SetBlockResult World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
+
+	SetBlockResult result{};
+
 	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
 	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
 
@@ -102,7 +105,7 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	auto it = chunks.find(Index(cx, cz));
 	if (it == chunks.end() || !it->second) {
-		return;
+		return result;
 	}
 
 	auto* c = it->second.get();
@@ -111,6 +114,7 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 	BlockType oldB = (BlockType)c->GetBlock(lx, ly, lz);
 
 	c->SetBlock(lx, ly, lz, b);
+	result.blockChanged = true;
 
 
 	if (b == BlockType::AIR &&
@@ -119,8 +123,9 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 		c->RemovePointLight(
 			glm::i64vec3(x, y, z)
 		);
+		result.pointLightChanged = true;
 
-		return;
+		return result;
 
 	}
 
@@ -134,10 +139,12 @@ void World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType b) {
 			pointLightRadius[(int)b],
 			4.5f);
 
-
+		result.pointLightChanged = true;
+		
 
 	}
 
+	return result;
 }
 
 
@@ -190,7 +197,9 @@ bool World::SetSkyLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) {
 }
 
 
-void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
+SetBlockResult World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
+	SetBlockResult result;
+
 	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
 	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
 
@@ -200,20 +209,21 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 
 	auto it = chunks.find(Index(cx, cz));
 	if (it == chunks.end() || !it->second) {
-		return;
+		return result;
 	}
 
 	auto* c = it->second.get();
 
 	if (b != (BlockType)0) {
 		if (c->GetBlock(lx, ly, lz) != 0) {
-			return;
+			return result;
 		}
 	}
 
 	BlockType oldB = (BlockType)c->GetBlock(lx, ly, lz);
 
 	c->SetBlock(lx, ly, lz, b);
+	result.blockChanged = true;
 
 
 	if (b == BlockType::AIR &&
@@ -222,8 +232,9 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 		c->RemovePointLight(
 			glm::i64vec3(x, y, z)
 		);
+		result.pointLightChanged = true;
 
-		return;
+		return result;
 
 	}
 
@@ -236,12 +247,12 @@ void World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 			pointLightRadius[(int)b],
 			4.5f);
 
-
+		result.pointLightChanged = true;
 
 	}
 
-	/*c->dirty = true;
-	c->urgentUpdateMesh = true;*/
+
+	return result;
 }
 
 
