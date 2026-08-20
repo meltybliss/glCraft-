@@ -423,7 +423,22 @@ void LightEngine::StartRemoveBlockLightTask(
 
 
 	if (oldLight > 0) {
-		w.SetBlockLightGlobal(worldX, worldY, worldZ, 0, glm::vec3(0.0f));
+		bool changed = w.SetBlockLightGlobal(
+			worldX,
+			worldY,
+			worldZ,
+			0,
+			glm::vec3(0.0f)
+		);
+
+		if (changed) {
+			RecordBlockLightChange(
+				task,
+				worldX,
+				worldY,
+				worldZ
+			);
+		}
 
 
 		task.dirtyChunks_light.insert(Index(cx, cz));
@@ -450,7 +465,25 @@ void LightEngine::StartRemoveBlockLightTask(
 
 	if (task.emissionAfterRemove > 0) {
 
-		w.SetBlockLightGlobal(worldX, worldY, worldZ, task.emissionAfterRemove, lightColor[static_cast<int>(newBlock)]);
+		const glm::vec3 color =
+			lightColor[static_cast<int>(newBlock)];
+
+		bool changed = w.SetBlockLightGlobal(
+			worldX,
+			worldY,
+			worldZ,
+			task.emissionAfterRemove,
+			color
+		);
+
+		if (changed) {
+			RecordBlockLightChange(
+				task,
+				worldX,
+				worldY,
+				worldZ
+			);
+		}
 
 		task.bfs_queue.push({
 			worldX,
@@ -674,7 +707,22 @@ bool LightEngine::Propagate_RemoveBlockLight(
 			if (neighborLight == 0) continue;
 
 			if (neighborLight < removeNode.oldLight) {
-				w.SetBlockLightGlobal(nx, ny, nz, 0, glm::vec3(0.0f));
+				bool changed = w.SetBlockLightGlobal(
+					nx,
+					ny,
+					nz,
+					0,
+					glm::vec3(0.0f)
+				);
+
+				if (changed) {
+					RecordBlockLightChange(
+						task,
+						nx,
+						ny,
+						nz
+					);
+				}
 
 				task.remove_queue.push({
 					nx,

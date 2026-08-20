@@ -275,7 +275,10 @@ void WorldThread::ApplyEditBlock(
 	const bool oldIsAir = (oldBlock == BlockType::AIR);
 	const bool newIsAir = (b == BlockType::AIR);
 
-	m_world.SetBlockGlobal_User(x, y, z, b);
+	auto result = m_world.SetBlockGlobal_User(x, y, z, b);
+	if (result.pointLightChanged) {
+		m_pointLightDirty = true;
+	}
 
 
 	if (oldIsAir && !newIsAir) {
@@ -705,13 +708,13 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 	if (clock::now() >= deadline) return;
 
-	if (m_requestedCreateLightVSnap.load()) {
+	if (m_lightVolumeDirty.exchange(false)) {
 		ProcCreateLightVSnap();
 	}
 
 	if (clock::now() >= deadline) return;
 
-	if (m_requestedCreatePointLightSnap.load()) {
+	if (m_pointLightDirty.exchange(false)) {
 
 		ProcCreatePointLightsSnapshot();
 	}
@@ -2106,10 +2109,19 @@ void WorldThread::UpdatePlrSnapshot(std::chrono::steady_clock::time_point simTim
 
 void WorldThread::ProcCreateLightVSnap() {
 
-	std::unique_ptr<LightVolumeSnapshot> snap =
-		m_world.CreateLightVSnapshot(m_lightVolumeCenter);
+	glm::i64vec3 center{};
 
-	
+	{
+		std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
+
+		center = m_lightVolumeCenter;
+	}
+
+
+
+	std::unique_ptr<LightVolumeSnapshot> snap = m_world.CreateLightVSnapshot(std::move(center));
+
+
 	m_exchanger.PublishLightVolumeSnap(std::move(snap));
 
 }
@@ -2274,7 +2286,7 @@ void WorldThread::SetDebugStateFromDebug(const DebugActions& actions) {
 void WorldThread::SetLightVolumeCenter(const glm::i64vec3& origin) {
 
 
-	std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+	std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
 
 
 	if (m_lightVolumeCenter == origin) return;
@@ -2293,7 +2305,7 @@ bool WorldThread::IsInsideLightVolume(int64_t x, int64_t y, int64_t z) {
 	glm::i64vec3 o;
 
 	{
-		std::lock_guard<std::mutex> lock(lightVolumeSnapMutex);
+		std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
 		
 		o = m_lightVolumeCenter;
 	}

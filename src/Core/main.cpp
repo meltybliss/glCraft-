@@ -1,14 +1,15 @@
 #include "Core/Application.h"
+#include <memory>
 
-int main() {
+int main(int argc, char** argv) {
 	
-	Application app;
+	auto app = std::make_unique<Application>();
 
-	if (!app.InitGL()) {
+	if (!app->InitGL()) {
 		return 1;
 	}
 
-	app.Run();
+	app->Run();
 
 	return 0;
 }

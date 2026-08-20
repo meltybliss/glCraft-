@@ -20,6 +20,8 @@ void Application::UpdateStreamCenter() {
 
 
 	m_session.GetWorldThread().SetDesiredStreamCenter(centerCx, centerCz);
+
+	
 }
 
 
@@ -222,6 +224,7 @@ void Application::Tick_playing() {
 
 	ProcessInput();
 
+	UpdateSnapshots();
 
 	ApplyCameraStatus();
 
@@ -233,16 +236,6 @@ void Application::Tick_playing() {
 	//m_wRenderer.RebuildDrityChunkMesh(m_world);
 	m_wRenderer.UploadPendingMeshData(m_session.GetWorldThread());
 
-	worldThread.RequestCreateLightVSnap(m_camera);
-
-	//äÆê¨çœÇ›SnapshotÇ™Ç†ÇÍÇŒéÛÇØéÊÇÈ
-	std::unique_ptr<LightVolumeSnapshot> lightSnapshot;
-
-	if (m_session.GetWorldThread().PopCreatedLightVSnapshot(lightSnapshot)) {
-		m_wRenderer.UpdateLightVolume(*lightSnapshot);//test
-	}
-
-
 
 }
 
@@ -250,38 +243,22 @@ void Application::Tick_playing() {
 
 void Application::Render_playing() {
 
+
+	m_wRenderer.UpdateSnapshots();
+
 	m_wRenderer.DeleteMeshes(m_session.GetWorldThread());
-
-
-
-	m_wRenderer.UpdateDayNightSnap();
 
 
 
 	m_wRenderer.RenderShadowPass(m_camera);
 
-	m_session.GetWorldThread().RequestCreatePointLightSnap();
-
-
 	m_wRenderer.BeginHDRScene();
 
 	m_wRenderer.RenderSky(m_camera);
 
-	PointLightsSnapshot out;
-	bool created = m_session.GetWorldThread().PopPointLightSnap(out);
-	if (!created) {
-		bool ok = m_session.GetWorldThread().PopPreviousPointLSnap(out);
-
-		if (!ok) {
-			std::cerr << "RequestCreatePlSnap seems to be late\n";
-
-		}
-	}
-
 	m_wRenderer.RenderWorld(
 		m_camera,
-		m_session.GetWorldThread().GetWorldPtr(),
-		out
+		m_session.GetWorldThread().GetWorldPtr()
 	);
 
 
@@ -560,11 +537,24 @@ void Application::RenderOutline() {
 }
 
 
+void Application::UpdateSnapshots() {
+
+	if (auto opt = m_exchanger.AcquirePlrRenderSnap()) {
+		m_plrRenderSnap = std::move(opt);
+	}
+
+
+}
+
+
 void Application::ApplyCameraStatus() {
 
-	PlayerRenderSnapshot snap = m_session.GetWorldThread().GetPlrRenderSnapshot();
-	auto& previous = snap.previous;
-	auto& cur = snap.current;
+	if (!m_plrRenderSnap) {
+		return;
+	}
+
+	auto& previous = m_plrRenderSnap->previous;
+	auto& cur = m_plrRenderSnap->current;
 
 	float alpha = CalcInterpolationAlpha(previous, cur);
 

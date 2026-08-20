@@ -16,7 +16,7 @@ public:
 		m_daynightC.publish(std::move(s));
 	}
 
-	void PublishChunkMeshSnap(ChunkMeshSnapshot s) {
+	void PublishChunkMeshSnap(ChunkMeshSnapshot&& s) {
 		m_chunkMeshC.publish(std::move(s));
 	}
 
@@ -33,32 +33,38 @@ public:
 	}
 
 	//render
-	bool AcquireDayNightSnap(DayNightSnapshot& out) {
-		return m_daynightC.acquire(out);
+	std::optional<DayNightSnapshot>
+	AcquireDayNightSnap() {
+		return m_daynightC.acquire();
 	}
 
-	bool AcquireChunkMeshSnap(ChunkMeshSnapshot& out) {
-		return m_chunkMeshC.acquire(out);
+	std::optional<ChunkMeshSnapshot>
+	AcquireChunkMeshSnap() {
+		return m_chunkMeshC.acquire();
 	}
 
-	bool AcquireLightVolumeSnap(std::unique_ptr<LightVolumeSnapshot>& out) {
-		return m_lightVolumeC.acquire(out);
+	std::unique_ptr<LightVolumeSnapshot>
+	AcquireLightVolumeSnap() {
+		return m_lightVolumeC.acquire();
 	}
 
 
-	bool AcquirePointLightSnap(std::unique_ptr<PointLightsSnapshot>& out) {
-		return m_pointLightC.acquire(out);
+	std::unique_ptr<PointLightsSnapshot>
+	AcquirePointLightSnap() {
+		return m_pointLightC.acquire();
 	}
 
-	bool AcquirePlrRenderSnap(PlayerRenderSnapshot& out) {
-		return m_plrRenderC.acquire(out);
+	std::optional<PlayerRenderSnapshot>
+	AcquirePlrRenderSnap() {
+		return m_plrRenderC.acquire();
 	}
 
 private:
 	
 	SnapshotChannel<DayNightSnapshot> m_daynightC;
 	SnapshotChannel<ChunkMeshSnapshot> m_chunkMeshC;
-	SnapshotChannel<std::unique_ptr<LightVolumeSnapshot>> m_lightVolumeC;
-	SnapshotChannel<std::unique_ptr<PointLightsSnapshot>> m_pointLightC;
+	PtrSnapshotChannel<LightVolumeSnapshot> m_lightVolumeC;
+
+	PtrSnapshotChannel<PointLightsSnapshot> m_pointLightC;
 	SnapshotChannel<PlayerRenderSnapshot> m_plrRenderC;
 };

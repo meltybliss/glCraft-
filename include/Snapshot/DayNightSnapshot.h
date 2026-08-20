@@ -6,10 +6,10 @@ struct DayNightSnapshot {
 
 	glm::vec3 directionToSun{ 0.0f, 1.0f, 0.0f };
 
-	float dayFactor;
-	float sunHeight;
+	float dayFactor = 1.0f;
+	float sunHeight = 1.0f;
 
-	float sunIntensity;
-	float skyStrength;
+	float sunIntensity = 1.0f;
+	float skyStrength = 1.0f;
 
 };

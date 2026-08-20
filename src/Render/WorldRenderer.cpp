@@ -57,15 +57,6 @@ void WorldRenderer::InitSkyShaderAndVAO() {
 }
 
 
-void WorldRenderer::UpdateDayNightSnap() {
-
-	DayNightSnapshot dayNight;
-	bool ok = m_exchanger.acquire(dayNight);
-	if (ok) {
-		m_dayNightSnap = std::move(dayNight);
-	}
-
-}
 
 
 
@@ -87,8 +78,8 @@ void WorldRenderer::RenderSky(const Camera& cam) {
 	m_skyShader->SetVec3("cameraRight", cam.right);
 	m_skyShader->SetVec3("cameraUp", cam.up);
 
-	m_skyShader->SetFloat("uDayFactor", m_dayNightSnap.dayFactor);
-	m_skyShader->SetVec3("sunDirection", m_dayNightSnap.directionToSun);
+	m_skyShader->SetFloat("uDayFactor", m_dayNightSnapshot->dayFactor);
+	m_skyShader->SetVec3("sunDirection", m_dayNightSnapshot->directionToSun);
 
 	glBindVertexArray(m_skyVAO);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -749,43 +740,26 @@ void WorldRenderer::EndHDRScene() {
 void WorldRenderer::UpdateSnapshots() {
 
 
-	DayNightSnapshot dayNight;
-
-	if (m_exchanger.AcquireDayNightSnap(dayNight)) {
+	if (auto opt = m_exchanger.AcquireDayNightSnap()) {
 
 		m_dayNightSnapshot =
-			std::move(dayNight);
+			std::move(opt);
 	}
 
 
-	PlayerRenderSnapshot player;
 
-	if (m_exchanger.AcquirePlrRenderSnap(player)) {
-
-		m_playerSnapshot =
-			std::move(player);
-	}
-
-
-	std::unique_ptr<PointLightsSnapshot>
-		pointLights;
-
-	if (m_exchanger.AcquirePointLightSnap(
-		pointLights))
+	if (auto opt = m_exchanger.AcquirePointLightSnap())
 	{
 		m_pointLightsSnap =
-			std::move(pointLights);
+			std::move(opt);
 	}
 
 
-	std::unique_ptr<LightVolumeSnapshot>
-		lightVolume;
 
-	if (m_exchanger.AcquireLightVolumeSnap(
-		lightVolume))
+	if (auto opt = m_exchanger.AcquireLightVolumeSnap())
 	{
 		UpdateLightVolume(
-			*lightVolume
+			*opt
 		);
 
 	}
@@ -845,6 +819,8 @@ void WorldRenderer::UploadPointLights(
 
 void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
+	if (!m_dayNightSnapshot) return;
+
 	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_shadowFBO);
@@ -855,7 +831,7 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 
 
-	glm::vec3 sunDirection = m_dayNightSnap.directionToSun;
+	glm::vec3 sunDirection = m_dayNightSnapshot->directionToSun;
 	glm::vec3 sunDir =
 		glm::normalize(sunDirection);
 
@@ -930,7 +906,7 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 
 
-void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSnapshot& snapshot) {
+void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 	using namespace LIGHT_VOLUME_SIZE;
 
@@ -956,14 +932,14 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 
 	);
 
-	baseShader->SetFloat("u_skyStrength", m_dayNightSnap.skyStrength);
+	baseShader->SetFloat("u_skyStrength", m_dayNightSnapshot->skyStrength);
 
 	baseShader->SetMat4("view", view);
 	baseShader->SetMat4("projection", projection);
 
-	baseShader->SetVec3("sunDirection", m_dayNightSnap.directionToSun);
+	baseShader->SetVec3("sunDirection", m_dayNightSnapshot->directionToSun);
 
-	baseShader->SetFloat("uSunIntensity", m_dayNightSnap.sunIntensity);
+	baseShader->SetFloat("uSunIntensity", m_dayNightSnapshot->sunIntensity);
 
 	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
 
@@ -1012,15 +988,19 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w, const PointLightsSn
 
 		baseShader->SetMat4("model", model);
 		
-
-		auto it = snapshot.pointLightsMap.find(key);
-		if (it != snapshot.pointLightsMap.end()) {
-			UploadPointLights(
-				*baseShader,
-				it->second.pointLights,
-				it->second.count,
-				cam
-			);
+		if (m_pointLightsSnap) {
+			auto it = m_pointLightsSnap->pointLightsMap.find(key);
+			if (it != m_pointLightsSnap->pointLightsMap.end()) {
+				UploadPointLights(
+					*baseShader,
+					it->second.pointLights,
+					it->second.count,
+					cam
+				);
+			}
+			else {
+				baseShader->SetInt("uPointLightCount", 0);
+			}
 		}
 		else {
 			baseShader->SetInt("uPointLightCount", 0);
@@ -1065,12 +1045,3 @@ void WorldRenderer::DeleteMeshes(WorldThread& wt) {
 
 }
 
-
-
-DayNightSnapshot const WorldRenderer::GetDayNightSnapForDebug() {
-
-	std::lock_guard<std::mutex> lock(dayNightSnapMutex);
-
-	return m_dayNightSnap;
-
-}

@@ -2,7 +2,7 @@
 #include "Core/ChunkJob.h"
 #include "World/Chunk.h"
 #include "World/ChunkUtil.h"
-#include "World/ChunkMeshSnapshot.h"
+
 #include "World/ChunkResult.h"
 #include "World/TerrainGenerator.h"
 #include <thread>

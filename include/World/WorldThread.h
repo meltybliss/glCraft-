@@ -159,7 +159,6 @@ private:
 	std::mutex pendingDeleteMeshMutex;
 	std::mutex inputMutex;
 	std::mutex offsetMutex;
-	std::mutex camBlockPosMutex;
 
 	std::deque<WorldCommand> m_commands;
 
@@ -193,11 +192,11 @@ private:
 
 
 
-	std::mutex lightVolumeSnapMutex;
+	std::mutex m_lightVolumeCenterMutex;
 	std::atomic<bool> m_lightVolumeDirty = false;
 	std::atomic<bool> m_pointLightDirty = false;
 
-	glm::i64vec3 m_lightVolumeCenter;
+	glm::i64vec3 m_lightVolumeCenter{0};
 
 
 

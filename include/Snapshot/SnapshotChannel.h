@@ -19,15 +19,16 @@ public:
 
 
 	//renderer
-	bool acquire(T& out) {
+	std::optional<T> acquire() {
 		std::scoped_lock lock(m_mutex);
 
-		if (!m_pending.has_value()) return false;
+		if (!m_pending.has_value()) return std::nullopt;
 
-		out = std::move(*m_pending);
+		auto result = std::move(m_pending);
+
 		m_pending.reset();
 
-		return true;
+		return result;
 	}
 
 
@@ -36,4 +37,25 @@ private:
 
 	std::optional<T> m_pending;
 
+};
+
+
+template<typename T>
+class PtrSnapshotChannel {
+public:
+	void publish(std::unique_ptr<T> snapshot)
+	{
+		std::scoped_lock lock(m_mutex);
+		m_pending = std::move(snapshot);
+	}
+
+	std::unique_ptr<T> acquire()
+	{
+		std::scoped_lock lock(m_mutex);
+		return std::move(m_pending);
+	}
+
+private:
+	std::mutex m_mutex;
+	std::unique_ptr<T> m_pending;
 };
