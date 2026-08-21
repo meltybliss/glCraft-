@@ -12,6 +12,7 @@
 #include "Debugs/DebugActions.h"
 #include "Persistence/WorldSaveData.h"
 #include "Snapshot/SnapshotExchanger.h"
+#include "Debugs/DebugSettings.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -109,6 +110,7 @@ public:
 
 
 	void SetLightVolumeCenter(const glm::i64vec3& origin);
+	WorldThreadDebugStats GetDebugStats();
 
 private:
 	
@@ -196,6 +198,15 @@ private:
 	std::atomic<bool> m_lightVolumeDirty = false;
 	std::atomic<bool> m_pointLightDirty = false;
 
+	std::atomic<uint64_t> m_debugBusyTimeNs = 0;
+	std::atomic<uint64_t> m_debugLoopIterations = 0;
+	std::atomic<size_t> m_debugLoadedChunks = 0;
+	std::atomic<size_t> m_debugPendingChunkLoads = 0;
+	std::atomic<size_t> m_debugNormalLightTasks = 0;
+	std::atomic<size_t> m_debugUrgentLightTasks = 0;
+	std::atomic<size_t> m_debugDirtyMeshTasks = 0;
+	std::atomic<size_t> m_debugPendingMeshUploads = 0;
+
 	glm::i64vec3 m_lightVolumeCenter{0};
 
 
@@ -261,6 +272,9 @@ private:
 
 	bool HasChunkToErase();
 	bool HasChunkToCreate();
+	bool IsChunkWithinUnloadRange(int32_t cx, int32_t cz) const;
+	void QueueMeshDeletion(uint64_t key);
+	void RebuildDirtyMeshQueuePriorities();
 
 	void UpdateChunksAround();
 
@@ -276,7 +290,7 @@ private:
 	void UpdateDayNightSnap();
 	void UpdatePlrSnapshot(std::chrono::steady_clock::time_point simTime);
 
-	void PushPendingMesh(PendingMesh& mesh);
+	void PushPendingMesh(PendingMesh&& mesh);
 	
 	void Start_BlockLightTask(
 		int64_t x,
@@ -334,6 +348,7 @@ private:
 	void ProcLightTasks(std::chrono::steady_clock::time_point deadline);
 	void ProcessLightTask(LightTask& task, int budget);
 	void FinishLightTask(LightTask& task);
+	uint64_t GetLightTaskDistance(const LightTask& task) const;
 
 	void DispatchDirtyMeshJobs();
 	void DispatchOneDirtyMeshJob();
@@ -346,6 +361,7 @@ private:
 
 	bool HasImmediateTask();
 	void Wake();
+	void PublishDebugCounters();
 
 
 	bool IsInsideLightVolume(int64_t x, int64_t y, int64_t z);

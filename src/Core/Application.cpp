@@ -1,5 +1,6 @@
 #include "Core/Application.h"
 #include "Math/WorldPosMath.h"
+#include <algorithm>
 #include <iostream>
 #include <cmath>
 
@@ -76,6 +77,92 @@ void Application::Run() {
 				"glCraft++ | FPS: " + std::to_string(static_cast<int>(fps));
 
 			glfwSetWindowTitle(m_window, title.c_str());
+
+			if (m_debugUI && m_state == AppState::PLAY) {
+				static uint64_t lastWorkerCompletedTasks = 0;
+				static uint64_t lastWorkerBusyTimeNs = 0;
+				static uint64_t lastWorldBusyTimeNs = 0;
+				static uint64_t lastWorldLoopIterations = 0;
+
+				const WorldThreadDebugStats worldStats =
+					m_session.GetWorldThread().GetDebugStats();
+				const auto& pipelineStats = worldStats.pipeline;
+
+				const uint64_t completedTaskDelta =
+					pipelineStats.completedTasks - lastWorkerCompletedTasks;
+				const uint64_t workerBusyDelta =
+					pipelineStats.busyTimeNs - lastWorkerBusyTimeNs;
+				const uint64_t worldBusyDelta =
+					worldStats.busyTimeNs - lastWorldBusyTimeNs;
+				const uint64_t worldLoopDelta =
+					worldStats.loopIterations - lastWorldLoopIterations;
+
+				DebugPerformanceStats performance;
+				performance.mainFps = fps;
+				performance.mainFrameTimeMs =
+					fps > 0.0f ? 1000.0f / fps : 0.0f;
+
+				const double sampleNs =
+					static_cast<double>(fpsTimer) * 1'000'000'000.0;
+
+				performance.worldThreadUtilization = static_cast<float>(
+					std::clamp(
+						static_cast<double>(worldBusyDelta) / sampleNs * 100.0,
+						0.0,
+						100.0
+					)
+				);
+				performance.worldIterationsPerSecond = static_cast<uint64_t>(
+					static_cast<double>(worldLoopDelta) / fpsTimer
+				);
+
+				performance.workerCount = pipelineStats.workerCount;
+				performance.activeWorkers = pipelineStats.activeWorkers;
+
+				if (pipelineStats.workerCount > 0) {
+					const double workerCapacityNs =
+						sampleNs * pipelineStats.workerCount;
+					performance.workerUtilization = static_cast<float>(
+						std::clamp(
+							static_cast<double>(workerBusyDelta) /
+								workerCapacityNs * 100.0,
+							0.0,
+							100.0
+						)
+					);
+				}
+
+				performance.workerTasksPerSecond =
+					static_cast<float>(completedTaskDelta) / fpsTimer;
+				performance.averageWorkerTaskMs = completedTaskDelta > 0 ?
+					static_cast<float>(
+						static_cast<double>(workerBusyDelta) /
+						completedTaskDelta /
+						1'000'000.0
+					) : 0.0f;
+
+				performance.queuedWorkerTasks = pipelineStats.queuedTasks;
+				performance.queuedCreateTasks = pipelineStats.queuedCreateTasks;
+				performance.queuedTerrainTasks = pipelineStats.queuedTerrainTasks;
+				performance.queuedMeshTasks = pipelineStats.queuedMeshTasks;
+				performance.readyGenerateResults =
+					pipelineStats.readyGenerateResults;
+				performance.readyMeshResults = pipelineStats.readyMeshResults;
+
+				performance.loadedChunks = worldStats.loadedChunks;
+				performance.pendingChunkLoads = worldStats.pendingChunkLoads;
+				performance.normalLightTasks = worldStats.normalLightTasks;
+				performance.urgentLightTasks = worldStats.urgentLightTasks;
+				performance.dirtyMeshTasks = worldStats.dirtyMeshTasks;
+				performance.pendingMeshUploads = worldStats.pendingMeshUploads;
+
+				m_debugUI->ReceivePerformanceStats(performance);
+
+				lastWorkerCompletedTasks = pipelineStats.completedTasks;
+				lastWorkerBusyTimeNs = pipelineStats.busyTimeNs;
+				lastWorldBusyTimeNs = worldStats.busyTimeNs;
+				lastWorldLoopIterations = worldStats.loopIterations;
+			}
 
 			frameCount = 0;
 			fpsTimer = 0.f;
