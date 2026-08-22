@@ -39,11 +39,11 @@ struct Chunk {
 	bool urgentUpdateMesh = false;
 
 
-	constexpr static uint32_t CHUNK_WIDTH = 16;
-	constexpr static uint32_t CHUNK_DEPTH = 16;
-	constexpr static uint32_t CHUNK_HEIGHT = 256;
+	constexpr static int CHUNK_WIDTH = 16;
+	constexpr static int CHUNK_DEPTH = 16;
+	constexpr static int CHUNK_HEIGHT = 256;
 
-	constexpr static uint32_t CHUNK_SIZE = CHUNK_WIDTH * CHUNK_DEPTH * CHUNK_HEIGHT;
+	constexpr static int CHUNK_SIZE = CHUNK_WIDTH * CHUNK_DEPTH * CHUNK_HEIGHT;
 
 
 	std::array<BlockType, CHUNK_SIZE> blocks;

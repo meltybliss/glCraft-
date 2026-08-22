@@ -721,9 +721,9 @@ float MeshBuilder::BuildAOLight(int x, int y, int z, ChunkMeshSnapshot& snapShot
 
 
 void MeshBuilder::AddLightToVertex(
-	int x, 
-	int y, 
-	int z, 
+	int x,
+	int y,
+	int z,
 	const BlockFace face,
 	const BlockType type,
 	std::vector<float>& buffer, 

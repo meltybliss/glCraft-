@@ -943,6 +943,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
 
+
 	WorldPos lightVolumePos;
 	lightVolumePos.block = m_lightVolumeOrigin;
 	lightVolumePos.local = glm::dvec3(0.0);
@@ -986,6 +987,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 		);
 
+		
 		baseShader->SetMat4("model", model);
 		
 		if (m_pointLightsSnap) {

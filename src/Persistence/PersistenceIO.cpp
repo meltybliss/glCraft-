@@ -1,4 +1,6 @@
 #include "Persistence/PersistenceIO.h"
+#include "World/ChunkUtil.h"
+#include <algorithm>
 #include <iostream>
 
 void PersistenceIO::StartThread() {
@@ -90,6 +92,11 @@ void PersistenceIO::RequestToLoadChunk(int32_t cx, int32_t cz) {
 
 	{
 		std::lock_guard<std::mutex> lock(m_TaskMutex);
+		const uint64_t key = ChunkUtil::Index(cx, cz);
+
+		if (m_pendingLoadKeys.contains(key)) return;
+
+		m_pendingLoadKeys.insert(key);
 
 		m_chunkLoadTasks.push_back(
 			ChunkLoadTask{
@@ -99,6 +106,55 @@ void PersistenceIO::RequestToLoadChunk(int32_t cx, int32_t cz) {
 		);
 	}
 	m_threadCv.notify_one();
+}
+
+
+void PersistenceIO::SetStreamCenterAndCancelOutsideLoads(
+	int32_t cx,
+	int32_t cz,
+	int32_t unloadDistance
+) {
+	{
+		std::lock_guard<std::mutex> lock(m_TaskMutex);
+
+		m_streamCx.store(cx);
+		m_streamCz.store(cz);
+
+		for (auto it = m_chunkLoadTasks.begin(); it != m_chunkLoadTasks.end();) {
+			const int64_t dx = std::abs(
+				static_cast<int64_t>(it->cx) - static_cast<int64_t>(cx)
+			);
+			const int64_t dz = std::abs(
+				static_cast<int64_t>(it->cz) - static_cast<int64_t>(cz)
+			);
+
+			if (dx < unloadDistance && dz < unloadDistance) {
+				++it;
+				continue;
+			}
+
+			m_pendingLoadKeys.erase(ChunkUtil::Index(it->cx, it->cz));
+			it = m_chunkLoadTasks.erase(it);
+		}
+	}
+
+	{
+		std::lock_guard<std::mutex> lock(m_loadResultMutex);
+
+		std::erase_if(
+			m_chunkLoadedResult,
+			[cx, cz, unloadDistance](const ChunkSaveData& result) {
+				const int64_t dx = std::abs(
+					static_cast<int64_t>(result.cx) - cx
+				);
+				const int64_t dz = std::abs(
+					static_cast<int64_t>(result.cz) - cz
+				);
+
+				return dx >= unloadDistance || dz >= unloadDistance;
+			}
+		);
+	}
 }
 
 
@@ -178,10 +234,28 @@ void PersistenceIO::ProcLoadTasks() {
 			std::lock_guard<std::mutex> lock(m_TaskMutex);
 
 			if (m_chunkLoadTasks.empty()) break;
+			const int64_t centerCx = m_streamCx.load();
+			const int64_t centerCz = m_streamCz.load();
 
-			task = std::move(m_chunkLoadTasks.front());
+			auto nearestTask = std::min_element(
+				m_chunkLoadTasks.begin(),
+				m_chunkLoadTasks.end(),
+				[centerCx, centerCz](const ChunkLoadTask& a, const ChunkLoadTask& b) {
+					const int64_t distanceA = std::max(
+						std::abs(static_cast<int64_t>(a.cx) - centerCx),
+						std::abs(static_cast<int64_t>(a.cz) - centerCz)
+					);
+					const int64_t distanceB = std::max(
+						std::abs(static_cast<int64_t>(b.cx) - centerCx),
+						std::abs(static_cast<int64_t>(b.cz) - centerCz)
+					);
 
-			m_chunkLoadTasks.pop_front();
+					return distanceA < distanceB;
+				}
+			);
+
+			task = std::move(*nearestTask);
+			m_chunkLoadTasks.erase(nearestTask);
 		}
 
 
@@ -189,6 +263,8 @@ void PersistenceIO::ProcLoadTasks() {
 
 		ChunkDiskLoadResult result = 
 			c_diskStorage.LoadFromDisk(task);
+
+		bool retryLoad = false;
 
 		switch (result.status)
 		{
@@ -202,21 +278,27 @@ void PersistenceIO::ProcLoadTasks() {
 			}
 
 
-			continue;
+			break;
 
 		case ChunkLoadStatus::NotFound:
 			
-			continue;
+			break;
 
 		case ChunkLoadStatus::Corrupted:
 			// ‰ó‚ê‚Ä‚¢‚é‚Ì‚ÅƒƒOE•œ‹Œ•ûj
-			continue;
+			break;
 
 		case ChunkLoadStatus::IOError:
 			
 			pendingReloadTasks.push_back(std::move(task));
+			retryLoad = true;
 
-			continue;
+			break;
+		}
+
+		if (!retryLoad) {
+			std::lock_guard<std::mutex> lock(m_TaskMutex);
+			m_pendingLoadKeys.erase(ChunkUtil::Index(task.cx, task.cz));
 		}
 
 

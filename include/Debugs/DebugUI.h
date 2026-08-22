@@ -20,10 +20,12 @@ public:
 	DebugActions Draw();
 
 	void ReceiveSettings(DebugSettings&& settings);
+	void ReceivePerformanceStats(const DebugPerformanceStats& stats);
 	bool GetIsOpening() const { return m_opening; }
 	void SetIsOpening(bool value) { m_opening = value; }
 private:
 
 	DebugSettings m_settings;
+	DebugPerformanceStats m_performanceStats;
 	bool m_opening = false;
 };

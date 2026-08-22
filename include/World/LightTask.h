@@ -29,6 +29,8 @@ struct LightTask {
 
 	bool urgent = false;
 	LightType lightType;
+	int32_t sourceCx = 0;
+	int32_t sourceCz = 0;
 
 	std::queue<LightNode> bfs_queue;
 	std::queue<RemoveNode> remove_queue;

@@ -1,4 +1,5 @@
 #include "Debugs/DebugUI.h"
+#include <algorithm>
 #include <utility>
 
 
@@ -11,7 +12,132 @@ DebugActions DebugUI::Draw() {
 		return actions;
 	}
 
+	const ImGuiViewport* viewport = ImGui::GetMainViewport();
+	const float availableWidth = std::max(
+		320.0f,
+		viewport->WorkSize.x - 24.0f
+	);
+	const float availableHeight = std::max(
+		360.0f,
+		viewport->WorkSize.y - 24.0f
+	);
+
+	const ImVec2 desiredSize(
+		std::min(680.0f, availableWidth),
+		std::min(900.0f, availableHeight)
+	);
+	const ImVec2 minimumSize(
+		std::min(560.0f, availableWidth),
+		std::min(640.0f, availableHeight)
+	);
+
+	ImGui::SetNextWindowSize(desiredSize, ImGuiCond_Once);
+	ImGui::SetNextWindowSizeConstraints(
+		minimumSize,
+		ImVec2(availableWidth, availableHeight)
+	);
+
 	ImGui::Begin("Debug");
+
+	if (ImGui::CollapsingHeader(
+		"Performance",
+		ImGuiTreeNodeFlags_DefaultOpen)) {
+
+		ImGui::Text("Main thread");
+		ImGui::Text("FPS: %.1f", m_performanceStats.mainFps);
+		ImGui::Text(
+			"Frame time: %.2f ms",
+			m_performanceStats.mainFrameTimeMs
+		);
+
+		ImGui::Separator();
+		ImGui::Text("World thread");
+		ImGui::Text(
+			"Utilization: %.1f%%",
+			m_performanceStats.worldThreadUtilization
+		);
+		ImGui::ProgressBar(
+			std::clamp(
+				m_performanceStats.worldThreadUtilization / 100.0f,
+				0.0f,
+				1.0f
+			),
+			ImVec2(-1.0f, 0.0f)
+		);
+		ImGui::Text(
+			"Loop rate: %llu / sec",
+			static_cast<unsigned long long>(
+				m_performanceStats.worldIterationsPerSecond
+			)
+		);
+
+		ImGui::Separator();
+		ImGui::Text("Chunk workers");
+		ImGui::Text(
+			"Active: %d / %d",
+			m_performanceStats.activeWorkers,
+			m_performanceStats.workerCount
+		);
+		ImGui::Text(
+			"Utilization: %.1f%%",
+			m_performanceStats.workerUtilization
+		);
+		ImGui::ProgressBar(
+			std::clamp(
+				m_performanceStats.workerUtilization / 100.0f,
+				0.0f,
+				1.0f
+			),
+			ImVec2(-1.0f, 0.0f)
+		);
+		ImGui::Text(
+			"Throughput: %.1f tasks / sec",
+			m_performanceStats.workerTasksPerSecond
+		);
+		ImGui::Text(
+			"Average task: %.2f ms",
+			m_performanceStats.averageWorkerTaskMs
+		);
+
+		const char* workerState = "Caught up";
+		if (m_performanceStats.queuedWorkerTasks > 0) {
+			workerState =
+				m_performanceStats.workerUtilization >= 85.0f ?
+				"Saturated" : "Processing";
+		}
+		ImGui::Text("State: %s", workerState);
+
+		ImGui::Separator();
+		ImGui::Text(
+			"Worker queue: %zu  (create %zu, terrain %zu, mesh %zu)",
+			m_performanceStats.queuedWorkerTasks,
+			m_performanceStats.queuedCreateTasks,
+			m_performanceStats.queuedTerrainTasks,
+			m_performanceStats.queuedMeshTasks
+		);
+		ImGui::Text(
+			"Ready results: terrain %zu, mesh %zu",
+			m_performanceStats.readyGenerateResults,
+			m_performanceStats.readyMeshResults
+		);
+		ImGui::Text(
+			"Light tasks: %zu normal, %zu urgent",
+			m_performanceStats.normalLightTasks,
+			m_performanceStats.urgentLightTasks
+		);
+		ImGui::Text(
+			"Mesh tasks: %zu dirty, %zu awaiting upload",
+			m_performanceStats.dirtyMeshTasks,
+			m_performanceStats.pendingMeshUploads
+		);
+		ImGui::Text(
+			"Chunks: %zu loaded, %zu pending",
+			m_performanceStats.loadedChunks,
+			m_performanceStats.pendingChunkLoads
+		);
+	}
+
+	ImGui::Separator();
 
 	ImGui::Text("Block");
 
@@ -105,4 +231,11 @@ void DebugUI::ReceiveSettings(DebugSettings&& settings) {
 
 	m_settings = std::move(settings);
 
+}
+
+
+void DebugUI::ReceivePerformanceStats(
+	const DebugPerformanceStats& stats
+) {
+	m_performanceStats = stats;
 }

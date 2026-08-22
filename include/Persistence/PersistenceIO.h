@@ -11,6 +11,8 @@
 #include <atomic>
 #include <condition_variable>
 #include <deque>
+#include <unordered_set>
+#include <vector>
 
 class PersistenceIO {
 public:
@@ -20,6 +22,11 @@ public:
 
 	void RequestToSaveChunk(ChunkSaveData&& c);
 	void RequestToLoadChunk(int32_t cx, int32_t cz);
+	void SetStreamCenterAndCancelOutsideLoads(
+		int32_t cx,
+		int32_t cz,
+		int32_t unloadDistance
+	);
 
 	void SaveWorld(WorldSaveData&& data);
 	std::optional<WorldSaveData> LoadWorld();
@@ -51,12 +58,15 @@ private:
 
 	std::deque<ChunkSaveTask> m_chunkSaveTasks;
 	std::deque<ChunkLoadTask> m_chunkLoadTasks;
+	std::unordered_set<uint64_t> m_pendingLoadKeys;
 
 	
 
 	std::deque<ChunkSaveData> m_chunkLoadedResult;
 
 	std::condition_variable m_threadCv;
+	std::atomic<int32_t> m_streamCx = 0;
+	std::atomic<int32_t> m_streamCz = 0;
 
 
 	constexpr static uint32_t loadTasksBudget = 8;

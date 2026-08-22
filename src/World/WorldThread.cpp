@@ -59,8 +59,10 @@ void WorldThread::StartThread() {
 		constexpr auto SIM_INTERVAL = std::chrono::duration<float>(FIXED_DT);
 
 		auto nextSimTime = clock::now();
+		auto nextDebugPublishTime = clock::now();
 
 		while (runningWorldThread.load()) {
+			const auto workStart = clock::now();
 
 			auto now = clock::now();
 
@@ -71,6 +73,23 @@ void WorldThread::StartThread() {
 			}
 
 			TickBackground(nextSimTime);
+
+			const auto workTime = clock::now() - workStart;
+			const auto workTimeNs = std::chrono::duration_cast<
+				std::chrono::nanoseconds
+			>(workTime).count();
+
+			m_debugBusyTimeNs.fetch_add(
+				static_cast<uint64_t>(workTimeNs),
+				std::memory_order_relaxed
+			);
+			m_debugLoopIterations.fetch_add(1, std::memory_order_relaxed);
+
+			if (clock::now() >= nextDebugPublishTime) {
+				PublishDebugCounters();
+				nextDebugPublishTime =
+					clock::now() + std::chrono::milliseconds(100);
+			}
 
 
 			if (HasImmediateTask()) {
@@ -401,6 +420,8 @@ void WorldThread::Start_RemoveBlockLightTask(
 	
 
 	LightTask task;
+	task.sourceCx = static_cast<int32_t>(floorDiv(x, Chunk::CHUNK_WIDTH));
+	task.sourceCz = static_cast<int32_t>(floorDiv(z, Chunk::CHUNK_DEPTH));
 
 	task.lightType = LightType::BLOCK;
 	task.phase = Phase::REMOVE;
@@ -444,6 +465,8 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 
 
 	LightTask task;
+	task.sourceCx = static_cast<int32_t>(floorDiv(x, Chunk::CHUNK_WIDTH));
+	task.sourceCz = static_cast<int32_t>(floorDiv(z, Chunk::CHUNK_DEPTH));
 
 
 	task.lightType = LightType::BLOCK;
@@ -484,6 +507,8 @@ void WorldThread::Start_RemoveSkyLightTask(
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
 	LightTask task;
+	task.sourceCx = static_cast<int32_t>(floorDiv(x, Chunk::CHUNK_WIDTH));
+	task.sourceCz = static_cast<int32_t>(floorDiv(z, Chunk::CHUNK_DEPTH));
 	task.lightType = LightType::SKY;
 	task.phase = Phase::REMOVE;
 	task.urgent = urgent;
@@ -534,6 +559,8 @@ void WorldThread::Start_BlockLightTask(
 
 
 	LightTask task;
+	task.sourceCx = cx;
+	task.sourceCz = cz;
 	task.lightType = LightType::BLOCK;
 
 	task.urgent = urgent;
@@ -573,6 +600,8 @@ void WorldThread::Start_SkyLightTask(
 	//if (level == 0) return;
 
 	LightTask task;
+	task.sourceCx = static_cast<int32_t>(floorDiv(x, Chunk::CHUNK_WIDTH));
+	task.sourceCz = static_cast<int32_t>(floorDiv(z, Chunk::CHUNK_DEPTH));
 	task.lightType = LightType::SKY;
 	task.urgent = urgent;
 
@@ -966,6 +995,7 @@ void WorldThread::ProcOne_Disk_ChunkLoadResult() {
 
 	int32_t& cx = saveData->cx;
 	int32_t& cz = saveData->cz;
+	if (!IsChunkWithinUnloadRange(cx, cz)) return;
 
 	auto it = chunks.find(Index(cx, cz));
 
@@ -1037,6 +1067,58 @@ bool WorldThread::HasChunkToCreate() {
 }
 
 
+bool WorldThread::IsChunkWithinUnloadRange(int32_t cx, int32_t cz) const {
+	const int64_t dx =
+		static_cast<int64_t>(cx) - static_cast<int64_t>(m_lastStreamCx);
+	const int64_t dz =
+		static_cast<int64_t>(cz) - static_cast<int64_t>(m_lastStreamCz);
+
+	return std::abs(dx) < UNLOAD_CHUNKS_DISTANCE &&
+		std::abs(dz) < UNLOAD_CHUNKS_DISTANCE;
+}
+
+
+void WorldThread::QueueMeshDeletion(uint64_t key) {
+	{
+		std::lock_guard<std::mutex> lock(pendingMeshMutex);
+
+		std::erase_if(
+			m_pendingMeshData,
+			[key](const PendingMesh& mesh) {
+				return mesh.key == key;
+			}
+		);
+	}
+
+	{
+		std::lock_guard<std::mutex> lock(pendingDeleteMeshMutex);
+		m_pendingDeleteMeshKey.push_back(key);
+	}
+}
+
+
+void WorldThread::RebuildDirtyMeshQueuePriorities() {
+	std::priority_queue<ChunkDirtyEntry> rebuiltQueue;
+
+	for (const auto& [key, chunk] : m_world.GetChunks()) {
+		if (!chunk || !chunk->dirty) continue;
+
+		const int32_t dx = chunk->cx - m_lastStreamCx;
+		const int32_t dz = chunk->cz - m_lastStreamCz;
+		const auto rank = m_loadOffsetsRank.find(Index(dx, dz));
+
+		if (rank == m_loadOffsetsRank.end()) continue;
+
+		rebuiltQueue.push({
+			chunk->urgentUpdateMesh ? -1 : rank->second,
+			key
+		});
+	}
+
+	m_dirtyMeshQueue.swap(rebuiltQueue);
+}
+
+
 bool WorldThread::RequestEraseOneChunkAround() {
 	auto& chunks = m_world.GetChunks();
 
@@ -1062,10 +1144,7 @@ bool WorldThread::RequestEraseOneChunkAround() {
 			continue;
 		}
 
-		{
-			std::lock_guard<std::mutex> lock(pendingDeleteMeshMutex);
-			m_pendingDeleteMeshKey.push_back(it->first);
-		}
+		QueueMeshDeletion(it->first);
 
 		chunks.erase(it);
 
@@ -1215,9 +1294,7 @@ void WorldThread::UpdateChunksAround() {
 		if (shouldDestroy) {
 
 
-			std::lock_guard<std::mutex> lock(pendingDeleteMeshMutex);
-
-			m_pendingDeleteMeshKey.push_back(it->first);
+			QueueMeshDeletion(it->first);
 
 			it = chunks.erase(it);
 			destroyBudget--;
@@ -1298,6 +1375,11 @@ void WorldThread::ApplyStreamCenter() {
 		m_nextLoadOffset = 0;
 
 		m_chunkPipeline.SetStreamCenter(curCenterCx, curCenterCz);
+		m_persistenceIO.SetStreamCenterAndCancelOutsideLoads(
+			curCenterCx,
+			curCenterCz,
+			UNLOAD_CHUNKS_DISTANCE
+		);
 
 		std::vector<uint64_t> canceledKey =
 			m_chunkPipeline.CancelQueuedOutside_ChunkJob();
@@ -1305,6 +1387,8 @@ void WorldThread::ApplyStreamCenter() {
 		for (auto& key : canceledKey) {
 			m_pendingChunkKeys.erase(key);
 		}
+
+		RebuildDirtyMeshQueuePriorities();
 
 		m_streamNeedsUpdate = true;
 
@@ -1335,7 +1419,7 @@ void WorldThread::ProcOneChunkResult() {
 			mesh.meshData = std::move(*meshResult.meshData);
 			mesh.key = key;
 
-			PushPendingMesh(mesh);
+			PushPendingMesh(std::move(mesh));
 		}
 
 		/*if (c->waitingFirstMesh) {
@@ -1356,7 +1440,14 @@ void WorldThread::ProcOneChunkResult() {
 		if (!genResult.chunk) {
 
 			assert(false && "GenerateChunkResult doesnt have Chunk pointer");
+			return;
+		}
 
+		const int32_t cx = RestoreCxFromKey(key);
+		const int32_t cz = RestoreCzFromKey(key);
+
+		if (!IsChunkWithinUnloadRange(cx, cz) || chunks.contains(key)) {
+			return;
 		}
 
 		chunks[key] = std::move(genResult.chunk);
@@ -1389,7 +1480,7 @@ void WorldThread::ProcChunkResults() {
 			mesh.meshData = std::move(*meshResult.meshData);
 			mesh.key = key;
 
-			PushPendingMesh(mesh);
+			PushPendingMesh(std::move(mesh));
 		}
 
 		/*if (c->waitingFirstMesh) {
@@ -1412,7 +1503,14 @@ void WorldThread::ProcChunkResults() {
 		if (!genResult.chunk) {
 
 			assert(false && "GenerateChunkResult doesnt have Chunk pointer");
+			continue;
+		}
 
+		const int32_t cx = RestoreCxFromKey(key);
+		const int32_t cz = RestoreCzFromKey(key);
+
+		if (!IsChunkWithinUnloadRange(cx, cz) || chunks.contains(key)) {
+			continue;
 		}
 
 
@@ -1477,11 +1575,18 @@ bool WorldThread::PopPendingDeleteMeshKey(uint64_t& out) {
 }
 
 
-void WorldThread::PushPendingMesh(PendingMesh& mesh) {
-	
+void WorldThread::PushPendingMesh(PendingMesh&& mesh) {
+	const int32_t cx = RestoreCxFromKey(mesh.key);
+	const int32_t cz = RestoreCzFromKey(mesh.key);
+
+	if (!IsChunkWithinUnloadRange(cx, cz) ||
+		!m_world.GetTargetChunkFromKey(mesh.key)) {
+		return;
+	}
+
 	std::lock_guard<std::mutex> lock(pendingMeshMutex);
 
-	m_pendingMeshData.push_back(mesh);
+	m_pendingMeshData.push_back(std::move(mesh));
 
 }
 
@@ -1491,6 +1596,8 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 
 	LightTask task;
 	task.lightType = LightType::SKY;
+	task.sourceCx = c.cx;
+	task.sourceCz = c.cz;
 
 
 	int64_t wx = static_cast<int64_t>(c.cx) * Chunk::CHUNK_WIDTH;
@@ -1627,90 +1734,67 @@ void WorldThread::FinishLightTask(LightTask& task) {
 }
 
 
-void WorldThread::ProcLightTasks(std::chrono::steady_clock::time_point deadline) {
+uint64_t WorldThread::GetLightTaskDistance(const LightTask& task) const {
+	const int64_t dx = std::abs(
+		static_cast<int64_t>(task.sourceCx) - m_lastStreamCx
+	);
+	const int64_t dz = std::abs(
+		static_cast<int64_t>(task.sourceCz) - m_lastStreamCz
+	);
 
+	return static_cast<uint64_t>(std::max(dx, dz));
+}
+
+
+void WorldThread::ProcLightTasks(std::chrono::steady_clock::time_point deadline) {
 	if (m_lightTasks.empty() && m_urgentLightTasks.empty()) return;
 
 	using clock = std::chrono::steady_clock;
 
 	constexpr int CHECK_INTERVAL = 64;
 	int processed = 0;
-	{
-	
-		while (!m_urgentLightTasks.empty()) {
 
-			auto& task = m_urgentLightTasks.front();
+	auto processQueue = [this, deadline, &processed](
+		std::deque<LightTask>& tasks
+	) {
+		while (!tasks.empty()) {
+			auto target = std::min_element(
+				tasks.begin(),
+				tasks.end(),
+				[this](const LightTask& a, const LightTask& b) {
+					return GetLightTaskDistance(a) < GetLightTaskDistance(b);
+				}
+			);
 
-		
-			ProcessLightTask(task, 1);//proc 1 node
+			while (true) {
+				LightTask& task = *target;
+				ProcessLightTask(task, 1);
+				++processed;
 
-			processed++;
+				const bool finished = task.phase == Phase::ADD ?
+					task.bfs_queue.empty() :
+					task.remove_queue.empty();
 
-			bool finished = false;
+				if (finished) {
+					FinishLightTask(task);
+					tasks.erase(target);
+					break;
+				}
 
-			if (task.phase == Phase::ADD) {
-				finished = task.bfs_queue.empty();
-			}
-			else if (task.phase == Phase::REMOVE) {
-				finished = task.remove_queue.empty();
-			}
-
-			if (finished) {
-
-				FinishLightTask(task);
-
-				m_urgentLightTasks.pop_front();
-			}
-
-			if (processed % CHECK_INTERVAL == 0) {
-				if (clock::now() >= deadline) {
-					return;
+				if (processed % CHECK_INTERVAL == 0 &&
+					clock::now() >= deadline) {
+					return false;
 				}
 			}
-
 		}
 
-	}
+		return true;
+	};
 
-
+	if (!processQueue(m_urgentLightTasks)) return;
 	if (clock::now() >= deadline) return;
 
-
-	while (!m_lightTasks.empty()) {
-
-		auto& task = m_lightTasks.front();
-
-
-
-		ProcessLightTask(task, 1);
-
-		processed++;
-
-		bool finished = false;
-
-		if (task.phase == Phase::ADD) {
-			finished = task.bfs_queue.empty();
-		}
-		else if (task.phase == Phase::REMOVE) {
-			finished = task.remove_queue.empty();
-		}
-
-		if (finished) {
-
-			FinishLightTask(task);
-
-			m_lightTasks.pop_front();
-		}
-
-
-		if (processed % CHECK_INTERVAL == 0) {
-			if (clock::now() >= deadline) return;
-		}
-
-
-	}
-
-
+	processQueue(m_lightTasks);
 }
 
 
@@ -2319,4 +2403,58 @@ bool WorldThread::IsInsideLightVolume(int64_t x, int64_t y, int64_t z) {
 		z <= o.z + LIGHT_VOLUME_DEPTH;
 	
 
+}
+
+
+WorldThreadDebugStats WorldThread::GetDebugStats() {
+	WorldThreadDebugStats stats;
+	stats.pipeline = m_chunkPipeline.GetDebugStats();
+
+	stats.busyTimeNs = m_debugBusyTimeNs.load(std::memory_order_relaxed);
+	stats.loopIterations = m_debugLoopIterations.load(std::memory_order_relaxed);
+	stats.loadedChunks = m_debugLoadedChunks.load(std::memory_order_relaxed);
+	stats.pendingChunkLoads =
+		m_debugPendingChunkLoads.load(std::memory_order_relaxed);
+	stats.normalLightTasks =
+		m_debugNormalLightTasks.load(std::memory_order_relaxed);
+	stats.urgentLightTasks =
+		m_debugUrgentLightTasks.load(std::memory_order_relaxed);
+	stats.dirtyMeshTasks =
+		m_debugDirtyMeshTasks.load(std::memory_order_relaxed);
+	stats.pendingMeshUploads =
+		m_debugPendingMeshUploads.load(std::memory_order_relaxed);
+
+	return stats;
+}
+
+
+void WorldThread::PublishDebugCounters() {
+	m_debugLoadedChunks.store(
+		m_world.GetChunks().size(),
+		std::memory_order_relaxed
+	);
+	m_debugPendingChunkLoads.store(
+		m_pendingChunkKeys.size(),
+		std::memory_order_relaxed
+	);
+	m_debugNormalLightTasks.store(
+		m_lightTasks.size(),
+		std::memory_order_relaxed
+	);
+	m_debugUrgentLightTasks.store(
+		m_urgentLightTasks.size(),
+		std::memory_order_relaxed
+	);
+	m_debugDirtyMeshTasks.store(
+		m_dirtyMeshQueue.size(),
+		std::memory_order_relaxed
+	);
+
+	{
+		std::lock_guard<std::mutex> lock(pendingMeshMutex);
+		m_debugPendingMeshUploads.store(
+			m_pendingMeshData.size(),
+			std::memory_order_relaxed
+		);
+	}
 }

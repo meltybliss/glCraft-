@@ -2,7 +2,7 @@
 #include "Core/ChunkJob.h"
 #include "World/Chunk.h"
 #include "World/ChunkUtil.h"
-
+#include "Debugs/DebugSettings.h"
 #include "World/ChunkResult.h"
 #include "World/TerrainGenerator.h"
 #include <thread>
@@ -21,6 +21,7 @@ using namespace ChunkUtil;
 class WorldThread;
 class World;
 
+
 class ChunkPipeline {
 public:
 
@@ -38,8 +39,9 @@ public:
 	bool PopFrontMeshResult(MeshChunkResult& out);
 	bool PopFrontGenResult(GeneratedChunkResult& out);
 
-	void SetStreamCenter(const int64_t curCx, const int64_t curCz);
+	void SetStreamCenter(int32_t curCx, int32_t curCz);
 	std::vector<uint64_t> CancelQueuedOutside_ChunkJob();
+	ChunkPipelineDebugStats GetDebugStats();
 
 	void SetResultReadyCallback(std::function<void()> callback) {
 
@@ -52,12 +54,21 @@ private:
 	
 
 	void RemoveQueuedMeshJob_NoLock(uint64_t targetKey);
+	static uint64_t GetChunkDistance(
+		int32_t cx,
+		int32_t cz,
+		int32_t centerCx,
+		int32_t centerCz
+	);
+	bool IsOutsideUnloadDistance(int32_t cx, int32_t cz) const;
+	bool IsJobOutsideUnloadDistance(const ChunkJob& job) const;
+	static int GetJobStagePriority(JobType type);
 
 private:
 
-	static constexpr int JOB_CANCEL_BUDGET = 8;
-
 	int WorkerCount = 0;
+	constexpr static int MAX_WORKER_COUNT = 5;
+
 private:
 	World* m_world = nullptr;
 	std::unique_ptr<TerrainGenerator> m_terrainGen;
@@ -80,6 +91,9 @@ private:
 
 	std::atomic<int32_t> m_curStreamCx = 0;
 	std::atomic<int32_t> m_curStreamCz = 0;
+	std::atomic<int> m_activeWorkers = 0;
+	std::atomic<uint64_t> m_completedTasks = 0;
+	std::atomic<uint64_t> m_busyTimeNs = 0;
 	
 
 	std::unordered_set<uint64_t> m_pendingMeshJobs_ChunkKeys;
