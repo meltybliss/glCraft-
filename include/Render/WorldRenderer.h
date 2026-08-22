@@ -9,8 +9,12 @@
 #include <unordered_map>
 #include <stdint.h>
 #include <optional>
-#include "Texture.h"
+#include "ImageTexture2D.h"
+#include "RenderTexture2D.h"
+#include "DepthTexture2D.h"
+#include "DataTexture3D.h"
 #include "Snapshot/SnapshotExchanger.h"
+#include "Snapshot/ChunkRenderabilitySnapshot.h"
 
 class WorldThread;
 class World;
@@ -57,8 +61,8 @@ private:
 
 
 	void ExtractBrightPixels();
-	unsigned int BlurBloom(int passCount);
-	void RenderFinalPost(unsigned int bloomTexture);
+	RenderTexture2D& BlurBloom(int passCount);
+	void RenderFinalPost(RenderTexture2D& bloomTexture);
 
 	void DrawFullscreenTriangle();
 
@@ -68,6 +72,7 @@ private:
 	void UpdateLightVolume(const LightVolumeSnapshot& snapshot);
 
 
+	std::unique_ptr<ChunkRenderabilitySnapshot> CreateChunkRenderabilitySnap() const;
 private:
 
 	SnapshotExchanger& m_exchanger;
@@ -89,24 +94,25 @@ private:
 	std::optional<Shader> baseShader;
 
 
-	std::unique_ptr<Texture> blockAtlas;
+	std::unique_ptr<ImageTexture2D> blockAtlas;
 	
 
 	unsigned int m_shadowFBO = 0;
-	unsigned int m_shadowDepthTexture = 0;
+	std::unique_ptr<DepthTexture2D> m_shadowDepthTexture;
 	std::optional<Shader> m_shadowShader;
 
 	unsigned int m_hdrFBO = 0;
-	unsigned int m_sceneTexture = 0;
+	std::unique_ptr<RenderTexture2D> m_sceneTexture;
 	unsigned int m_depthRBO = 0;
 
 
 	unsigned int m_brightFBO = 0;
-	unsigned int m_brightTexture = 0;
+	std::unique_ptr<RenderTexture2D> m_brightTexture;
 	unsigned int m_pingPongFBO[2] = { 0, 0 };
-	unsigned int m_pingPongTextures[2] = { 0, 0 };
+	std::array<std::unique_ptr<RenderTexture2D>, 2> m_pingpongTextures;
 
-	unsigned int m_lightVolumeTexture = 0;
+
+	std::unique_ptr<DataTexture3D> m_lightVolumeTexture;
 	
 
 	glm::i64vec3 m_lightVolumeOrigin{ 0 };

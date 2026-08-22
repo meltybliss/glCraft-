@@ -1,4 +1,4 @@
-#include "Render/Texture.h"
+#include "Render/ImageTexture2D.h"
 
 #include <iostream>
 #include "glad/glad.h"
@@ -6,11 +6,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb/stb_image.h"
 
-Texture::Texture(const std::string& path) {
+ImageTexture2D::ImageTexture2D(const std::string& path) {
 	LoadFromFile(path);
 }
 
-bool Texture::LoadFromFile(const std::string& path) {
+bool ImageTexture2D::LoadFromFile(const std::string& path) {
 	stbi_set_flip_vertically_on_load(true);
 
 	unsigned char* data = stbi_load(
@@ -59,15 +59,13 @@ bool Texture::LoadFromFile(const std::string& path) {
 }
 
 
-void Texture::Bind(unsigned int unit) const {
+void ImageTexture2D::Bind(unsigned int unit) const {
 	glActiveTexture(GL_TEXTURE0 + unit);
 	glBindTexture(GL_TEXTURE_2D, m_id);
 }
 
 
-void Texture::Destroy() {
-	if (m_id != 0) {
-		glDeleteTextures(1, &m_id);
-		m_id = 0;
-	}
+void ImageTexture2D::Unbind() const {
+
+	glBindTexture(GL_TEXTURE_2D, 0);
 }
