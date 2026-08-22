@@ -3,7 +3,6 @@
 #include "Render/MeshBuilder.h"
 #include "Core/ChunkJob.h"
 #include "Core/WindowSize.h"
-#include "Render/Texture.h"
 #include <iostream>
 
 /*void WorldRenderer::RebuildDrityChunkMesh(World& w) {
@@ -40,7 +39,7 @@ void WorldRenderer::InitBaseShader() {
 	baseShader->SetVec2("torchMinUV", minMax.min);
 	baseShader->SetVec2("torchMaxUV", minMax.max);
 
-	blockAtlas = std::make_unique<Texture>("assets/textures/block_atlas2.png");
+	blockAtlas = std::make_unique<ImageTexture2D>("assets/textures/block_atlas2.png");
 
 }
 
@@ -94,67 +93,8 @@ void WorldRenderer::InitShadownMap() {
 
 	glGenFramebuffers(1, &m_shadowFBO);
 
-	glGenTextures(1, &m_shadowDepthTexture);
-	glBindTexture(GL_TEXTURE_2D, m_shadowDepthTexture);
-
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0,
-		GL_DEPTH_COMPONENT,
-		SHADOW_WIDTH,
-		SHADOW_HEIGHT,
-		0,
-		GL_DEPTH_COMPONENT,
-		GL_FLOAT,
-		nullptr
-
-	);
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_COMPARE_MODE,
-		GL_COMPARE_REF_TO_TEXTURE
-	);
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_COMPARE_FUNC,
-		GL_LEQUAL
-	);
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MIN_FILTER,
-		GL_LINEAR
-	);
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MAG_FILTER,
-		GL_LINEAR
-	);
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_WRAP_S,
-		GL_CLAMP_TO_BORDER
-	);
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_WRAP_T,
-		GL_CLAMP_TO_BORDER
-	);
-
-	const float borderColor[] = {
-		1.0f, 1.0f, 1.0f, 1.0f
-	};
-
-	glTexParameterfv(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_BORDER_COLOR,
-		borderColor
-	);
+	
+	m_shadowDepthTexture = std::make_unique<DepthTexture2D>(SHADOW_WIDTH, SHADOW_HEIGHT);
 
 	glBindFramebuffer(
 		GL_FRAMEBUFFER,
@@ -165,7 +105,7 @@ void WorldRenderer::InitShadownMap() {
 		GL_FRAMEBUFFER,
 		GL_DEPTH_ATTACHMENT,
 		GL_TEXTURE_2D,
-		m_shadowDepthTexture,
+		m_shadowDepthTexture->GetID(),
 		0
 	);
 
@@ -198,40 +138,22 @@ void WorldRenderer::InitHDRFrameBuffer() {
 	glGenFramebuffers(1, &m_hdrFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_hdrFBO);
 
-	glGenTextures(1, &m_sceneTexture);
-	glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
 
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0,
-		GL_RGBA16F,
+	m_sceneTexture = std::make_unique<RenderTexture2D>(
 		WindowSize::windowWidth,
 		WindowSize::windowHeight,
-		0,
+		GL_RGBA16F,
 		GL_RGBA,
-		GL_FLOAT,
-		nullptr
-
+		GL_FLOAT
 	);
 
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MIN_FILTER,
-		GL_LINEAR
-	);
-
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MAG_FILTER,
-		GL_LINEAR
-	);
+	
 
 	glFramebufferTexture2D(
 		GL_FRAMEBUFFER,
 		GL_COLOR_ATTACHMENT0,
 		GL_TEXTURE_2D,
-		m_sceneTexture,
+		m_sceneTexture->GetID(),
 		0
 	);
 
@@ -269,47 +191,7 @@ void WorldRenderer::InitHDRFrameBuffer() {
 void WorldRenderer::InitLightVolumeTexture() {
 
 
-	glGenTextures(1, &m_lightVolumeTexture);
-	glBindTexture(GL_TEXTURE_3D, m_lightVolumeTexture);
-
-
-	constexpr int channel_count = 4;
-
-	using namespace LIGHT_VOLUME_SIZE;
-
-	std::vector<float> emptyData(
-		LIGHT_VOLUME_WIDTH *
-		LIGHT_VOLUME_HEIGHT * 
-		LIGHT_VOLUME_DEPTH *
-		channel_count,
-		0.0f
-	);
-
-
-	glTexImage3D(
-		GL_TEXTURE_3D,
-		0,
-		GL_RGBA16F,
-		LIGHT_VOLUME_WIDTH,
-		LIGHT_VOLUME_HEIGHT,
-		LIGHT_VOLUME_DEPTH,
-		0,
-		GL_RGBA,
-		GL_FLOAT,
-		emptyData.data()
-	);
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-
-
-	glBindTexture(GL_TEXTURE_3D, 0);
+	m_lightVolumeTexture = std::make_unique<DataTexture3D>(GL_RGBA16F, GL_RGBA, GL_FLOAT);
 
 }
 
@@ -322,55 +204,13 @@ void WorldRenderer::InitBloom() {
 	glGenFramebuffers(1, &m_brightFBO);
 	glBindFramebuffer(GL_FRAMEBUFFER, m_brightFBO);
 
-	glGenTextures(1, &m_brightTexture);
-	glBindTexture(GL_TEXTURE_2D, m_brightTexture);
-
-	glTexImage2D(
-		GL_TEXTURE_2D,
-		0,
-		GL_RGBA16F,
-		(GLsizei)WindowSize::windowWidth,
-		(GLsizei)WindowSize::windowHeight,
-		0,
-		GL_RGBA,
-		GL_FLOAT,
-		nullptr
-
-
-	);
-
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MIN_FILTER,
-		GL_LINEAR
-	);
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_MAG_FILTER,
-		GL_LINEAR
-	);
-
-	
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_WRAP_S,
-		GL_CLAMP_TO_EDGE
-	);
-
-	glTexParameteri(
-		GL_TEXTURE_2D,
-		GL_TEXTURE_WRAP_T,
-		GL_CLAMP_TO_EDGE
-	);
-
+	m_brightTexture = std::make_unique<RenderTexture2D>(WindowSize::windowWidth, WindowSize::windowHeight, GL_RGBA16F, GL_RGBA, GL_FLOAT);
 
 	glFramebufferTexture2D(
 		GL_FRAMEBUFFER,
 		GL_COLOR_ATTACHMENT0,
 		GL_TEXTURE_2D,
-		m_brightTexture,
+		m_brightTexture->GetID(),
 		0
 	);
 
@@ -385,58 +225,23 @@ void WorldRenderer::InitBloom() {
 	//for Blur
 
 	glGenFramebuffers(2, m_pingPongFBO);
-	glGenTextures(2, m_pingPongTextures);
+	
 
+	m_pingpongTextures[0] =
+		std::make_unique<RenderTexture2D>(WindowSize::windowWidth, WindowSize::windowHeight, GL_RGBA16F, GL_RGBA, GL_FLOAT);
+
+	m_pingpongTextures[1] =
+		std::make_unique<RenderTexture2D>(WindowSize::windowWidth, WindowSize::windowHeight, GL_RGBA16F, GL_RGBA, GL_FLOAT);
 
 	for (int i = 0; i < 2; ++i) {
 
 		glBindFramebuffer(GL_FRAMEBUFFER, m_pingPongFBO[i]);
 
-		glBindTexture(GL_TEXTURE_2D, m_pingPongTextures[i]);
-
-		glTexImage2D(
-			GL_TEXTURE_2D,
-			0,
-			GL_RGBA16F,
-			(GLsizei)WindowSize::windowWidth,
-			(GLsizei)WindowSize::windowHeight,
-			0,
-			GL_RGBA,
-			GL_FLOAT,
-			nullptr
-
-		);
-
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_MIN_FILTER,
-			GL_LINEAR
-		);
-
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_MAG_FILTER,
-			GL_LINEAR
-		);
-
-
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_WRAP_S,
-			GL_CLAMP_TO_EDGE
-		);
-
-		glTexParameteri(
-			GL_TEXTURE_2D,
-			GL_TEXTURE_WRAP_T,
-			GL_CLAMP_TO_EDGE
-		);
-
 
 		glFramebufferTexture(
 			GL_FRAMEBUFFER,
 			GL_COLOR_ATTACHMENT0,
-			m_pingPongTextures[i],
+			m_pingpongTextures[i]->GetID(),
 			0
 		);
 
@@ -538,23 +343,11 @@ void WorldRenderer::UpdateLightVolume(const LightVolumeSnapshot& snapshot) {
 
 	m_lightVolumeOrigin = snapshot.origin;
 
-	glBindTexture(GL_TEXTURE_3D, m_lightVolumeTexture);
+	m_lightVolumeTexture->Bind();
 
-	glTexSubImage3D(
-		GL_TEXTURE_3D,
-		0,
-		0, 0, 0,
-		LIGHT_VOLUME_WIDTH,
-		LIGHT_VOLUME_HEIGHT,
-		LIGHT_VOLUME_DEPTH,
-		GL_RGBA,
-		GL_FLOAT,
-		snapshot.pixels.data()
+	m_lightVolumeTexture->UpdateSub(snapshot.pixels.data());
 
-	);
-
-
-	glBindTexture(GL_TEXTURE_3D, 0);
+	m_lightVolumeTexture->Unbind();
 
 }
 
@@ -578,8 +371,7 @@ void WorldRenderer::ExtractBrightPixels() {
 	m_brightShader->SetFloat("uThreshold", 1.f);
 
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+	m_sceneTexture->Bind();
 
 
 	DrawFullscreenTriangle();
@@ -587,10 +379,11 @@ void WorldRenderer::ExtractBrightPixels() {
 }
 
 
-unsigned int WorldRenderer::BlurBloom(int passCount) {
+
+RenderTexture2D& WorldRenderer::BlurBloom(int passCount) {
 
 	if (passCount <= 0) {
-		return m_brightTexture;
+		return *m_brightTexture;
 	}
 
 
@@ -598,7 +391,7 @@ unsigned int WorldRenderer::BlurBloom(int passCount) {
 	int writeIndex = 0;
 
 
-	unsigned int inputTexture = m_brightTexture;
+	RenderTexture2D* inputTexture = m_brightTexture.get();
 
 	m_blurShader->Use();
 
@@ -622,17 +415,13 @@ unsigned int WorldRenderer::BlurBloom(int passCount) {
 		);
 
 
-		glActiveTexture(GL_TEXTURE0);
 
-		glBindTexture(
-			GL_TEXTURE_2D,
-			inputTexture
-		);
+		inputTexture->Bind();
 
 
 		DrawFullscreenTriangle();
 
-		inputTexture = m_pingPongTextures[writeIndex];
+		inputTexture = m_pingpongTextures[writeIndex].get();
 
 		writeIndex = 1 - writeIndex;
 
@@ -640,12 +429,12 @@ unsigned int WorldRenderer::BlurBloom(int passCount) {
 			!horizontal;
 
 	}
-	return inputTexture;
+	return *inputTexture;
 
 }
 
 
-void WorldRenderer::RenderFinalPost(unsigned int bloomTexture) {
+void WorldRenderer::RenderFinalPost(RenderTexture2D& bloomTexture) {
 
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -671,12 +460,9 @@ void WorldRenderer::RenderFinalPost(unsigned int bloomTexture) {
 	);
 
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_sceneTexture);
+	m_sceneTexture->Bind();
 
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, bloomTexture);
+	bloomTexture.Bind(1);
 
 
 	DrawFullscreenTriangle();
@@ -729,7 +515,7 @@ void WorldRenderer::EndHDRScene() {
 
 	ExtractBrightPixels();
 
-	unsigned int bloomTexture = BlurBloom(20);
+	RenderTexture2D& bloomTexture = BlurBloom(20);
 
 	RenderFinalPost(bloomTexture);
 
@@ -926,7 +712,8 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 	glm::mat4 projection = glm::perspective(
 		glm::radians(cam.fov),
-		WindowSize::windowWidth / WindowSize::windowHeight,
+		static_cast<float>(WindowSize::windowWidth) /
+		static_cast<float>(WindowSize::windowHeight),
 		0.1f,
 		1000.f
 
@@ -956,12 +743,9 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 	baseShader->SetVec3("uLightVolumeSize", glm::vec3(LIGHT_VOLUME_WIDTH, LIGHT_VOLUME_HEIGHT, LIGHT_VOLUME_DEPTH));
 
 	blockAtlas->Bind(0);
+	m_shadowDepthTexture->Bind(1);
+	m_lightVolumeTexture->Bind(2);
 
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, m_shadowDepthTexture);//‚±‚Ìtexture‚à‚¢‚¸‚êTextureŒ^‚É‚·‚é
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_3D, m_lightVolumeTexture);
 
 	for (auto& [key, mesh] : m_chunkMeshes) {
 
@@ -1024,6 +808,9 @@ void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 	while (wt.PopPendingMeshData(out)) {
 		auto [it, inserted] = m_chunkMeshes.try_emplace(out.key);
 
+		if (!inserted) {
+			it->second.DeleteGL();
+		}
 		it->second.Upload(out.meshData);
 		
 	}
@@ -1047,3 +834,23 @@ void WorldRenderer::DeleteMeshes(WorldThread& wt) {
 
 }
 
+
+
+std::unique_ptr<ChunkRenderabilitySnapshot>
+WorldRenderer::CreateChunkRenderabilitySnap() const {
+
+	std::unique_ptr<ChunkRenderabilitySnapshot> result = 
+		std::make_unique<ChunkRenderabilitySnapshot>();
+
+	result->renderableChunks.reserve(m_chunkMeshes.size());
+
+
+	for (const auto& [key, mesh] : m_chunkMeshes) {
+
+		result->renderableChunks.insert(key);
+
+	}
+
+
+	return std::move(result);
+}

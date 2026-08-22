@@ -1,19 +1,19 @@
 #pragma once
 
 #include <string>
+#include "TextureObject.h"
 
-class Texture {
+class ImageTexture2D : public TextureObject {
 public:
-	Texture() = default;
-	explicit Texture(const std::string& path);
+	ImageTexture2D() = default;
+	explicit ImageTexture2D(const std::string& path);
 
 	bool LoadFromFile(const std::string& path);
 	void Bind(unsigned int unit = 0) const;
-	void Destroy();
+	void Unbind() const;
 
 private:
 
-	unsigned int m_id = 0;
 	int m_width = 0;
 	int m_height = 0;
 	int m_channels = 0;

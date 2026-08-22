@@ -13,6 +13,7 @@
 #include "Persistence/WorldSaveData.h"
 #include "Snapshot/SnapshotExchanger.h"
 #include "Debugs/DebugSettings.h"
+#include "WorldConfig.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -26,6 +27,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 
+using namespace WorldConfig;
 
 struct ChunkOffset {
 	int32_t dx = 0;
@@ -213,8 +215,6 @@ private:
 
 private:
  
-	static constexpr int LOAD_CHUNKS_DISTANCE = 12;
-	static constexpr int UNLOAD_CHUNKS_DISTANCE = 14;
 
 	static constexpr int MAX_CHUNK_CREATE_PER_TICK = 8;
 	static constexpr int MAX_CHUNK_DESTROY_PER_TICK = 10;
