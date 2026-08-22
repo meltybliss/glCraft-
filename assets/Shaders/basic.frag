@@ -417,7 +417,8 @@ void main() {
 	litColor +=
 		whiteEmission +
 		orangeEmission;
-	
+
+
 	
 	FragColor =
         vec4(

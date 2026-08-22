@@ -67,6 +67,8 @@ private:
 private:
 
 	int WorkerCount = 0;
+	constexpr static int MAX_WORKER_COUNT = 5;
+
 private:
 	World* m_world = nullptr;
 	std::unique_ptr<TerrainGenerator> m_terrainGen;

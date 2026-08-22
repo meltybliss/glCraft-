@@ -21,7 +21,7 @@ void ChunkPipeline::StartWorkerThreads() {
 	WorkerCount = std::clamp<int>(
 		static_cast<int>(hw) - 2,
 		1,
-		4
+		MAX_WORKER_COUNT
 	);
 
 
