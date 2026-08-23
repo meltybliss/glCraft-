@@ -318,6 +318,8 @@ void Application::Tick_playing() {
 	UpdateRayHit();//raycast
 	UpdateStreamCenter();
 
+	
+
 	worldThread.SetLightVolumeCenter(m_camera.position.block);//cameraの位置が以前のworldThread内で保存されてるlightVolumeOriginと違う値になったときだけoriginを更新してsnapshotつくる。
 
 	//m_wRenderer.RebuildDrityChunkMesh(m_world);
@@ -338,6 +340,11 @@ void Application::Render_playing() {
 
 
 	m_wRenderer.RenderShadowPass(m_camera);
+
+
+	m_wRenderer.UpdateFogSys(m_camera);///////
+
+
 
 	m_wRenderer.BeginHDRScene();
 
@@ -433,13 +440,15 @@ bool Application::InitGL() {
 	
 	m_wRenderer.InitBaseShader();
 
+
 	m_wRenderer.InitSkyShaderAndVAO();
 	m_wRenderer.InitBloom();
 	m_wRenderer.InitShadownMap();
 	m_wRenderer.InitHDRFrameBuffer();
-
+	
 	m_wRenderer.InitLightVolumeTexture();
 
+	m_wRenderer.InitFogSys();
 	//UI
 	m_imguiRenderer.Init(m_window);
 

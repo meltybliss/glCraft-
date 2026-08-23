@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include <memory>
 
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
@@ -8,21 +9,29 @@
 
 #include "Snapshot/ChunkRenderabilitySnapshot.h"
 #include "Render/Texture1D.h"
+#include "World/WorldPos.h"
 
 class FogSystem {
 public:
 
+	FogSystem();
+
 	void InitRenderableDistTexture();
 
 	void UpdateFog(
-		const glm::dvec3& camera,
+		const WorldPos& camera,
 		const ChunkRenderabilitySnapshot& snap
 	);
 
 
+	Texture1D* GetRenderableDistTexture() const { return m_renderableDistTexture.get(); }
+
+	void Bind(unsigned int unit) const;
+
+	
 private:
 
-	double FindRenderableDistance(const glm::dvec2& cameraXZ, const glm::dvec2& dir, const ChunkRenderabilitySnapshot& snap);
+	double FindRenderableDistance(const WorldPos& camera, const glm::dvec2& dir, const ChunkRenderabilitySnapshot& snap);
 
 	std::array<float, 360> m_renderableDistances;
 	std::unique_ptr<Texture1D> m_renderableDistTexture;

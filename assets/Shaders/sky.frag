@@ -17,6 +17,13 @@ uniform float uDayFactor;
 uniform vec3 sunDirection;
 
 
+uniform vec3 dayHorizonColor;
+uniform vec3 dayTopColor;
+	 
+uniform vec3 nightHorizonColor;
+uniform vec3 nightTopColor;
+
+
 float Hash21(vec2 p) {
     p = fract(p * vec2(123.34, 456.21));
     p += dot(p, p + 45.32);
@@ -154,11 +161,7 @@ void main() {
 
 	 float moonTexture = 0.72 + 0.28 * ValueNoise(worldDirection.xz * 160.0 + worldDirection.y * 47.0);
 
-	 vec3 dayHorizonColor = vec3(0.35, 0.65, 0.95);
-     vec3 dayTopColor     = vec3(0.20, 0.50, 0.95);
-
-	 vec3 nightHorizonColor = vec3(0.018, 0.035, 0.085);
-	 vec3 nightTopColor     = vec3(0.012, 0.022, 0.065);
+	
 
 	 vec3 horizonColor = 
 		mix(
