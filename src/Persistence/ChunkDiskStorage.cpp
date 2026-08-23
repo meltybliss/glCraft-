@@ -12,9 +12,9 @@ bool ChunkDiskStorage::SaveToDisk(ChunkSaveTask& task) const {
 		chunksPath /
 		(
 			"c_" +
-			std::to_string(saveData.cx) +
+			std::to_string(saveData.coord.x) +
 			"_" +
-			std::to_string(saveData.cz) +
+			std::to_string(saveData.coord.z) +
 			".bin"
 		);
 
@@ -30,13 +30,13 @@ bool ChunkDiskStorage::SaveToDisk(ChunkSaveTask& task) const {
 	file.write(magic, sizeof(magic));
 
 	file.write(
-		reinterpret_cast<const char*>(&saveData.cx),
-		sizeof(saveData.cx)
+		reinterpret_cast<const char*>(&saveData.coord.x),
+		sizeof(saveData.coord.x)
 	);
 
 	file.write(
-		reinterpret_cast<const char*>(&saveData.cz),
-		sizeof(saveData.cz)
+		reinterpret_cast<const char*>(&saveData.coord.z),
+		sizeof(saveData.coord.z)
 	);
 
 
@@ -52,7 +52,7 @@ bool ChunkDiskStorage::SaveToDisk(ChunkSaveTask& task) const {
 
 ChunkDiskLoadResult ChunkDiskStorage::LoadFromDisk(const ChunkLoadTask& task) {
 
-    const auto path = GetChunkPath(task.cx, task.cz);
+    const auto path = GetChunkPath(task.coord);
 
 	 if (!std::filesystem::exists(path))
     {
@@ -102,15 +102,21 @@ ChunkDiskLoadResult ChunkDiskStorage::LoadFromDisk(const ChunkLoadTask& task) {
         };
     }
 
-    file.read(
-        reinterpret_cast<char*>(&data.cx),
-        sizeof(data.cx)
-    );
+    constexpr std::uintmax_t oldFileSize =
+        sizeof(expectedMagic) + sizeof(int32_t) * 2 +
+        sizeof(BlockType) * Chunk::CHUNK_SIZE;
 
-    file.read(
-        reinterpret_cast<char*>(&data.cz),
-        sizeof(data.cz)
-    );
+    if (std::filesystem::file_size(path) == oldFileSize) {
+        int32_t oldCx = 0;
+        int32_t oldCz = 0;
+        file.read(reinterpret_cast<char*>(&oldCx), sizeof(oldCx));
+        file.read(reinterpret_cast<char*>(&oldCz), sizeof(oldCz));
+        data.coord = {oldCx, oldCz};
+    }
+    else {
+        file.read(reinterpret_cast<char*>(&data.coord.x), sizeof(data.coord.x));
+        file.read(reinterpret_cast<char*>(&data.coord.z), sizeof(data.coord.z));
+    }
 
     if (!file)
     {
@@ -120,7 +126,7 @@ ChunkDiskLoadResult ChunkDiskStorage::LoadFromDisk(const ChunkLoadTask& task) {
         };
     }
 
-    if (data.cx != task.cx || data.cz != task.cz)
+    if (data.coord != task.coord)
     {
         return {
             .status = ChunkLoadStatus::Corrupted,
@@ -156,20 +162,8 @@ ChunkDiskLoadResult ChunkDiskStorage::LoadFromDisk(const ChunkLoadTask& task) {
 
 
 
-bool ChunkDiskStorage::CheckDataExistence(int32_t cx, int32_t cz) const {
-
-	std::filesystem::path filePath =
-		chunksPath /
-		(
-			"c_" +
-			std::to_string(cx) +
-			"_" +
-			std::to_string(cz) +
-			".bin"
-			);
-
-
-	return std::filesystem::exists(filePath);
+bool ChunkDiskStorage::CheckDataExistence(ChunkCoord coord) const {
+	return std::filesystem::exists(GetChunkPath(coord));
 
 
 }

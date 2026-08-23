@@ -6,6 +6,7 @@
 #include <memory>
 #include <unordered_map>
 #include <stdint.h>
+#include "World/ChunkCoord.h"
 
 
 //ある場所に周りに減衰しながら広がる光オブジェクトを置くためにつかう。主に光源ブロックに置く。
@@ -29,6 +30,6 @@ struct PointLightsStruct {
 
 struct PointLightsSnapshot {
 
-	std::unordered_map<uint64_t, PointLightsStruct> pointLightsMap;
+	std::unordered_map<ChunkCoord, PointLightsStruct, ChunkCoordHash> pointLightsMap;
 
 };

@@ -4,6 +4,7 @@
 #include "GLFW/glfw3.h"
 #include "World/BlockData.h"
 #include "PointLight.h"
+#include "ChunkCoord.h"
 
 #include <array>
 
@@ -14,7 +15,7 @@
 
 struct Chunk {
 
-	Chunk(int32_t x, int32_t z) : cx(x), cz(z)  {
+	explicit Chunk(ChunkCoord chunkCoord) : coord(chunkCoord)  {
 		blocks.fill(BlockType::AIR);
 	}
 	
@@ -30,9 +31,7 @@ struct Chunk {
 
 	}
 
-	int32_t cx = 0;
-	int32_t cz = 0;
-
+	ChunkCoord coord;
 
 	bool dirty = false;
 	bool dirtyToSave = false;

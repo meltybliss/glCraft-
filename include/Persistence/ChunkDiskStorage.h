@@ -17,21 +17,21 @@ public:
 
 	ChunkDiskLoadResult LoadFromDisk(const ChunkLoadTask& task);
 
-	bool CheckDataExistence(int32_t cx, int32_t cz) const;
+	bool CheckDataExistence(ChunkCoord coord) const;
 
 private:
 
 	std::filesystem::path worldPath = "worlds/MyWorld";
 	std::filesystem::path chunksPath = worldPath / "chunks";
 
-	std::filesystem::path GetChunkPath(int32_t cx, int32_t cz) const {
+	std::filesystem::path GetChunkPath(ChunkCoord coord) const {
 		return 
 			chunksPath /
 			(
 				"c_" +
-				std::to_string(cx) +
+				std::to_string(coord.x) +
 				"_" +
-				std::to_string(cz) +
+				std::to_string(coord.z) +
 				".bin"
 			);
 

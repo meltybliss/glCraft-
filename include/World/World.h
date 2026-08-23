@@ -21,7 +21,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-using ChunkMapKey = uint64_t;
+using ChunkMapKey = ChunkCoord;
 using namespace ChunkUtil;
 
 struct Camera;
@@ -42,7 +42,7 @@ public:
 
 	World() = default;
 
-	using ChunkMap = std::unordered_map<ChunkMapKey, std::unique_ptr<Chunk>>;
+	using ChunkMap = std::unordered_map<ChunkMapKey, std::unique_ptr<Chunk>, ChunkCoordHash>;
 
 	[[nodiscard]] unsigned int GetBlockGlobal(int64_t x, int64_t y, int64_t z) const;
 	[[nodiscard]] uint8_t GetBlockLightGlobal(int64_t x, int64_t y, int64_t z) const;
@@ -63,25 +63,15 @@ public:
 		return chunks;
 	}
 
-	[[nodiscard]] Chunk* GetTargetChunk(int32_t cx, int32_t cz) {
-		uint64_t key = Index(cx, cz);
-		auto it = chunks.find(key);
+	[[nodiscard]] Chunk* GetTargetChunk(ChunkCoord coord) {
+		auto it = chunks.find(coord);
 
 		if (it == chunks.end()) return nullptr;
 
 		return it->second.get();
 	}
 
-	[[nodiscard]] Chunk* GetTargetChunkFromKey(uint64_t key) {
-
-		auto it = chunks.find(key);
-
-		if (it == chunks.end()) return nullptr;
-
-		return it->second.get();
-	}
-
-	[[nodiscard]] const Chunk* GetTargetChunkFromKey(uint64_t key) const {
+	[[nodiscard]] Chunk* GetTargetChunkFromKey(ChunkCoord key) {
 
 		auto it = chunks.find(key);
 
@@ -90,9 +80,17 @@ public:
 		return it->second.get();
 	}
 
-	[[nodiscard]] const Chunk* GetTargetChunk(int32_t cx, int32_t cz) const {
-		uint64_t key = Index(cx, cz);
+	[[nodiscard]] const Chunk* GetTargetChunkFromKey(ChunkCoord key) const {
+
 		auto it = chunks.find(key);
+
+		if (it == chunks.end()) return nullptr;
+
+		return it->second.get();
+	}
+
+	[[nodiscard]] const Chunk* GetTargetChunk(ChunkCoord coord) const {
+		auto it = chunks.find(coord);
 
 		if (it == chunks.end()) return nullptr;
 
@@ -106,7 +104,7 @@ public:
 
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshot(Chunk& c);
 
-	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(uint64_t key);
+	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(ChunkCoord key);
 
 	std::unique_ptr<LightVolumeSnapshot> CreateLightVSnapshot(const glm::i64vec3 camBlockPos) const;
 
@@ -121,7 +119,7 @@ public:
 	}
 
 
-	void SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count);
+	void SelectOptimalPointLights(ChunkCoord coord, std::array<PointLight*, 16>& out, size_t& count);
 
 
 	void SetWorldTime(double time) {

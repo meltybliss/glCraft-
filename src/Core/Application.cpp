@@ -11,16 +11,16 @@ Application::Application() : m_exchanger(), m_session(m_exchanger, m_persistence
 
 void Application::UpdateStreamCenter() {
 
-	int32_t centerCx = static_cast<int32_t>(
+	int64_t centerCx =
 		floorDiv(m_camera.position.block.x, Chunk::CHUNK_WIDTH)
-	);
+	;
 
-	int32_t centerCz = static_cast<int32_t>(
+	int64_t centerCz =
 		floorDiv(m_camera.position.block.z, Chunk::CHUNK_DEPTH)
-	);
+	;
 
 
-	m_session.GetWorldThread().SetDesiredStreamCenter(centerCx, centerCz);
+	m_session.GetWorldThread().SetDesiredStreamCenter({centerCx, centerCz});
 
 	
 }

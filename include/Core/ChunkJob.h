@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <memory>
 #include "Snapshot/ChunkMeshSnapshot.h"
+#include "World/ChunkCoord.h"
 
 enum JobType {
 	CREATE_CHUNK,
@@ -11,7 +12,7 @@ enum JobType {
 };
 
 struct ChunkJob {
-	int32_t cx, cz;
+	ChunkCoord coord;
 	bool urgent = false;
 
 	JobType type;

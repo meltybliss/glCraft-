@@ -2,13 +2,13 @@
 #include <stdint.h>
 #include <vector>
 #include "World/BlockData.h"
+#include "World/ChunkCoord.h"
 
 
 struct ChunkSaveData {
 
 
-	int32_t cx;
-	int32_t cz;
+	ChunkCoord coord;
 
 	std::vector<BlockType> blocks;
 

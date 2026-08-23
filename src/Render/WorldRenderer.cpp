@@ -697,11 +697,8 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 		glm::mat4 model(1.0f);//identity matrix 単位行列
 
-		int32_t cx = RestoreCxFromKey(key);
-		int32_t cz = RestoreCzFromKey(key);
-
 		WorldPos pos;
-		pos.block = { static_cast<int64_t>(cx) * Chunk::CHUNK_WIDTH, 0, static_cast<int64_t>(cz) * Chunk::CHUNK_DEPTH };
+		pos.block = { key.x * Chunk::CHUNK_WIDTH, 0, key.z * Chunk::CHUNK_DEPTH };
 		pos.local = glm::dvec3(0.0);
 
 		glm::dvec3 relative = GetRelativePos(cam.position, pos);
@@ -793,11 +790,8 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 		glm::mat4 model(1.0f);//identity matrix 単位行列
 
-		int32_t cx = RestoreCxFromKey(key);
-		int32_t cz = RestoreCzFromKey(key);
-
 		WorldPos pos;
-		pos.block = { static_cast<int64_t>(cx) * Chunk::CHUNK_WIDTH, 0, static_cast<int64_t>(cz) * Chunk::CHUNK_DEPTH };
+		pos.block = { key.x * Chunk::CHUNK_WIDTH, 0, key.z * Chunk::CHUNK_DEPTH };
 		pos.local = glm::dvec3(0.0);
 
 		glm::dvec3 relative = GetRelativePos(cam.position, pos);
@@ -860,7 +854,7 @@ void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 
 void WorldRenderer::DeleteMeshes(WorldThread& wt) {
 
-	uint64_t key;
+	ChunkCoord key;
 
 	while (wt.PopPendingDeleteMeshKey(key)) {
 		auto it = m_chunkMeshes.find(key);

@@ -1,13 +1,10 @@
 #pragma once
 #include <stdint.h>
+#include "World/ChunkCoord.h"
 
 namespace ChunkUtil {
-	inline uint64_t Index(int32_t cx, int32_t cz) {
-		uint64_t x = static_cast<uint32_t>(cx);
-		uint64_t z = static_cast<uint32_t>(cz);
-
-		return (x << 32) | z;
-
+	[[nodiscard]] constexpr ChunkCoord Index(int64_t cx, int64_t cz) noexcept {
+		return { cx, cz };
 	}
 
 
@@ -33,11 +30,4 @@ namespace ChunkUtil {
 	}
 
 
-	inline int32_t RestoreCxFromKey(uint64_t key) {
-		return static_cast<int32_t>(key >> 32);
-	}
-
-	inline int32_t RestoreCzFromKey(uint64_t key) {
-		return static_cast<int32_t>(key & 0xffffffffu);
-	}
-} 
+}

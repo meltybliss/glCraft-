@@ -282,10 +282,9 @@ void WorldThread::ApplyEditBlock(
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
-	const int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	const int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
-	Chunk* c = m_world.GetTargetChunk(cx, cz);
+	Chunk* c = m_world.GetTargetChunk(coord);
 	if (!c) return;
 
 	const BlockType oldBlock = static_cast<BlockType>(m_world.GetBlockGlobal(x, y, z));
@@ -420,8 +419,10 @@ void WorldThread::Start_RemoveBlockLightTask(
 	
 
 	LightTask task;
-	task.sourceCx = static_cast<int32_t>(floorDiv(x, Chunk::CHUNK_WIDTH));
-	task.sourceCz = static_cast<int32_t>(floorDiv(z, Chunk::CHUNK_DEPTH));
+	task.sourceCoord = Index(
+		floorDiv(x, Chunk::CHUNK_WIDTH),
+		floorDiv(z, Chunk::CHUNK_DEPTH)
+	);
 
 	task.lightType = LightType::BLOCK;
 	task.phase = Phase::REMOVE;
@@ -465,8 +466,10 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 
 
 	LightTask task;
-	task.sourceCx = static_cast<int32_t>(floorDiv(x, Chunk::CHUNK_WIDTH));
-	task.sourceCz = static_cast<int32_t>(floorDiv(z, Chunk::CHUNK_DEPTH));
+	task.sourceCoord = Index(
+		floorDiv(x, Chunk::CHUNK_WIDTH),
+		floorDiv(z, Chunk::CHUNK_DEPTH)
+	);
 
 
 	task.lightType = LightType::BLOCK;
@@ -507,8 +510,10 @@ void WorldThread::Start_RemoveSkyLightTask(
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
 	LightTask task;
-	task.sourceCx = static_cast<int32_t>(floorDiv(x, Chunk::CHUNK_WIDTH));
-	task.sourceCz = static_cast<int32_t>(floorDiv(z, Chunk::CHUNK_DEPTH));
+	task.sourceCoord = Index(
+		floorDiv(x, Chunk::CHUNK_WIDTH),
+		floorDiv(z, Chunk::CHUNK_DEPTH)
+	);
 	task.lightType = LightType::SKY;
 	task.phase = Phase::REMOVE;
 	task.urgent = urgent;
@@ -549,18 +554,14 @@ void WorldThread::Start_BlockLightTask(
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
-	const int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	const int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
-
-	uint64_t key = Index(cx, cz);
-	Chunk* c = m_world.GetTargetChunkFromKey(key);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
+	Chunk* c = m_world.GetTargetChunkFromKey(coord);
 
 	if (!c) return;
 
 
 	LightTask task;
-	task.sourceCx = cx;
-	task.sourceCz = cz;
+	task.sourceCoord = coord;
 	task.lightType = LightType::BLOCK;
 
 	task.urgent = urgent;
@@ -600,8 +601,10 @@ void WorldThread::Start_SkyLightTask(
 	//if (level == 0) return;
 
 	LightTask task;
-	task.sourceCx = static_cast<int32_t>(floorDiv(x, Chunk::CHUNK_WIDTH));
-	task.sourceCz = static_cast<int32_t>(floorDiv(z, Chunk::CHUNK_DEPTH));
+	task.sourceCoord = Index(
+		floorDiv(x, Chunk::CHUNK_WIDTH),
+		floorDiv(z, Chunk::CHUNK_DEPTH)
+	);
 	task.lightType = LightType::SKY;
 	task.urgent = urgent;
 
@@ -939,21 +942,20 @@ bool WorldThread::RequestOneMissingChunkAround() {
 
 
 
-		int32_t cx = m_lastStreamCx + dx;
-		int32_t cz = m_lastStreamCz + dz;
+		const ChunkCoord coord{
+			m_lastStreamCoord.x + dx,
+			m_lastStreamCoord.z + dz
+		};
 
 		m_nextLoadOffset++;
 
 
-		uint64_t key = Index(cx, cz);
-
-
-		if (chunks.find(key) != chunks.end()) {
+		if (chunks.find(coord) != chunks.end()) {
 			continue;
 		}
 
 
-		if (m_pendingChunkKeys.find(key) != m_pendingChunkKeys.end()) {
+		if (m_pendingChunkKeys.find(coord) != m_pendingChunkKeys.end()) {
 
 			continue;
 
@@ -961,20 +963,19 @@ bool WorldThread::RequestOneMissingChunkAround() {
 
 
 		if (worldInfo.action == WorldSelectionAction::LoadWorld && 
-			m_persistenceIO.CheckDataExistence(cx, cz)) {
+			m_persistenceIO.CheckDataExistence(coord)) {
 
 
-			m_persistenceIO.RequestToLoadChunk(cx, cz);
+			m_persistenceIO.RequestToLoadChunk(coord);
 
 		}
 		else {
 			ChunkJob job;
-			job.cx = cx;
-			job.cz = cz;
+			job.coord = coord;
 			job.type = JobType::CREATE_CHUNK;
 
 
-			m_pendingChunkKeys.insert(key);
+			m_pendingChunkKeys.insert(coord);
 			m_chunkPipeline.EnqueueJob(std::move(job));
 		}
 		return true;
@@ -993,25 +994,21 @@ void WorldThread::ProcOne_Disk_ChunkLoadResult() {
 
 	if (!saveData) return;
 
-	int32_t& cx = saveData->cx;
-	int32_t& cz = saveData->cz;
-	if (!IsChunkWithinUnloadRange(cx, cz)) return;
+	const ChunkCoord coord = saveData->coord;
+	if (!IsChunkWithinUnloadRange(coord)) return;
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 
 	if (it == chunks.end()) {
 
-		std::unique_ptr<Chunk> c = std::make_unique<Chunk>(cx, cz);
+		std::unique_ptr<Chunk> c = std::make_unique<Chunk>(coord);
 
 		c->ReceiveBlocksVector(saveData->blocks);
-		c->cx = cx;
-		c->cz = cz;
-
-		chunks[Index(cx, cz)] = std::move(c);
+		chunks[coord] = std::move(c);
 
 
 
-		Start_SkyLightTaskForNewChunk(*chunks[Index(cx, cz)]);
+		Start_SkyLightTaskForNewChunk(*chunks[coord]);
 
 	}
 }
@@ -1025,8 +1022,8 @@ bool WorldThread::HasChunkToErase() {
 
 		if (!c) return true;
 
-		int32_t dx = c->cx - m_lastStreamCx;
-		int32_t dz = c->cz - m_lastStreamCz;
+		int64_t dx = c->coord.x - m_lastStreamCoord.x;
+		int64_t dz = c->coord.z - m_lastStreamCoord.z;
 
 		if (std::abs(dx) >= UNLOAD_CHUNKS_DISTANCE ||
 			std::abs(dz) >= UNLOAD_CHUNKS_DISTANCE) {
@@ -1045,16 +1042,16 @@ bool WorldThread::HasChunkToCreate() {
 
 	for (const auto& offset : m_loadOffsets) {
 
-		int32_t cx = m_lastStreamCx + offset.dx;
-		int32_t cz = m_lastStreamCz + offset.dz;
-
-		uint64_t key = Index(cx, cz);
+		const ChunkCoord coord{
+			m_lastStreamCoord.x + offset.dx,
+			m_lastStreamCoord.z + offset.dz
+		};
 
 		bool alreadyLoaded =
-			chunks.find(key) != chunks.end();
+			chunks.find(coord) != chunks.end();
 
 		bool alreadyPending =
-			m_pendingChunkKeys.find(key) != m_pendingChunkKeys.end();
+			m_pendingChunkKeys.find(coord) != m_pendingChunkKeys.end();
 
 		if (!alreadyLoaded && !alreadyPending) {
 			return true;
@@ -1067,18 +1064,18 @@ bool WorldThread::HasChunkToCreate() {
 }
 
 
-bool WorldThread::IsChunkWithinUnloadRange(int32_t cx, int32_t cz) const {
+bool WorldThread::IsChunkWithinUnloadRange(ChunkCoord coord) const {
 	const int64_t dx =
-		static_cast<int64_t>(cx) - static_cast<int64_t>(m_lastStreamCx);
+		coord.x - m_lastStreamCoord.x;
 	const int64_t dz =
-		static_cast<int64_t>(cz) - static_cast<int64_t>(m_lastStreamCz);
+		coord.z - m_lastStreamCoord.z;
 
 	return std::abs(dx) < UNLOAD_CHUNKS_DISTANCE &&
 		std::abs(dz) < UNLOAD_CHUNKS_DISTANCE;
 }
 
 
-void WorldThread::QueueMeshDeletion(uint64_t key) {
+void WorldThread::QueueMeshDeletion(ChunkCoord key) {
 	{
 		std::lock_guard<std::mutex> lock(pendingMeshMutex);
 
@@ -1103,8 +1100,8 @@ void WorldThread::RebuildDirtyMeshQueuePriorities() {
 	for (const auto& [key, chunk] : m_world.GetChunks()) {
 		if (!chunk || !chunk->dirty) continue;
 
-		const int32_t dx = chunk->cx - m_lastStreamCx;
-		const int32_t dz = chunk->cz - m_lastStreamCz;
+		const int64_t dx = chunk->coord.x - m_lastStreamCoord.x;
+		const int64_t dz = chunk->coord.z - m_lastStreamCoord.z;
 		const auto rank = m_loadOffsetsRank.find(Index(dx, dz));
 
 		if (rank == m_loadOffsetsRank.end()) continue;
@@ -1131,8 +1128,8 @@ bool WorldThread::RequestEraseOneChunkAround() {
 			shouldDestroy = true;
 		}
 		else {
-			int32_t dx = c->cx - m_lastStreamCx;
-			int32_t dz = c->cz - m_lastStreamCz;
+			int64_t dx = c->coord.x - m_lastStreamCoord.x;
+			int64_t dz = c->coord.z - m_lastStreamCoord.z;
 
 			if (std::abs(dx) >= UNLOAD_CHUNKS_DISTANCE ||
 				std::abs(dz) >= UNLOAD_CHUNKS_DISTANCE) {
@@ -1202,21 +1199,21 @@ void WorldThread::UpdateChunksAround() {
 					break;
 				}
 
-				int32_t cx = m_lastStreamCx + dx;
-				int32_t cz = m_lastStreamCz + dz;
+				const ChunkCoord coord{
+					m_lastStreamCoord.x + dx,
+					m_lastStreamCoord.z + dz
+				};
 
-				uint64_t key = Index(cx, cz);
-
-				if (!chunks.contains(key)) {
+				if (!chunks.contains(coord)) {
 
 					allRequestedChunks_Created = false;
 				}
 
-				if (chunks.find(key) != chunks.end()) {
+				if (chunks.find(coord) != chunks.end()) {
 					continue;
 				}
 
-				if (m_pendingChunkKeys.find(key) != m_pendingChunkKeys.end()) {
+				if (m_pendingChunkKeys.find(coord) != m_pendingChunkKeys.end()) {
 					continue;
 				}
 
@@ -1226,12 +1223,11 @@ void WorldThread::UpdateChunksAround() {
 				}
 
 				ChunkJob job;
-				job.cx = cx;
-				job.cz = cz;
+				job.coord = coord;
 				job.type = JobType::CREATE_CHUNK;
 
 
-				m_pendingChunkKeys.insert(key);
+				m_pendingChunkKeys.insert(coord);
 				m_chunkPipeline.EnqueueJob(std::move(job));
 
 
@@ -1240,29 +1236,6 @@ void WorldThread::UpdateChunksAround() {
 			}
 		}
 	}
-
-	/*for (int64_t cx = curCx - LOAD_CHUNKS_DISTANCE; cx <= curCx + LOAD_CHUNKS_DISTANCE && !createDone; ++cx) {
-		for (int64_t cz = curCz - LOAD_CHUNKS_DISTANCE; cz <= curCz + LOAD_CHUNKS_DISTANCE; ++cz) {
-			uint64_t key = Index(cx, cz);
-
-			if (createBudget <= 0) {
-				createDone = true;
-				break;
-			}
-
-			if (chunks.find(key) != chunks.end()) {
-				continue;
-			}
-
-			std::unique_ptr<Chunk> c = std::make_unique<Chunk>(cx, cz);
-
-			TerrainGenerator::GenerateTerrain(*c);
-			chunks[key] = std::move(c);
-
-			createBudget--;
-		}
-	}*/
-
 
 	for (auto it = chunks.begin(); it != chunks.end();) {
 		const auto& c = it->second;
@@ -1277,8 +1250,8 @@ void WorldThread::UpdateChunksAround() {
 		}
 		else {
 
-			int32_t dx = c->cx - m_lastStreamCx;
-			int32_t dz = c->cz - m_lastStreamCz;
+			int64_t dx = c->coord.x - m_lastStreamCoord.x;
+			int64_t dz = c->coord.z - m_lastStreamCoord.z;
 
 
 			if (std::abs(dx) >= UNLOAD_CHUNKS_DISTANCE ||
@@ -1332,16 +1305,12 @@ void WorldThread::Rebuild_allChunks() {
 }
 
 
-void WorldThread::SetDesiredStreamCenter(
-	int32_t cx,
-	int32_t cz
-) {
+void WorldThread::SetDesiredStreamCenter(ChunkCoord coord) {
 
 	{
 		std::lock_guard<std::mutex> lock(streamCenterMutex);
 
-		m_streamCx = cx;
-		m_streamCz = cz;
+		m_streamCoord = coord;
 	}
 
 	m_hasSettedDesireStreamC.store(true);
@@ -1352,36 +1321,30 @@ void WorldThread::SetDesiredStreamCenter(
 
 void WorldThread::ApplyStreamCenter() {
 
-	int32_t curCenterCx = 0;
-	int32_t curCenterCz = 0;
+	ChunkCoord currentCenter{};
 
 	{
 		std::lock_guard<std::mutex> lock(streamCenterMutex);
 
-		curCenterCx = m_streamCx;
-		curCenterCz = m_streamCz;
+		currentCenter = m_streamCoord;
 	}
 
 
-	bool enternedNewChunk =
-		m_lastStreamCx != curCenterCx ||
-		m_lastStreamCz != curCenterCz;
+	bool enternedNewChunk = m_lastStreamCoord != currentCenter;
 
-	m_lastStreamCx = curCenterCx;
-	m_lastStreamCz = curCenterCz;
+	m_lastStreamCoord = currentCenter;
 
 	if (enternedNewChunk) {
 
 		m_nextLoadOffset = 0;
 
-		m_chunkPipeline.SetStreamCenter(curCenterCx, curCenterCz);
+		m_chunkPipeline.SetStreamCenter(currentCenter);
 		m_persistenceIO.SetStreamCenterAndCancelOutsideLoads(
-			curCenterCx,
-			curCenterCz,
+			currentCenter,
 			UNLOAD_CHUNKS_DISTANCE
 		);
 
-		std::vector<uint64_t> canceledKey =
+		std::vector<ChunkCoord> canceledKey =
 			m_chunkPipeline.CancelQueuedOutside_ChunkJob();
 
 		for (auto& key : canceledKey) {
@@ -1409,11 +1372,6 @@ void WorldThread::ProcOneChunkResult() {
 	if (m_chunkPipeline.PopFrontMeshResult(meshResult)) {
 		const auto& key = meshResult.key;
 
-		int32_t cx = RestoreCxFromKey(key);
-		int32_t cz = RestoreCzFromKey(key);
-
-		
-
 		if (meshResult.meshData) {
 			PendingMesh mesh;
 			mesh.meshData = std::move(*meshResult.meshData);
@@ -1422,10 +1380,6 @@ void WorldThread::ProcOneChunkResult() {
 			PushPendingMesh(std::move(mesh));
 		}
 
-		/*if (c->waitingFirstMesh) {
-			m_world.MarkNeighborChunksDirty(cx, cz);
-			c->waitingFirstMesh = false;
-		}*/
 	}
 
 	if (m_chunkPipeline.PopFrontGenResult(genResult)) {
@@ -1443,10 +1397,7 @@ void WorldThread::ProcOneChunkResult() {
 			return;
 		}
 
-		const int32_t cx = RestoreCxFromKey(key);
-		const int32_t cz = RestoreCzFromKey(key);
-
-		if (!IsChunkWithinUnloadRange(cx, cz) || chunks.contains(key)) {
+		if (!IsChunkWithinUnloadRange(key) || chunks.contains(key)) {
 			return;
 		}
 
@@ -1472,9 +1423,6 @@ void WorldThread::ProcChunkResults() {
 		const auto& key = meshResult.key;
 
 
-		int32_t cx = RestoreCxFromKey(key);
-		int32_t cz = RestoreCzFromKey(key);
-
 		if (meshResult.meshData) {
 			PendingMesh mesh;
 			mesh.meshData = std::move(*meshResult.meshData);
@@ -1482,11 +1430,6 @@ void WorldThread::ProcChunkResults() {
 
 			PushPendingMesh(std::move(mesh));
 		}
-
-		/*if (c->waitingFirstMesh) {
-			m_world.MarkNeighborChunksDirty(cx, cz);
-			c->waitingFirstMesh = false;
-		}*/
 
 	}
 
@@ -1506,10 +1449,7 @@ void WorldThread::ProcChunkResults() {
 			continue;
 		}
 
-		const int32_t cx = RestoreCxFromKey(key);
-		const int32_t cz = RestoreCzFromKey(key);
-
-		if (!IsChunkWithinUnloadRange(cx, cz) || chunks.contains(key)) {
+		if (!IsChunkWithinUnloadRange(key) || chunks.contains(key)) {
 			continue;
 		}
 
@@ -1527,8 +1467,7 @@ void WorldThread::ProcChunkResults() {
 void WorldThread::EnqueueMeshJob(Chunk& c) {
 
 	ChunkJob job;
-	job.cx = c.cx;
-	job.cz = c.cz;
+	job.coord = c.coord;
 	job.snapshot = m_world.CreateMeshSnapshot(c);
 	job.type = JobType::BUILD_MESH;
 
@@ -1536,9 +1475,6 @@ void WorldThread::EnqueueMeshJob(Chunk& c) {
 		c.urgentUpdateMesh = false;
 		job.urgent = true;
 	}
-
-	uint64_t key = Index(c.cx, c.cz);
-
 
 	m_chunkPipeline.EnqueueJob(std::move(job));
 
@@ -1559,7 +1495,7 @@ bool WorldThread::PopPendingMeshData(PendingMesh& out) {
 }
 
 
-bool WorldThread::PopPendingDeleteMeshKey(uint64_t& out) {
+bool WorldThread::PopPendingDeleteMeshKey(ChunkCoord& out) {
 
 	std::lock_guard<std::mutex> lock(pendingDeleteMeshMutex);
 
@@ -1576,10 +1512,7 @@ bool WorldThread::PopPendingDeleteMeshKey(uint64_t& out) {
 
 
 void WorldThread::PushPendingMesh(PendingMesh&& mesh) {
-	const int32_t cx = RestoreCxFromKey(mesh.key);
-	const int32_t cz = RestoreCzFromKey(mesh.key);
-
-	if (!IsChunkWithinUnloadRange(cx, cz) ||
+	if (!IsChunkWithinUnloadRange(mesh.key) ||
 		!m_world.GetTargetChunkFromKey(mesh.key)) {
 		return;
 	}
@@ -1596,12 +1529,11 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 
 	LightTask task;
 	task.lightType = LightType::SKY;
-	task.sourceCx = c.cx;
-	task.sourceCz = c.cz;
+	task.sourceCoord = c.coord;
 
 
-	int64_t wx = static_cast<int64_t>(c.cx) * Chunk::CHUNK_WIDTH;
-	int64_t wz = static_cast<int64_t>(c.cz) * Chunk::CHUNK_DEPTH;
+	int64_t wx = c.coord.x * Chunk::CHUNK_WIDTH;
+	int64_t wz = c.coord.z * Chunk::CHUNK_DEPTH;
 
 
 	m_lightEngine.InitializeSkylightForChunk(c);
@@ -1705,7 +1637,7 @@ void WorldThread::FinishLightTask(LightTask& task) {
 			MarkChunkDirty(*c);
 		}
 
-		MarkNeighborChunksDirty(c->cx, c->cz);
+		MarkNeighborChunksDirty(c->coord);
 
 	}
 
@@ -1725,7 +1657,7 @@ void WorldThread::FinishLightTask(LightTask& task) {
 			MarkChunkDirty(*c);
 		}
 
-		MarkNeighborChunksDirty(c->cx, c->cz);
+		MarkNeighborChunksDirty(c->coord);
 
 	}
 
@@ -1736,10 +1668,10 @@ void WorldThread::FinishLightTask(LightTask& task) {
 
 uint64_t WorldThread::GetLightTaskDistance(const LightTask& task) const {
 	const int64_t dx = std::abs(
-		static_cast<int64_t>(task.sourceCx) - m_lastStreamCx
+		task.sourceCoord.x - m_lastStreamCoord.x
 	);
 	const int64_t dz = std::abs(
-		static_cast<int64_t>(task.sourceCz) - m_lastStreamCz
+		task.sourceCoord.z - m_lastStreamCoord.z
 	);
 
 	return static_cast<uint64_t>(std::max(dx, dz));
@@ -1811,8 +1743,7 @@ void WorldThread::QueueChunksToAutoSave() {
 		
 
 		ChunkSaveData data;
-		data.cx = c_ptr->cx;
-		data.cz = c_ptr->cz;
+		data.coord = c_ptr->coord;
 
 		data.blocks.assign(
 			c_ptr->blocks.begin(),
@@ -1924,21 +1855,13 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 	c.dirty = true;
 	c.dirtyToSave = true;
 
-	const int32_t cx = c.cx;
-	const int32_t cz = c.cz;
+	const ChunkCoord relativeCoord{
+		c.coord.x - m_lastStreamCoord.x,
+		c.coord.z - m_lastStreamCoord.z
+	};
 
-	const int32_t dx = cx - m_lastStreamCx;
-	const int32_t dz = cz - m_lastStreamCz;
+	const auto rankIt = m_loadOffsetsRank.find(relativeCoord);
 
-	const uint64_t relativeKey = Index(dx, dz);
-
-	const auto rankIt = m_loadOffsetsRank.find(relativeKey);
-
-	/*const int priority = std::max(
-		std::abs(cx - m_lastStreamCx),
-		std::abs(cz - m_lastStreamCz)
-	);*/
-	
 	if (rankIt == m_loadOffsetsRank.end()) {
 		return;
 	}
@@ -1951,7 +1874,7 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 
 	m_dirtyMeshQueue.push({
 		priority,
-		Index(cx, cz)
+		c.coord
 	});
 
 }
@@ -1965,14 +1888,14 @@ void WorldThread::MarkChunkUrgentDirty(Chunk& c) {
 	MarkChunkDirty(c);
 }
 
-void WorldThread::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
+void WorldThread::MarkNeighborChunksDirty(ChunkCoord coord) {
 
 	auto& chunks = m_world.GetChunks();
 
-	for (int32_t x = cx - 1; x <= cx + 1; ++x) {
-		if (x == cx) continue;
+	for (int64_t x = coord.x - 1; x <= coord.x + 1; ++x) {
+		if (x == coord.x) continue;
 
-		uint64_t key = Index(x, cz);
+		ChunkCoord key = Index(x, coord.z);
 		auto it = chunks.find(key);
 
 		if (it == chunks.end() || !it->second) {
@@ -1985,10 +1908,10 @@ void WorldThread::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 		MarkChunkDirty(*it->second);
 	}
 
-	for (int32_t z = cz - 1; z <= cz + 1; ++z) {
-		if (z == cz) continue;
+	for (int64_t z = coord.z - 1; z <= coord.z + 1; ++z) {
+		if (z == coord.z) continue;
 
-		uint64_t key = Index(cx, z);
+		ChunkCoord key = Index(coord.x, z);
 		auto it = chunks.find(key);
 
 		if (it == chunks.end() || !it->second) {
@@ -2003,15 +1926,15 @@ void WorldThread::MarkNeighborChunksDirty(const int32_t cx, const int32_t cz) {
 	}
 }
 
-void WorldThread::MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz) {
+void WorldThread::MarkNeighborChunksUrgentDirty(ChunkCoord coord) {
 
 	auto& chunks = m_world.GetChunks();
 
 
-	for (int32_t x = cx - 1; x <= cx + 1; ++x) {
-		if (x == cx) continue;
+	for (int64_t x = coord.x - 1; x <= coord.x + 1; ++x) {
+		if (x == coord.x) continue;
 
-		uint64_t key = Index(x, cz);
+		ChunkCoord key = Index(x, coord.z);
 		auto it = chunks.find(key);
 
 		if (it == chunks.end() || !it->second) {
@@ -2024,10 +1947,10 @@ void WorldThread::MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t 
 
 	}
 
-	for (int32_t z = cz - 1; z <= cz + 1; ++z) {
-		if (z == cz) continue;
+	for (int64_t z = coord.z - 1; z <= coord.z + 1; ++z) {
+		if (z == coord.z) continue;
 
-		uint64_t key = Index(cx, z);
+		ChunkCoord key = Index(coord.x, z);
 		auto it = chunks.find(key);
 
 		if (it == chunks.end() || !it->second) {
@@ -2226,14 +2149,11 @@ void WorldThread::ProcCreatePointLightsSnapshot() {
 
 		candidates.clear();
 
-		int32_t cx = RestoreCxFromKey(key);
-		int32_t cz = RestoreCzFromKey(key);
-
 		const int64_t chunkMinX =
-			cx * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
+			key.x * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
 
 		const int64_t chunkMinZ =
-			cz * static_cast<int64_t>(Chunk::CHUNK_DEPTH);
+			key.z * static_cast<int64_t>(Chunk::CHUNK_DEPTH);
 
 
 		const int64_t chunkMaxX =
@@ -2248,7 +2168,7 @@ void WorldThread::ProcCreatePointLightsSnapshot() {
 		for (int x = -1; x <= 1; ++x) {
 			for (int z = -1; z <= 1; ++z) {
 
-				auto it = chunks.find(Index(cx + x, cz + z));
+				auto it = chunks.find(Index(key.x + x, key.z + z));
 				if (it == chunks.end() || !it->second) continue;
 
 				auto* c = it->second.get();

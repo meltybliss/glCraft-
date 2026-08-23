@@ -9,11 +9,11 @@ using namespace ChunkUtil;
 
 struct ChunkRenderabilitySnapshot {
 
-	std::unordered_set<uint64_t> renderableChunks;//mesh‚ª‚ ‚échunk‚½‚¿
+	std::unordered_set<ChunkCoord, ChunkCoordHash> renderableChunks;//mesh‚ª‚ ‚échunk‚½‚¿
 
-	bool IsRenderableChunk(int32_t cx, int32_t cz) const {
+	bool IsRenderableChunk(ChunkCoord coord) const {
 
-		return renderableChunks.contains(Index(cx, cz));
+		return renderableChunks.contains(coord);
 
 	}
 

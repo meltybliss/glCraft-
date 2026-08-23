@@ -61,13 +61,10 @@ public:
 
 	);
 
-	void SetDesiredStreamCenter(
-		int32_t cx,
-		int32_t cz
-	);
+	void SetDesiredStreamCenter(ChunkCoord coord);
 
 	bool PopPendingMeshData(PendingMesh& out);
-	bool PopPendingDeleteMeshKey(uint64_t& out);
+	bool PopPendingDeleteMeshKey(ChunkCoord& out);
 
 	static int Get_UNLOAD_DISTANCE() {
 
@@ -137,10 +134,14 @@ private:
 	
 	bool requestedToWake = false;
 
-	int32_t m_streamCx = std::numeric_limits<int32_t>::max();
-	int32_t m_streamCz = std::numeric_limits<int32_t>::max();
-	int32_t m_lastStreamCx = std::numeric_limits<int32_t>::max();
-	int32_t m_lastStreamCz = std::numeric_limits<int32_t>::max();
+	ChunkCoord m_streamCoord{
+		std::numeric_limits<int64_t>::max(),
+		std::numeric_limits<int64_t>::max()
+	};
+	ChunkCoord m_lastStreamCoord{
+		std::numeric_limits<int64_t>::max(),
+		std::numeric_limits<int64_t>::max()
+	};
 
 	std::atomic<bool> runningWorldThread;
 
@@ -171,15 +172,15 @@ private:
 
 
 	std::deque<PendingMesh> m_pendingMeshData;//to collect and load its meshData in order
-	std::unordered_set<uint64_t> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks to create and generate Terrain
+	std::unordered_set<ChunkCoord, ChunkCoordHash> m_pendingChunkKeys;//to avoid submitting instructions for submitted chunks to create and generate Terrain
 	
 
-	std::deque<uint64_t> m_pendingDeleteMeshKey;
+	std::deque<ChunkCoord> m_pendingDeleteMeshKey;
 
 	std::priority_queue<ChunkDirtyEntry> m_dirtyMeshQueue;
 
 	std::vector<ChunkOffset> m_loadOffsets;
-	std::unordered_map<uint64_t, int> m_loadOffsetsRank;//dxÇ∆dzÇçáëÃÇ≥ÇπÇΩkey
+	std::unordered_map<ChunkCoord, int, ChunkCoordHash> m_loadOffsetsRank;//dxÇ∆dzÇÇ‹Ç∆ÇﬂÇΩç¿ïW
 
 	size_t m_nextLoadOffset = 0;
 
@@ -272,8 +273,8 @@ private:
 
 	bool HasChunkToErase();
 	bool HasChunkToCreate();
-	bool IsChunkWithinUnloadRange(int32_t cx, int32_t cz) const;
-	void QueueMeshDeletion(uint64_t key);
+	bool IsChunkWithinUnloadRange(ChunkCoord coord) const;
+	void QueueMeshDeletion(ChunkCoord key);
 	void RebuildDirtyMeshQueuePriorities();
 
 	void UpdateChunksAround();
@@ -354,8 +355,8 @@ private:
 	void DispatchOneDirtyMeshJob();
 
 	void MarkChunkDirty(Chunk& c);
-	void MarkNeighborChunksDirty(const int32_t cx, const int32_t cz);
-	void MarkNeighborChunksUrgentDirty(const int32_t cx, const int32_t cz);
+	void MarkNeighborChunksDirty(ChunkCoord coord);
+	void MarkNeighborChunksUrgentDirty(ChunkCoord coord);
 
 	void MarkChunkUrgentDirty(Chunk& c);
 

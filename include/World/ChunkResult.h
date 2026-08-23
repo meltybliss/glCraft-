@@ -3,14 +3,15 @@
 
 #include <memory>
 #include <optional>
+#include "World/ChunkCoord.h"
 
 
 struct GeneratedChunkResult {
-	uint64_t key;
+	ChunkCoord key;
 	std::unique_ptr<Chunk> chunk;
 };
 
 struct MeshChunkResult {
-	uint64_t key;
+	ChunkCoord key;
 	std::optional<MeshData> meshData;
 };
