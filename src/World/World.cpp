@@ -9,14 +9,13 @@
 
 
 unsigned int World::GetBlockGlobal(int64_t x, int64_t y, int64_t z) const {
-	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
 	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
 	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 	if (it == chunks.end() || !it->second) {
 		return 0;
 	}
@@ -29,14 +28,13 @@ unsigned int World::GetBlockGlobal(int64_t x, int64_t y, int64_t z) const {
 
 uint8_t World::GetBlockLightGlobal(int64_t x, int64_t y, int64_t z) const {
 
-	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
 	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
 	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 	if (it == chunks.end() || !it->second) {
 		return 0;
 	}
@@ -49,14 +47,13 @@ uint8_t World::GetBlockLightGlobal(int64_t x, int64_t y, int64_t z) const {
 
 
 uint8_t World::GetSkyLightGlobal(int64_t x, int64_t y, int64_t z) const {
-	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
 	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
 	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 	if (it == chunks.end() || !it->second) {
 		return 0;
 	}
@@ -71,14 +68,13 @@ uint8_t World::GetSkyLightGlobal(int64_t x, int64_t y, int64_t z) const {
 
 
 glm::vec3 World::GetBlockLightColorGlobal(int64_t x, int64_t y, int64_t z) const {
-	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
 	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
 	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 	if (it == chunks.end() || !it->second) {
 		return glm::vec3(0.0f);
 	}
@@ -96,14 +92,13 @@ SetBlockResult World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType 
 
 	SetBlockResult result{};
 
-	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
 	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
 	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 	if (it == chunks.end() || !it->second) {
 		return result;
 	}
@@ -149,14 +144,13 @@ SetBlockResult World::SetBlockGlobal(int64_t x, int64_t y, int64_t z, BlockType 
 
 
 bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level, const glm::vec3& lightColor) {
-	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
 	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
 	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 	if (it == chunks.end() || !it->second) {
 		return false;
 	}
@@ -179,14 +173,13 @@ bool World::SetBlockLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level, 
 
 bool World::SetSkyLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) {
 
-	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
 	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
 	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 	if (it == chunks.end() || !it->second) {
 		return false;
 	}
@@ -200,14 +193,13 @@ bool World::SetSkyLightGlobal(int64_t x, int64_t y, int64_t z, uint8_t level) {
 SetBlockResult World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, BlockType b) {
 	SetBlockResult result;
 
-	int32_t cx = floorDiv(x, Chunk::CHUNK_WIDTH);
-	int32_t cz = floorDiv(z, Chunk::CHUNK_DEPTH);
+	const ChunkCoord coord{floorDiv(x, Chunk::CHUNK_WIDTH), floorDiv(z, Chunk::CHUNK_DEPTH)};
 
 	int lx = floorMod(x, Chunk::CHUNK_WIDTH);
 	int ly = y;
 	int lz = floorMod(z, Chunk::CHUNK_DEPTH);
 
-	auto it = chunks.find(Index(cx, cz));
+	auto it = chunks.find(coord);
 	if (it == chunks.end() || !it->second) {
 		return result;
 	}
@@ -257,15 +249,15 @@ SetBlockResult World::SetBlockGlobal_User(int64_t x, int64_t y, int64_t z, Block
 
 
 
-void World::SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLight*, 16>& out, size_t& count) {
+void World::SelectOptimalPointLights(ChunkCoord coord, std::array<PointLight*, 16>& out, size_t& count) {
 
 	std::vector<PointLight*> candidates;
 
 	const int64_t chunkMinX =
-		cx * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
+		coord.x * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
 
 	const int64_t chunkMinZ =
-		cz * static_cast<int64_t>(Chunk::CHUNK_DEPTH);
+		coord.z * static_cast<int64_t>(Chunk::CHUNK_DEPTH);
 
 
 	const int64_t chunkMaxX =
@@ -280,7 +272,7 @@ void World::SelectOptimalPointLights(int32_t cx, int32_t cz, std::array<PointLig
 	for (int x = -1; x <= 1; ++x) {
 		for (int z = -1; z <= 1; ++z) {
 
-			auto it = chunks.find(Index(cx + x, cz + z));
+			auto it = chunks.find(Index(coord.x + x, coord.z + z));
 			if (it == chunks.end() || !it->second) continue;
 
 			auto* c = it->second.get();
@@ -381,7 +373,7 @@ void World::DebugChunkInfo() {
 
 	for (const auto& [key, c] : chunks) {
 		count++;
-		std::cout << count << "," << c->cx << "," << c->cz << "," << c->dirty << "\n";
+		std::cout << count << "," << c->coord.x << "," << c->coord.z << "," << c->dirty << "\n";
 	}
 }
 
@@ -391,8 +383,8 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 	std::unique_ptr<ChunkMeshSnapshot> snapshot =
 		std::make_unique<ChunkMeshSnapshot>();
 
-	int32_t cx = c.cx;
-	int32_t cz = c.cz;
+	const int64_t cx = c.coord.x;
+	const int64_t cz = c.coord.z;
 
 	// center
 	snapshot->center = c.blocks;
@@ -406,7 +398,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	//leftFront
 	{
-		uint64_t key = Index(cx - 1, cz + 1);
+		ChunkCoord key = Index(cx - 1, cz + 1);
 
 		auto it = chunks.find(key);
 
@@ -428,7 +420,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	//leftBack
 	{
-		uint64_t key = Index(cx - 1, cz - 1);
+		ChunkCoord key = Index(cx - 1, cz - 1);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -447,7 +439,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	//rightFront
 	{
-		uint64_t key = Index(cx + 1, cz + 1);
+		ChunkCoord key = Index(cx + 1, cz + 1);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -466,7 +458,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	//rightBack
 	{
-		uint64_t key = Index(cx + 1, cz - 1);
+		ChunkCoord key = Index(cx + 1, cz - 1);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -485,7 +477,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	// left
 	{
-		uint64_t key = Index(cx - 1, cz);
+		ChunkCoord key = Index(cx - 1, cz);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -532,7 +524,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	// right
 	{
-		uint64_t key = Index(cx + 1, cz);
+		ChunkCoord key = Index(cx + 1, cz);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -574,7 +566,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	// front
 	{
-		uint64_t key = Index(cx, cz + 1);
+		ChunkCoord key = Index(cx, cz + 1);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -615,7 +607,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 
 	// back
 	{
-		uint64_t key = Index(cx, cz - 1);
+		ChunkCoord key = Index(cx, cz - 1);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -665,13 +657,13 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 	return snapshot;
 }
 
-std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key) {
+std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(ChunkCoord key) {
 	std::unique_ptr<ChunkMeshSnapshot> snapshot = std::make_unique<ChunkMeshSnapshot>();
 
 	auto& c = *GetTargetChunkFromKey(key);
 
-	int32_t cx = c.cx;
-	int32_t cz = c.cz;
+	const int64_t cx = c.coord.x;
+	const int64_t cz = c.coord.z;
 
 	//center
 
@@ -687,7 +679,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	//leftFront
 	{
-		uint64_t key = Index(cx - 1, cz + 1);
+		ChunkCoord key = Index(cx - 1, cz + 1);
 
 		auto it = chunks.find(key);
 
@@ -707,7 +699,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	//leftBack
 	{
-		uint64_t key = Index(cx - 1, cz - 1);
+		ChunkCoord key = Index(cx - 1, cz - 1);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -726,7 +718,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	//rightFront
 	{
-		uint64_t key = Index(cx + 1, cz + 1);
+		ChunkCoord key = Index(cx + 1, cz + 1);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -745,7 +737,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	//rightBack
 	{
-		uint64_t key = Index(cx + 1, cz - 1);
+		ChunkCoord key = Index(cx + 1, cz - 1);
 		auto it = chunks.find(key);
 
 		if (it != chunks.end() && it->second) {
@@ -764,7 +756,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	//left
 	{
-		uint64_t key = Index(cx - 1, cz);
+		ChunkCoord key = Index(cx - 1, cz);
 		auto it = chunks.find(key);
 		if (it != chunks.end() && it->second) {
 			Chunk* c = it->second.get();
@@ -803,7 +795,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	//right
 	{
-		uint64_t key = Index(cx + 1, cz);
+		ChunkCoord key = Index(cx + 1, cz);
 		auto it = chunks.find(key);
 		if (it != chunks.end() && it->second) {
 			Chunk* c = it->second.get();
@@ -842,7 +834,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	//front
 	{
-		uint64_t key = Index(cx, cz + 1);
+		ChunkCoord key = Index(cx, cz + 1);
 		auto it = chunks.find(key);
 		if (it != chunks.end() && it->second) {
 			Chunk* c = it->second.get();
@@ -881,7 +873,7 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(uint64_t key
 
 	//back
 	{
-		uint64_t key = Index(cx, cz - 1);
+		ChunkCoord key = Index(cx, cz - 1);
 		auto it = chunks.find(key);
 		if (it != chunks.end() && it->second) {
 			Chunk* c = it->second.get();

@@ -15,6 +15,7 @@
 #include "DataTexture3D.h"
 #include "SkyRenderingConfig.h"
 #include "World/FogSystem.h"
+#include "World/ChunkCoord.h"
 #include "Snapshot/SnapshotExchanger.h"
 #include "Snapshot/ChunkRenderabilitySnapshot.h"
 
@@ -100,7 +101,7 @@ private:
 	std::unique_ptr<PointLightsSnapshot> m_pointLightsSnap;
 
 
-	std::unordered_map<uint64_t, ChunkMesh> m_chunkMeshes;
+	std::unordered_map<ChunkCoord, ChunkMesh, ChunkCoordHash> m_chunkMeshes;
 
 
 	std::optional<Shader> baseShader;

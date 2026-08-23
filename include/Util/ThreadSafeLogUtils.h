@@ -3,51 +3,45 @@
 #include <syncstream>
 #include <iostream>
 #include <stdint.h>
+#include "World/ChunkCoord.h"
 
 
 namespace ThreadSafe_Log {
 
 	inline void logDirtyNeighbor(
-		int32_t cx,
-		int32_t cz,
+		ChunkCoord coord,
 		bool urgent
 	) {
 		
-		if (cx != 0 || cz != 0) return;
+		if (coord.x != 0 || coord.z != 0) return;
 
 		std::osyncstream(std::cout)
 			<< "[DIRTY_NEIGHBOR]"
-			<< cx << ", " << cz
+			<< coord.x << ", " << coord.z
 			<< "Urgent: " << urgent
 			<< "\n";
 		
 	}
 
 
-	inline void logMeshJob(
-		int32_t cx,
-		int32_t cz
-	) {
-		if (cx != 0 || cz != 0) return;
+	inline void logMeshJob(ChunkCoord coord) {
+		if (coord.x != 0 || coord.z != 0) return;
 
 		std::osyncstream(std::cout)
 			<< "[MESH_JOB]"
-			<< cx << ", " << cz
+			<< coord.x << ", " << coord.z
 			<< "\n";
 
 	}
 
 
-	inline void logMeshDone(
-		int32_t cx,
-		int32_t cz
-	) {
+	inline void logMeshDone(ChunkCoord coord) {
 
-		if (cx != 0 || cz != 0) return;
+		if (coord.x != 0 || coord.z != 0) return;
 
 		std::osyncstream(std::cout)
 			<< "[MeshJobDone]"
-			<< cx << ", " << cz
+			<< coord.x << ", " << coord.z
 			<< "\n";
 
 

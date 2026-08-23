@@ -21,17 +21,16 @@ public:
 	void StopThread();
 
 	void RequestToSaveChunk(ChunkSaveData&& c);
-	void RequestToLoadChunk(int32_t cx, int32_t cz);
+	void RequestToLoadChunk(ChunkCoord coord);
 	void SetStreamCenterAndCancelOutsideLoads(
-		int32_t cx,
-		int32_t cz,
+		ChunkCoord coord,
 		int32_t unloadDistance
 	);
 
 	void SaveWorld(WorldSaveData&& data);
 	std::optional<WorldSaveData> LoadWorld();
 
-	bool CheckDataExistence(int32_t cx, int32_t cz) const;
+	bool CheckDataExistence(ChunkCoord coord) const;
 
 	std::optional<ChunkSaveData> PopChunkLoadedResult();
 private:
@@ -58,15 +57,14 @@ private:
 
 	std::deque<ChunkSaveTask> m_chunkSaveTasks;
 	std::deque<ChunkLoadTask> m_chunkLoadTasks;
-	std::unordered_set<uint64_t> m_pendingLoadKeys;
+	std::unordered_set<ChunkCoord, ChunkCoordHash> m_pendingLoadKeys;
 
 	
 
 	std::deque<ChunkSaveData> m_chunkLoadedResult;
 
 	std::condition_variable m_threadCv;
-	std::atomic<int32_t> m_streamCx = 0;
-	std::atomic<int32_t> m_streamCz = 0;
+	ChunkCoord m_streamCoord{};
 
 
 	constexpr static uint32_t loadTasksBudget = 8;

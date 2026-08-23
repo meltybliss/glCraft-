@@ -88,21 +88,16 @@ void PersistenceIO::RequestToSaveChunk(ChunkSaveData&& data) {
 }
 
 
-void PersistenceIO::RequestToLoadChunk(int32_t cx, int32_t cz) {
+void PersistenceIO::RequestToLoadChunk(ChunkCoord coord) {
 
 	{
 		std::lock_guard<std::mutex> lock(m_TaskMutex);
-		const uint64_t key = ChunkUtil::Index(cx, cz);
+		if (m_pendingLoadKeys.contains(coord)) return;
 
-		if (m_pendingLoadKeys.contains(key)) return;
-
-		m_pendingLoadKeys.insert(key);
+		m_pendingLoadKeys.insert(coord);
 
 		m_chunkLoadTasks.push_back(
-			ChunkLoadTask{
-				.cx = cx,
-				.cz = cz
-			}
+			ChunkLoadTask{ .coord = coord }
 		);
 	}
 	m_threadCv.notify_one();
@@ -110,22 +105,20 @@ void PersistenceIO::RequestToLoadChunk(int32_t cx, int32_t cz) {
 
 
 void PersistenceIO::SetStreamCenterAndCancelOutsideLoads(
-	int32_t cx,
-	int32_t cz,
+	ChunkCoord coord,
 	int32_t unloadDistance
 ) {
 	{
 		std::lock_guard<std::mutex> lock(m_TaskMutex);
 
-		m_streamCx.store(cx);
-		m_streamCz.store(cz);
+		m_streamCoord = coord;
 
 		for (auto it = m_chunkLoadTasks.begin(); it != m_chunkLoadTasks.end();) {
 			const int64_t dx = std::abs(
-				static_cast<int64_t>(it->cx) - static_cast<int64_t>(cx)
+				it->coord.x - coord.x
 			);
 			const int64_t dz = std::abs(
-				static_cast<int64_t>(it->cz) - static_cast<int64_t>(cz)
+				it->coord.z - coord.z
 			);
 
 			if (dx < unloadDistance && dz < unloadDistance) {
@@ -133,7 +126,7 @@ void PersistenceIO::SetStreamCenterAndCancelOutsideLoads(
 				continue;
 			}
 
-			m_pendingLoadKeys.erase(ChunkUtil::Index(it->cx, it->cz));
+			m_pendingLoadKeys.erase(it->coord);
 			it = m_chunkLoadTasks.erase(it);
 		}
 	}
@@ -143,12 +136,12 @@ void PersistenceIO::SetStreamCenterAndCancelOutsideLoads(
 
 		std::erase_if(
 			m_chunkLoadedResult,
-			[cx, cz, unloadDistance](const ChunkSaveData& result) {
+			[coord, unloadDistance](const ChunkSaveData& result) {
 				const int64_t dx = std::abs(
-					static_cast<int64_t>(result.cx) - cx
+					result.coord.x - coord.x
 				);
 				const int64_t dz = std::abs(
-					static_cast<int64_t>(result.cz) - cz
+					result.coord.z - coord.z
 				);
 
 				return dx >= unloadDistance || dz >= unloadDistance;
@@ -234,20 +227,19 @@ void PersistenceIO::ProcLoadTasks() {
 			std::lock_guard<std::mutex> lock(m_TaskMutex);
 
 			if (m_chunkLoadTasks.empty()) break;
-			const int64_t centerCx = m_streamCx.load();
-			const int64_t centerCz = m_streamCz.load();
+			const ChunkCoord center = m_streamCoord;
 
 			auto nearestTask = std::min_element(
 				m_chunkLoadTasks.begin(),
 				m_chunkLoadTasks.end(),
-				[centerCx, centerCz](const ChunkLoadTask& a, const ChunkLoadTask& b) {
+				[center](const ChunkLoadTask& a, const ChunkLoadTask& b) {
 					const int64_t distanceA = std::max(
-						std::abs(static_cast<int64_t>(a.cx) - centerCx),
-						std::abs(static_cast<int64_t>(a.cz) - centerCz)
+						std::abs(a.coord.x - center.x),
+						std::abs(a.coord.z - center.z)
 					);
 					const int64_t distanceB = std::max(
-						std::abs(static_cast<int64_t>(b.cx) - centerCx),
-						std::abs(static_cast<int64_t>(b.cz) - centerCz)
+						std::abs(b.coord.x - center.x),
+						std::abs(b.coord.z - center.z)
 					);
 
 					return distanceA < distanceB;
@@ -298,7 +290,7 @@ void PersistenceIO::ProcLoadTasks() {
 
 		if (!retryLoad) {
 			std::lock_guard<std::mutex> lock(m_TaskMutex);
-			m_pendingLoadKeys.erase(ChunkUtil::Index(task.cx, task.cz));
+			m_pendingLoadKeys.erase(task.coord);
 		}
 
 
@@ -319,9 +311,9 @@ void PersistenceIO::ProcLoadTasks() {
 }
 
 
-bool PersistenceIO::CheckDataExistence(int32_t cx, int32_t cz) const {
+bool PersistenceIO::CheckDataExistence(ChunkCoord coord) const {
 
-	return c_diskStorage.CheckDataExistence(cx, cz);
+	return c_diskStorage.CheckDataExistence(coord);
 
 }
 

@@ -1,8 +1,9 @@
 #pragma once
 #include "MeshData.h"
+#include "World/ChunkCoord.h"
 
 struct PendingMesh {
 	MeshData meshData;
-	uint64_t key;
+	ChunkCoord key;
 
 };

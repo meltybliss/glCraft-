@@ -2,6 +2,7 @@
 #include <queue>
 #include <unordered_set>
 #include "LightNode.h"
+#include "World/ChunkCoord.h"
 
 
 enum class LightType {
@@ -29,13 +30,12 @@ struct LightTask {
 
 	bool urgent = false;
 	LightType lightType;
-	int32_t sourceCx = 0;
-	int32_t sourceCz = 0;
+	ChunkCoord sourceCoord{};
 
 	std::queue<LightNode> bfs_queue;
 	std::queue<RemoveNode> remove_queue;
-	std::unordered_set<uint64_t> dirtyChunks_light;
-	std::unordered_set<uint64_t> dirtyChunks_geometry;
+	std::unordered_set<ChunkCoord, ChunkCoordHash> dirtyChunks_light;
+	std::unordered_set<ChunkCoord, ChunkCoordHash> dirtyChunks_geometry;
 
 	Phase phase = Phase::ADD;
 	uint8_t emissionAfterRemove = 0;//if greater than 0, task of propagating block emission will be created

@@ -39,8 +39,8 @@ public:
 	bool PopFrontMeshResult(MeshChunkResult& out);
 	bool PopFrontGenResult(GeneratedChunkResult& out);
 
-	void SetStreamCenter(int32_t curCx, int32_t curCz);
-	std::vector<uint64_t> CancelQueuedOutside_ChunkJob();
+	void SetStreamCenter(ChunkCoord coord);
+	std::vector<ChunkCoord> CancelQueuedOutside_ChunkJob();
 	ChunkPipelineDebugStats GetDebugStats();
 
 	void SetResultReadyCallback(std::function<void()> callback) {
@@ -53,14 +53,12 @@ private:
 	void StartLoop();
 	
 
-	void RemoveQueuedMeshJob_NoLock(uint64_t targetKey);
+	void RemoveQueuedMeshJob_NoLock(ChunkCoord targetKey);
 	static uint64_t GetChunkDistance(
-		int32_t cx,
-		int32_t cz,
-		int32_t centerCx,
-		int32_t centerCz
+		ChunkCoord coord,
+		ChunkCoord center
 	);
-	bool IsOutsideUnloadDistance(int32_t cx, int32_t cz) const;
+	bool IsOutsideUnloadDistance(ChunkCoord coord) const;
 	bool IsJobOutsideUnloadDistance(const ChunkJob& job) const;
 	static int GetJobStagePriority(JobType type);
 
@@ -87,16 +85,16 @@ private:
 	std::deque<ChunkJob> m_jobQueue;
 	std::deque<MeshChunkResult> m_meshChunkResult;
 	std::deque<GeneratedChunkResult> m_genChunkResult;
-	std::unordered_map<uint64_t, std::unique_ptr<Chunk>> m_buildingChunks;
+	std::unordered_map<ChunkCoord, std::unique_ptr<Chunk>, ChunkCoordHash> m_buildingChunks;
 
-	std::atomic<int32_t> m_curStreamCx = 0;
-	std::atomic<int32_t> m_curStreamCz = 0;
+	std::atomic<int64_t> m_curStreamCx = 0;
+	std::atomic<int64_t> m_curStreamCz = 0;
 	std::atomic<int> m_activeWorkers = 0;
 	std::atomic<uint64_t> m_completedTasks = 0;
 	std::atomic<uint64_t> m_busyTimeNs = 0;
 	
 
-	std::unordered_set<uint64_t> m_pendingMeshJobs_ChunkKeys;
+	std::unordered_set<ChunkCoord, ChunkCoordHash> m_pendingMeshJobs_ChunkKeys;
 
 	//size_t m_cancelScanedIndex = 0;
 

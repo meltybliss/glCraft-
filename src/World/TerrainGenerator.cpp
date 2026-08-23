@@ -26,8 +26,8 @@ void TerrainGenerator::GenerateTerrain_V1(Chunk& c) {
 	for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
 		for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
 
-			int64_t worldX = static_cast<int64_t>(c.cx) * Chunk::CHUNK_WIDTH + x;
-			int64_t worldZ = static_cast<int64_t>(c.cz) * Chunk::CHUNK_DEPTH + z;
+			int64_t worldX = c.coord.x * Chunk::CHUNK_WIDTH + x;
+			int64_t worldZ = c.coord.z * Chunk::CHUNK_DEPTH + z;
 			int ground = GetHeight(worldX, worldZ);
 
 

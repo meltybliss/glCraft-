@@ -57,8 +57,10 @@ double FogSystem::FindRenderableDistance(
 		static_cast<double>(w);
 
 
-	int cx = (int)floorDiv(camera.block.x, Chunk::CHUNK_WIDTH);
-	int cz = (int)floorDiv(camera.block.z, Chunk::CHUNK_DEPTH);
+	ChunkCoord coord{
+		floorDiv(camera.block.x, Chunk::CHUNK_WIDTH),
+		floorDiv(camera.block.z, Chunk::CHUNK_DEPTH)
+	};
 
 
 	double localX =
@@ -121,16 +123,16 @@ double FogSystem::FindRenderableDistance(
 
 			dist = tMaxX;
 			tMaxX += deltaX;
-			cx += stepX;
+			coord.x += stepX;
 
 		}
 		else {
 			dist = tMaxZ;
 			tMaxZ += deltaZ;
-			cz += stepZ;
+			coord.z += stepZ;
 		}
 
-		if (!snap.IsRenderableChunk(cx, cz)) {
+		if (!snap.IsRenderableChunk(coord)) {
 			return dist;
 		}
 

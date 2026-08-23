@@ -42,25 +42,17 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 	switch (targetJob.type) {
 		case JobType::CREATE_CHUNK: {
-			const int32_t& cx = targetJob.cx;
-			const int32_t& cz = targetJob.cz;
-
-			uint64_t key = Index(cx, cz);
+			const ChunkCoord coord = targetJob.coord;
 			//todo ä˘Ç…Ç†Ç¡ÇΩÇÁÇªÇÍÇè¡ÇµÇƒÇ©ÇÁÇ‚ÇÈÇÊÇ§Ç…Ç∑ÇÈ
 			
 			{
 				std::lock_guard<std::mutex> lock(buildingChunksMutex);
 
-				auto it = m_buildingChunks.find(key);
+				auto it = m_buildingChunks.find(coord);
 				if (it != m_buildingChunks.end()) return;
 
-				std::unique_ptr<Chunk> c = std::make_unique<Chunk>(cx, cz);
-
-				c->cx = cx;
-				c->cz = cz;
-
-
-				m_buildingChunks[key] = std::move(c);
+				std::unique_ptr<Chunk> c = std::make_unique<Chunk>(coord);
+				m_buildingChunks[coord] = std::move(c);
 
 			}
 				
@@ -76,10 +68,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 		}
 		case JobType::GENERATE_TERRAIN: {
-			const int32_t& cx = targetJob.cx;
-			const int32_t& cz = targetJob.cz;
-
-			uint64_t key = Index(cx, cz);
+			const ChunkCoord coord = targetJob.coord;
 
 			std::unique_ptr<Chunk> chunk;
 
@@ -87,7 +76,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 				std::lock_guard<std::mutex> lock(buildingChunksMutex);
 
 
-				auto it = m_buildingChunks.find(key);
+				auto it = m_buildingChunks.find(coord);
 				if (it == m_buildingChunks.end()) return;
 
 				chunk = std::move(it->second);
@@ -104,7 +93,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 				std::lock_guard<std::mutex> lock(genResultMutex);
 
 				m_genChunkResult.push_back({
-					key,
+					coord,
 					std::move(chunk)
 				});
 			}
@@ -123,12 +112,6 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 		
 		case JobType::BUILD_MESH: {
-			const int32_t& cx = targetJob.cx;
-			const int32_t& cz = targetJob.cz;
-
-			uint64_t key = Index(cx, cz);
-
-			
 			if (targetJob.snapshot) {
 				MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
 
@@ -136,7 +119,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 					std::lock_guard<std::mutex> lock(meshResultMutex);
 
 					m_meshChunkResult.push_back({
-						key,
+						targetJob.coord,
 						std::move(data)
 
 					});
@@ -170,22 +153,21 @@ void ChunkPipeline::StartLoop() {
 			if (!runningWorker) {
 				break;
 			}
-			const int32_t centerCx = m_curStreamCx.load();
-			const int32_t centerCz = m_curStreamCz.load();
+			const ChunkCoord center{m_curStreamCx.load(), m_curStreamCz.load()};
 
 			auto bestJob = std::min_element(
 				m_jobQueue.begin(),
 				m_jobQueue.end(),
-				[centerCx, centerCz](const ChunkJob& a, const ChunkJob& b) {
+				[center](const ChunkJob& a, const ChunkJob& b) {
 					if (a.urgent != b.urgent) {
 						return a.urgent;
 					}
 
 					const uint64_t distanceA = GetChunkDistance(
-						a.cx, a.cz, centerCx, centerCz
+						a.coord, center
 					);
 					const uint64_t distanceB = GetChunkDistance(
-						b.cx, b.cz, centerCx, centerCz
+						b.coord, center
 					);
 
 					if (distanceA != distanceB) {
@@ -201,7 +183,7 @@ void ChunkPipeline::StartLoop() {
 			m_jobQueue.erase(bestJob);
 
 			if (targetJob.type == JobType::BUILD_MESH) {
-				m_pendingMeshJobs_ChunkKeys.erase(Index(targetJob.cx, targetJob.cz));
+				m_pendingMeshJobs_ChunkKeys.erase(targetJob.coord);
 			}
 
 		}
@@ -282,8 +264,7 @@ ChunkPipelineDebugStats ChunkPipeline::GetDebugStats() {
 
 
 bool ChunkPipeline::PopFrontMeshResult(MeshChunkResult& out) {
-	const int32_t centerCx = m_curStreamCx.load();
-	const int32_t centerCz = m_curStreamCz.load();
+	const ChunkCoord center{m_curStreamCx.load(), m_curStreamCz.load()};
 
 	{
 		std::lock_guard<std::mutex> lock(meshResultMutex);
@@ -294,20 +275,16 @@ bool ChunkPipeline::PopFrontMeshResult(MeshChunkResult& out) {
 		auto nearestResult = std::min_element(
 			m_meshChunkResult.begin(),
 			m_meshChunkResult.end(),
-			[centerCx, centerCz](
+			[center](
 				const MeshChunkResult& a,
 				const MeshChunkResult& b
 			) {
 				return GetChunkDistance(
-					RestoreCxFromKey(a.key),
-					RestoreCzFromKey(a.key),
-					centerCx,
-					centerCz
+					a.key,
+					center
 				) < GetChunkDistance(
-					RestoreCxFromKey(b.key),
-					RestoreCzFromKey(b.key),
-					centerCx,
-					centerCz
+					b.key,
+					center
 				);
 			}
 		);
@@ -321,8 +298,7 @@ bool ChunkPipeline::PopFrontMeshResult(MeshChunkResult& out) {
 
 
 bool ChunkPipeline::PopFrontGenResult(GeneratedChunkResult& out) {
-	const int32_t centerCx = m_curStreamCx.load();
-	const int32_t centerCz = m_curStreamCz.load();
+	const ChunkCoord center{m_curStreamCx.load(), m_curStreamCz.load()};
 
 	{
 		std::lock_guard<std::mutex> lock(genResultMutex);
@@ -334,20 +310,16 @@ bool ChunkPipeline::PopFrontGenResult(GeneratedChunkResult& out) {
 		auto nearestResult = std::min_element(
 			m_genChunkResult.begin(),
 			m_genChunkResult.end(),
-			[centerCx, centerCz](
+			[center](
 				const GeneratedChunkResult& a,
 				const GeneratedChunkResult& b
 			) {
 				return GetChunkDistance(
-					RestoreCxFromKey(a.key),
-					RestoreCzFromKey(a.key),
-					centerCx,
-					centerCz
+					a.key,
+					center
 				) < GetChunkDistance(
-					RestoreCxFromKey(b.key),
-					RestoreCzFromKey(b.key),
-					centerCx,
-					centerCz
+					b.key,
+					center
 				);
 			}
 		);
@@ -365,7 +337,7 @@ void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
 
 
 
-	uint64_t key = Index(job.cx, job.cz);
+	const ChunkCoord key = job.coord;
 	
 
 
@@ -395,16 +367,16 @@ void ChunkPipeline::EnqueueJob(ChunkJob&& job) {
 }
 
 
-void ChunkPipeline::SetStreamCenter(int32_t curCx, int32_t curCz) {
+void ChunkPipeline::SetStreamCenter(ChunkCoord coord) {
 	std::lock_guard<std::mutex> lock(jobsMutex);
-	m_curStreamCx.store(curCx);
-	m_curStreamCz.store(curCz);
+	m_curStreamCx.store(coord.x);
+	m_curStreamCz.store(coord.z);
 }
 
 
-std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
-	std::vector<uint64_t> canceledKey;
-	std::vector<uint64_t> canceledBuildingChunkKeys;
+std::vector<ChunkCoord> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
+	std::vector<ChunkCoord> canceledKey;
+	std::vector<ChunkCoord> canceledBuildingChunkKeys;
 
 	{
 		std::lock_guard<std::mutex> lock(jobsMutex);
@@ -415,7 +387,7 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 				continue;
 			}
 
-			const uint64_t key = Index(it->cx, it->cz);
+			const ChunkCoord key = it->coord;
 
 			if (it->type == JobType::BUILD_MESH) {
 				m_pendingMeshJobs_ChunkKeys.erase(key);
@@ -435,7 +407,7 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 	if (!canceledBuildingChunkKeys.empty()) {
 		std::lock_guard<std::mutex> lock(buildingChunksMutex);
 
-		for (const uint64_t key : canceledBuildingChunkKeys) {
+		for (const ChunkCoord key : canceledBuildingChunkKeys) {
 			m_buildingChunks.erase(key);
 		}
 	}
@@ -446,10 +418,7 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 		std::erase_if(
 			m_meshChunkResult,
 			[this](const MeshChunkResult& result) {
-				return IsOutsideUnloadDistance(
-					RestoreCxFromKey(result.key),
-					RestoreCzFromKey(result.key)
-				);
+				return IsOutsideUnloadDistance(result.key);
 			}
 		);
 	}
@@ -459,9 +428,7 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 
 		for (auto it = m_genChunkResult.begin();
 			it != m_genChunkResult.end();) {
-			if (!IsOutsideUnloadDistance(
-				RestoreCxFromKey(it->key),
-				RestoreCzFromKey(it->key))) {
+			if (!IsOutsideUnloadDistance(it->key)) {
 				++it;
 				continue;
 			}
@@ -483,33 +450,31 @@ std::vector<uint64_t> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 
 
 uint64_t ChunkPipeline::GetChunkDistance(
-	int32_t cx,
-	int32_t cz,
-	int32_t centerCx,
-	int32_t centerCz
+	ChunkCoord coord,
+	ChunkCoord center
 ) {
-	const int64_t dx = std::abs(
-		static_cast<int64_t>(cx) - static_cast<int64_t>(centerCx)
-	);
-	const int64_t dz = std::abs(
-		static_cast<int64_t>(cz) - static_cast<int64_t>(centerCz)
-	);
+	const uint64_t dx = coord.x >= center.x
+		? static_cast<uint64_t>(coord.x) - static_cast<uint64_t>(center.x)
+		: static_cast<uint64_t>(center.x) - static_cast<uint64_t>(coord.x);
+	const uint64_t dz = coord.z >= center.z
+		? static_cast<uint64_t>(coord.z) - static_cast<uint64_t>(center.z)
+		: static_cast<uint64_t>(center.z) - static_cast<uint64_t>(coord.z);
 
-	return static_cast<uint64_t>(std::max(dx, dz));
+	return std::max(dx, dz);
 }
 
 
 bool ChunkPipeline::IsJobOutsideUnloadDistance(const ChunkJob& job) const {
-	return IsOutsideUnloadDistance(job.cx, job.cz);
+	return IsOutsideUnloadDistance(job.coord);
 }
 
 
-bool ChunkPipeline::IsOutsideUnloadDistance(int32_t cx, int32_t cz) const {
+bool ChunkPipeline::IsOutsideUnloadDistance(ChunkCoord coord) const {
 	const int64_t dx = std::abs(
-		static_cast<int64_t>(cx) - m_curStreamCx.load()
+		coord.x - m_curStreamCx.load()
 	);
 	const int64_t dz = std::abs(
-		static_cast<int64_t>(cz) - m_curStreamCz.load()
+		coord.z - m_curStreamCz.load()
 	);
 
 	return dx >= WorldThread::Get_UNLOAD_DISTANCE() ||
@@ -531,14 +496,14 @@ int ChunkPipeline::GetJobStagePriority(JobType type) {
 }
 
 
-void ChunkPipeline::RemoveQueuedMeshJob_NoLock(uint64_t targetKey) {
+void ChunkPipeline::RemoveQueuedMeshJob_NoLock(ChunkCoord targetKey) {
 
 	auto newEnd = std::remove_if(
 		m_jobQueue.begin(),
 		m_jobQueue.end(),
 		[targetKey](const ChunkJob& job) {
 			return job.type == JobType::BUILD_MESH &&
-				Index(job.cx, job.cz) == targetKey;
+				job.coord == targetKey;
 		}
 	);
 
