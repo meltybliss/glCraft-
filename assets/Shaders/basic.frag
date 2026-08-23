@@ -46,6 +46,18 @@ uniform vec2 torchMaxUV;
 
 uniform float uSunIntensity;
 
+uniform sampler1D uRenderableDistancesTexture;
+uniform float uFogEndMargin;
+uniform float uFogWidth;
+
+
+
+uniform vec3 dayHorizonColor;	 
+uniform vec3 nightHorizonColor;
+
+
+uniform float uDayFactor;
+
 
 const vec2 disk[12] = vec2[12](
     vec2(-0.326, -0.406),
@@ -212,6 +224,50 @@ vec3 GetLightFromLightV(vec3 fallbackLight) {
 }
 
 
+
+float CalcFogFactor() {
+	const float PI = 3.14159265359;
+	vec2 fragXZ = FragPos.xz;//relative
+
+	float fragDist = length(fragXZ);
+
+	if (fragDist < 0.0001) {
+	
+		return 0.0;
+	}
+
+	vec2 dir = fragXZ / fragDist;
+	float angle = atan(dir.y, dir.x);
+
+	if (angle < 0.0) {
+        angle += 2.0 * PI;
+    }
+
+
+	float fogTextureCoord = angle / (2.0 * PI);
+
+	float renderableDist = 
+		texture(
+			uRenderableDistancesTexture,
+			fogTextureCoord
+		).r;
+
+	
+	float fogEnd = max(0.0, renderableDist - uFogEndMargin);
+	float fogStart = max(0.0, fogEnd - uFogWidth);
+
+
+	return 
+		smoothstep(
+			fogStart,
+			fogEnd,
+			fragDist
+		);
+
+}
+
+
+
 void main() {
 	vec4 texColor = texture(u_Texture, TexCoord);
 	vec3 caveAmbient =
@@ -334,9 +390,13 @@ void main() {
 
 	vec3 pointLight = CalcPointLights(normal);
 
+	float fogFactor = CalcFogFactor();
+
+
 
 	float ao =
 		clamp(vAO, 0.45, 1.0);
+
 
 
 
@@ -414,15 +474,37 @@ void main() {
 		orangeMask;
 
 
+		
+
+	vec3 fogColor = 
+		mix(
+			nightHorizonColor,
+			dayHorizonColor,
+			uDayFactor
+		
+		);
+
+
+
 	litColor +=
 		whiteEmission +
 		orangeEmission;
 
 
 	
+	vec3 finalLitColor = 
+		mix(
+			litColor,
+			fogColor,
+			fogFactor
+		
+		);
+
+	
+
 	FragColor =
         vec4(
-            litColor,
+            finalLitColor,
             texColor.a
         );
 

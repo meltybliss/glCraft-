@@ -1134,6 +1134,9 @@
     <ClInclude Include="include\Render\DataTexture3D.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="include\Render\SkyRenderingConfig.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="third_party\glad.c">

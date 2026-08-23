@@ -9,7 +9,9 @@ protected:
 
 public:
     TextureObject() = default;
-    ~TextureObject();
+    ~TextureObject() {
+        Destroy();
+    };
 
     TextureObject(const TextureObject&) = delete;
     TextureObject& operator=(const TextureObject&) = delete;

@@ -72,6 +72,8 @@ bool DepthTexture2D::Create(int w, int h) {
 
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+
+	return true;
 }
 
 

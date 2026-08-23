@@ -9,7 +9,6 @@
 #include "Render/WorldRenderer.h"
 #include "Render/SelectionOutlineRenderer.h"
 #include "Render/Shader.h"
-#include "Render/Texture.h"
 #include <optional>
 #include <memory>
 #include "World/RaycastHit.h"

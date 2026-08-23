@@ -13,8 +13,14 @@
 #include "RenderTexture2D.h"
 #include "DepthTexture2D.h"
 #include "DataTexture3D.h"
+#include "SkyRenderingConfig.h"
+#include "World/FogSystem.h"
 #include "Snapshot/SnapshotExchanger.h"
 #include "Snapshot/ChunkRenderabilitySnapshot.h"
+
+
+using namespace SkyRenderingConfig;
+
 
 class WorldThread;
 class World;
@@ -47,8 +53,11 @@ public:
 	void InitBloom();
 	void InitLightVolumeTexture();
 
+	void InitFogSys();
 
 	void UpdateSnapshots();
+
+	void UpdateFogSys(const Camera& cam);
 
 private:
 
@@ -85,6 +94,9 @@ private:
 			.sunIntensity = 1.0f,
 			.skyStrength = 1.0f
 		};
+
+	std::unique_ptr<FogSystem> m_fogsys;
+
 	std::unique_ptr<PointLightsSnapshot> m_pointLightsSnap;
 
 
@@ -121,6 +133,8 @@ private:
 	unsigned int m_skyVAO = 0;
 	std::optional<Shader> m_skyShader;
 
+
+	
 
 	unsigned int m_postVAO = 0;
 	std::optional<Shader> m_brightShader;

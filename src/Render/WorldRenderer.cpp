@@ -39,6 +39,12 @@ void WorldRenderer::InitBaseShader() {
 	baseShader->SetVec2("torchMinUV", minMax.min);
 	baseShader->SetVec2("torchMaxUV", minMax.max);
 
+
+	baseShader->SetVec3("dayHorizonColor", dayHorizonColor);
+	baseShader->SetVec3("dayTopColor", datTopColor);
+	baseShader->SetVec3("nightHorizonColor", nightHorizonColor);
+	baseShader->SetVec3("nightTopColor", nightTopColor);
+
 	blockAtlas = std::make_unique<ImageTexture2D>("assets/textures/block_atlas2.png");
 
 }
@@ -53,9 +59,39 @@ void WorldRenderer::InitSkyShaderAndVAO() {
 		"assets/Shaders/sky.vert",
 		"assets/Shaders/sky.frag"
 	);
+
+	m_skyShader->Use();
+	m_skyShader->SetVec3("dayHorizonColor", dayHorizonColor);
+	m_skyShader->SetVec3("dayTopColor", datTopColor);
+	m_skyShader->SetVec3("nightHorizonColor", nightHorizonColor);
+	m_skyShader->SetVec3("nightTopColor", nightTopColor);
 }
 
 
+
+void WorldRenderer::InitFogSys() {
+
+
+	m_fogsys = std::make_unique<FogSystem>();
+
+	baseShader->Use();
+
+	baseShader->SetInt("uRenderableDistancesTexture", 3);
+	baseShader->SetFloat("uFogEndMargin", 8.0f);
+	baseShader->SetFloat("uFogWidth", 24.0f);
+
+
+}
+
+
+
+void WorldRenderer::UpdateFogSys(const Camera& cam) {
+
+	auto snap = CreateChunkRenderabilitySnap();
+
+	m_fogsys->UpdateFog(cam.position, *snap);
+
+}
 
 
 
@@ -731,6 +767,8 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 	baseShader->SetMat4("lightSpaceMatrix", m_lightSpaceMatrix);
 
 
+	baseShader->SetFloat("uDayFactor", m_dayNightSnapshot->dayFactor);
+
 	WorldPos lightVolumePos;
 	lightVolumePos.block = m_lightVolumeOrigin;
 	lightVolumePos.local = glm::dvec3(0.0);
@@ -745,6 +783,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 	blockAtlas->Bind(0);
 	m_shadowDepthTexture->Bind(1);
 	m_lightVolumeTexture->Bind(2);
+	m_fogsys->Bind(3);
 
 
 	for (auto& [key, mesh] : m_chunkMeshes) {

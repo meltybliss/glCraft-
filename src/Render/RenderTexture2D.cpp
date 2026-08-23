@@ -40,6 +40,7 @@ bool RenderTexture2D::Create(
 	);
 
 
+
 	glTexParameteri(
 		GL_TEXTURE_2D,
 		GL_TEXTURE_MIN_FILTER,
