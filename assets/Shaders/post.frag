@@ -21,6 +21,17 @@ vec3 AcesFilm(vec3 color) {
     return clamp((color * (a * color + b)) / (color * (c * color + d) + e), 0.0, 1.0);
 }
 
+vec3 AcesFilmColorPreserving(vec3 color) {
+    float peak = max(color.r, max(color.g, color.b));
+
+    if (peak <= 0.00001) {
+        return vec3(0.0);
+    }
+
+    float mappedPeak = AcesFilm(vec3(peak)).r;
+    return color * (mappedPeak / peak);
+}
+
 
 
 void main() {
@@ -34,11 +45,19 @@ void main() {
         scene + bloom * uBloomStrength;
 
 
-	// HDR ¨ 0`1‚ÖŽ©‘R‚Éˆ³k
-    vec3 mapped =
-        AcesFilm(hdrColor * uExposure);
+	// HDR â†’ 0ï½ž1ã¸è‡ªç„¶ã«åœ§ç¸®
+    vec3 exposedColor = hdrColor * uExposure;
+    vec3 mappedPerChannel = AcesFilm(exposedColor);
+    vec3 mappedColorPreserving =
+        AcesFilmColorPreserving(exposedColor);
 
-    // ˆÃ•”‚ð­‚µÂ‚­A–¾•”‚ð­‚µ’g‚©‚­‚·‚é
+    vec3 mapped = mix(
+        mappedPerChannel,
+        mappedColorPreserving,
+        0.45
+    );
+
+    // æš—éƒ¨ã‚’å°‘ã—é’ãã€æ˜Žéƒ¨ã‚’å°‘ã—æš–ã‹ãã™ã‚‹
     float luminance =
         dot(
             mapped,

@@ -43,7 +43,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 	switch (targetJob.type) {
 		case JobType::CREATE_CHUNK: {
 			const ChunkCoord coord = targetJob.coord;
-			//todo Šù‚É‚ ‚Á‚½‚ç‚»‚ê‚ğÁ‚µ‚Ä‚©‚ç‚â‚é‚æ‚¤‚É‚·‚é
+			//todo æ—¢ã«ã‚ã£ãŸã‚‰ãã‚Œã‚’æ¶ˆã—ã¦ã‹ã‚‰ã‚„ã‚‹ã‚ˆã†ã«ã™ã‚‹
 			
 			{
 				std::lock_guard<std::mutex> lock(buildingChunksMutex);

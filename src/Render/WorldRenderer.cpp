@@ -443,8 +443,8 @@ RenderTexture2D& WorldRenderer::BlurBloom(int passCount) {
 			WindowSize::windowHeight
 		);
 
-		//true�Ȃ牡Blur
-		//false�Ȃ�cBlur
+		//trueなら横Blur
+		//falseなら縦Blur
 		m_blurShader->SetInt(
 			"uHorizontal",
 			horizontal ? 1 : 0
@@ -695,7 +695,7 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 	for (auto& [key, mesh] : m_chunkMeshes) {
 
-		glm::mat4 model(1.0f);//identity matrix �P�ʍs��
+		glm::mat4 model(1.0f);//identity matrix 単位行列
 
 		WorldPos pos;
 		pos.block = { key.x * Chunk::CHUNK_WIDTH, 0, key.z * Chunk::CHUNK_DEPTH };
@@ -788,7 +788,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 		count = 0;
 		pLights.fill(0);
 
-		glm::mat4 model(1.0f);//identity matrix �P�ʍs��
+		glm::mat4 model(1.0f);//identity matrix 単位行列
 
 		WorldPos pos;
 		pos.block = { key.x * Chunk::CHUNK_WIDTH, 0, key.z * Chunk::CHUNK_DEPTH };
@@ -825,10 +825,7 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 			baseShader->SetInt("uPointLightCount", 0);
 		}
 
-		auto it2 = m_chunkMeshes.find(key);
-		if (it2 == m_chunkMeshes.end()) continue;
-
-		it2->second.Draw();
+		mesh.Draw();
 
 	}
 }

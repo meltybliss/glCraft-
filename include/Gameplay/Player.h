@@ -96,11 +96,11 @@ private:
 
 	glm::dvec3 velocity{};
 	
-	//camera�n
+	//camera系
 	glm::vec3 front = glm::vec3(0.f, 0.f, -1.0f);
 	glm::vec3 right = glm::vec3(1.f, 0.f, 0.f);
-	glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);//��s�@�̂悤�Ɏ��_���X���Ă�Ƃ��ł��Ή��ł���悤�ɏ���������Ƃ��̌����ׂ������B
-	glm::vec3 worldUp = glm::vec3(0.f, 1.f, 0.f);//�㏸����Ƃ��̂��߂�
+	glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);//飛行機のように視点が傾いてるときでも対応できるように上を向いたときの向くべき方向。
+	glm::vec3 worldUp = glm::vec3(0.f, 1.f, 0.f);//上昇するときのための
 
 	float yaw = -90.f;
 	float pitch = 0.f;

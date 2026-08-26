@@ -25,7 +25,7 @@ in vec3 vLightColor;
 
 
 uniform sampler2D u_Texture;
-uniform float u_skyStrength;//’‹1.0, –é0.1‚İ‚½‚¢‚È
+uniform float u_skyStrength;//æ˜¼1.0, å¤œ0.1ã¿ãŸã„ãª
 
 uniform vec3 sunDirection;
 
@@ -77,12 +77,12 @@ const vec2 disk[12] = vec2[12](
 float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 {
 
-	//“§‹œZ
+	//é€è¦–é™¤ç®—
     vec3 projCoords =
         fragPosLightSpace.xyz / fragPosLightSpace.w;
  
 
-	//-1`1 ‚ğ 0`1 ‚É•ÏŠ·
+	//-1ï½1 ã‚’ 0ï½1 ã«å¤‰æ›
     projCoords = projCoords * 0.5 + 0.5;
  
 	if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
@@ -93,7 +93,7 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 	}
 
 
-	 //¡•`‚¢‚Ä‚¢‚éfragment©g‚Ì[‚³
+	 //ä»Šæã„ã¦ã„ã‚‹fragmentè‡ªèº«ã®æ·±ã•
     float currentDepth = projCoords.z;
 
 
@@ -140,8 +140,8 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 
 	visibility /= 12.0;
 	//visibility
-	//1.0 = “úŒü
-    //0.0 = ‰e
+	//1.0 = æ—¥å‘
+    //0.0 = å½±
 
     return 1.0 - visibility;
 
@@ -161,7 +161,7 @@ vec3 CalcPointLights(vec3 normal) {
 
 		vec3 lightDir = normalize(toLight);
 
-		//–Ê‚ªŒõŒ¹‚Ì•ûŒü‚ğŒü‚¢‚Ä‚¢‚é‚©‚©‚ç‚í‚©‚éA‚Ç‚ê‚¾‚¯Œõ‚ğó‚¯æ‚é‚©
+		//é¢ãŒå…‰æºã®æ–¹å‘ã‚’å‘ã„ã¦ã„ã‚‹ã‹ã‹ã‚‰ã‚ã‹ã‚‹ã€ã©ã‚Œã ã‘å…‰ã‚’å—ã‘å–ã‚‹ã‹
 		float diffuseFactor = max(dot(normal, lightDir), 0.0);
 
 		float softLight = 0.15;
@@ -169,10 +169,10 @@ vec3 CalcPointLights(vec3 normal) {
 
 
 
-		//ŒõŒ¹‚©‚ç‰“‚­‚È‚é‚Ù‚Çã‚­‚·‚é
+		//å…‰æºã‹ã‚‰é ããªã‚‹ã»ã©å¼±ãã™ã‚‹
 		float attenuation = clamp(1.0 - distanceToLight / uPointLights[i].radius, 0.0, 1.0);
 
-		//Œ¸Š‚ğ­‚µ©‘R‚É‚·‚é
+		//æ¸›è¡°ã‚’å°‘ã—è‡ªç„¶ã«ã™ã‚‹
 		attenuation = attenuation * attenuation * attenuation;
 
 		result +=
@@ -290,11 +290,11 @@ void main() {
 	float skyLevel =
 		clamp(vSkyLightLevel / 15.0, 0.0, 1.0);
 
-	//’n•\, ŒŠ‚Ì[‚³‚É‚æ‚é‹óŒõ‚Ì“’B—Ê
+	//åœ°è¡¨, ç©´ã®æ·±ã•ã«ã‚ˆã‚‹ç©ºå…‰ã®åˆ°é”é‡
 	float skyVisibility =
 		pow(skyLevel, 1.6);
 
-	//’‹–é‚àŠÜ‚ß‚½ÅI“I‚È‹­‚³
+	//æ˜¼å¤œã‚‚å«ã‚ãŸæœ€çµ‚çš„ãªå¼·ã•
 	float skyAmount =
 		skyVisibility *
 		u_skyStrength;
@@ -316,13 +316,13 @@ void main() {
 			max(rawBlockLight.g, rawBlockLight.b)
 		);
 
-	//‹­“x‚ÆF‚ğ•ª—£
+	//å¼·åº¦ã¨è‰²ã‚’åˆ†é›¢
     vec3 blockColor =
         blockIntensity > 0.00001
         ? rawBlockLight / blockIntensity
         : vec3(0.0);
 
-	//’áƒŒƒxƒ‹‚ÌBlock Light‚ğã‚­‚·‚é
+	//ä½ãƒ¬ãƒ™ãƒ«ã®Block Lightã‚’å¼±ãã™ã‚‹
     blockIntensity =
         pow(
             clamp(blockIntensity, 0.0, 1.0),
@@ -352,7 +352,7 @@ void main() {
 		(1.0 - shadow * 0.88);
 
 
-	// ’n–Ê‚©‚ç‚Ìã‚¢’gF”½Ë
+	// åœ°é¢ã‹ã‚‰ã®å¼±ã„æš–è‰²åå°„
 	vec3 groundBounce =
 		vec3(0.055, 0.035, 0.020) *
 		max(-normal.y, 0.0) *
@@ -374,7 +374,7 @@ void main() {
 		u_skyStrength *
 		hemisphere;
 
-	//‹ó‚ª“Í‚©‚È‚¢êŠ‚Ù‚Ç“´ŒAAmbient‚ğ‹­‚­‚·‚é
+	//ç©ºãŒå±Šã‹ãªã„å ´æ‰€ã»ã©æ´çªŸAmbientã‚’å¼·ãã™ã‚‹
     float caveFactor =
         1.0 -
         smoothstep(
@@ -396,7 +396,6 @@ void main() {
 
 	float ao =
 		clamp(vAO, 0.45, 1.0);
-
 
 
 
@@ -470,7 +469,7 @@ void main() {
 	vec3 orangeEmission =
 		texColor.rgb *
 		vec3(1.30, 0.95, 0.45) *
-		7.0 *
+		4.5 *
 		orangeMask;
 
 

@@ -7,8 +7,7 @@ DataTexture3D::DataTexture3D(
 	GLenum format,
 	GLenum type
 ) {
-
-
+	Create(internalFormat, format, type);
 }
 
 
@@ -17,6 +16,8 @@ bool DataTexture3D::Create(
 	GLenum format,
 	GLenum type
 ) {
+	glGenTextures(1, &m_id);
+	glBindTexture(GL_TEXTURE_3D, m_id);
 
 	constexpr int channel_count = 4;
 

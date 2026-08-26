@@ -77,7 +77,7 @@ public:
 	);
 
 
-	static void InsertGeoDirtyChunks(//Œõ‚Í‚¢‚¶‚ç‚¸ƒuƒƒbƒN‚¾‚¯‚ğ‚¢‚¶‚éê‡‚Ìmesh dirty
+	static void InsertGeoDirtyChunks(//å…‰ã¯ã„ã˜ã‚‰ãšãƒ–ãƒ­ãƒƒã‚¯ã ã‘ã‚’ã„ã˜ã‚‹å ´åˆã®mesh dirty
 		World& w,
 		int64_t worldX,
 		int64_t worldY,

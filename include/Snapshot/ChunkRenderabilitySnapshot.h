@@ -9,7 +9,7 @@ using namespace ChunkUtil;
 
 struct ChunkRenderabilitySnapshot {
 
-	std::unordered_set<ChunkCoord, ChunkCoordHash> renderableChunks;//mesh‚ª‚ ‚échunk‚½‚¿
+	std::unordered_set<ChunkCoord, ChunkCoordHash> renderableChunks;//meshãŒã‚ã‚‹chunkãŸã¡
 
 	bool IsRenderableChunk(ChunkCoord coord) const {
 

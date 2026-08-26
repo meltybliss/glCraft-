@@ -9,7 +9,7 @@
 #include "World/ChunkCoord.h"
 
 
-//����ꏊ�Ɏ���Ɍ������Ȃ���L������I�u�W�F�N�g��u�����߂ɂ����B��Ɍ����u���b�N�ɒu���B
+//ある場所に周りに減衰しながら広がる光オブジェクトを置くためにつかう。主に光源ブロックに置く。
 struct PointLight {
 
 	glm::i64vec3 position;

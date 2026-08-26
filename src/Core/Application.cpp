@@ -320,7 +320,7 @@ void Application::Tick_playing() {
 
 	
 
-	worldThread.SetLightVolumeCenter(m_camera.position.block);//camera‚ÌˆÊ’u‚ªˆÈ‘O‚ÌworldThread“à‚Å•Û‘¶‚³‚ê‚Ä‚élightVolumeOrigin‚Æˆá‚¤’l‚É‚È‚Á‚½‚Æ‚«‚¾‚¯origin‚ğXV‚µ‚Äsnapshot‚Â‚­‚éB
+	worldThread.SetLightVolumeCenter(m_camera.position.block);//cameraã®ä½ç½®ãŒä»¥å‰ã®worldThreadå†…ã§ä¿å­˜ã•ã‚Œã¦ã‚‹lightVolumeOriginã¨é•ã†å€¤ã«ãªã£ãŸã¨ãã ã‘originã‚’æ›´æ–°ã—ã¦snapshotã¤ãã‚‹ã€‚
 
 	//m_wRenderer.RebuildDrityChunkMesh(m_world);
 	m_wRenderer.UploadPendingMeshData(m_session.GetWorldThread());
@@ -370,7 +370,7 @@ void Application::Render_playing() {
 
 void Application::CreateWorldDebugUI() {
 
-	//‚È‚ñ‚©‚¿‚å‚Á‚Æ‰˜‚¢\‘¢
+	//ãªã‚“ã‹ã¡ã‚‡ã£ã¨æ±šã„æ§‹é€ 
 	DebugSettings debugSettings =
 		m_debugBuilder.BuildDebugData(*this, *m_session.GetWorldThread().GetWorldPtr());
 

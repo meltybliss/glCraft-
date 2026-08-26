@@ -26,7 +26,7 @@ void SelectionOutlineRenderer::Init() {
 		max, max, max, min, max, max,
 		min, max, max, min, min, max,
 
-		// ��̖ʂ��Ȃ���
+		// 二つの面をつなぐ辺
 		min, min, min,   min, min, max,
 		max, min, min,   max, min, max,
 		max, max, min,   max, max, max,

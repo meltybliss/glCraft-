@@ -180,7 +180,7 @@ private:
 	std::priority_queue<ChunkDirtyEntry> m_dirtyMeshQueue;
 
 	std::vector<ChunkOffset> m_loadOffsets;
-	std::unordered_map<ChunkCoord, int, ChunkCoordHash> m_loadOffsetsRank;//dx‚Ædz‚ğ‚Ü‚Æ‚ß‚½À•W
+	std::unordered_map<ChunkCoord, int, ChunkCoordHash> m_loadOffsetsRank;//dxã¨dzã‚’ã¾ã¨ã‚ãŸåº§æ¨™
 
 	size_t m_nextLoadOffset = 0;
 
@@ -198,7 +198,7 @@ private:
 
 
 	std::mutex m_lightVolumeCenterMutex;
-	std::atomic<bool> m_lightVolumeDirty = false;
+	std::atomic<bool> m_lightVolumeDirty = true;
 	std::atomic<bool> m_pointLightDirty = false;
 
 	std::atomic<uint64_t> m_debugBusyTimeNs = 0;
@@ -324,6 +324,7 @@ private:
 	);
 
 	void Start_SkyLightTaskForNewChunk(Chunk& c);
+	void Start_BlockLightTaskForNewChunk(Chunk& c);
 	void Start_BlockLightTaskFromNeighbors(
 		int64_t x,
 		int64_t y,

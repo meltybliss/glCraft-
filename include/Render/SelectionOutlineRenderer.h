@@ -10,6 +10,7 @@
 #include "World/RaycastHit.h"
 #include "Render/Shader.h"
 #include <vector>
+#include <optional>
 
 class Camera;
 

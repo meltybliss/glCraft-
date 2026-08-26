@@ -445,13 +445,13 @@ UV MeshBuilder::GetBlockFaceUV(const BlockType b, uint8_t index, BlockFace face)
 
 UV MeshBuilder::GetTileVertexUVForTorch(uint8_t index, int tileX, int tileY) {
 
-	//index‚Íuv‚Ì4ƒ|ƒCƒ“ƒg‚Ì‚Ç‚ê‚©‚ğ•\‚·
+	//indexã¯uvã®4ãƒã‚¤ãƒ³ãƒˆã®ã©ã‚Œã‹ã‚’è¡¨ã™
 	UVPoint p = (UVPoint)index;
 
 	float tileUV_X = 1.0f / atlasTilesX;
 	float tileUV_Y = 1.0f / atlasTilesY;
 
-	float torchSideUV_X = tileUV_X / 4.0f;//¼–¾‚Ítexture“à‚É4‚Â“ü‚Á‚Ä‚é‚©‚ç
+	float torchSideUV_X = tileUV_X / 4.0f;//æ¾æ˜ã¯textureå†…ã«4ã¤å…¥ã£ã¦ã‚‹ã‹ã‚‰
 
 	float u0 = tileUV_X * tileX;
 	float v1 = 1.0f - (tileUV_Y * tileY);
@@ -478,7 +478,7 @@ UV MeshBuilder::GetTileVertexUVForTorch(uint8_t index, int tileX, int tileY) {
 
 
 UV MeshBuilder::GetTileVertexUV(uint8_t index, int tileX, int tileY) {
-	//index‚Íuv‚Ì4ƒ|ƒCƒ“ƒg‚Ì‚Ç‚ê‚©‚ğ•\‚·
+	//indexã¯uvã®4ãƒã‚¤ãƒ³ãƒˆã®ã©ã‚Œã‹ã‚’è¡¨ã™
 	UVPoint p = (UVPoint)index;
 
 	float pixelU = 1.0f / atlasPixelWidth;
