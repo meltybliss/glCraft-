@@ -103,7 +103,7 @@ struct ChunkMeshSnapshot {
 	}
 
 	glm::vec3 GetBoundaryBlockLightColor(int x, int y, int z, bool did_X_exceed) {
-		//����x���͈͊O�̂��̂Ȃ�z�������Bz�����ɂ͂ݏo���Ă�Ȃ�x���g���d�g�݂ł��B
+		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
 
 		int index = 0;
 		if (did_X_exceed) {
@@ -201,7 +201,7 @@ struct ChunkMeshSnapshot {
 
 
 	unsigned int GetBoundaryBlock(int x, int y, int z, bool did_X_exceed) {
-		//����x���͈͊O�̂��̂Ȃ�z�������Bz�����ɂ͂ݏo���Ă�Ȃ�x���g���d�g�݂ł��B
+		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
 		
 		int index = 0;
 		if (did_X_exceed) {
@@ -238,7 +238,7 @@ struct ChunkMeshSnapshot {
 	}
 
 	uint8_t GetBoundary_SkyLight(int x, int y, int z, bool did_X_exceed) {
-		//����x���͈͊O�̂��̂Ȃ�z�������Bz�����ɂ͂ݏo���Ă�Ȃ�x���g���d�g�݂ł��B
+		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
 
 		int index = 0;
 		if (did_X_exceed) {
@@ -276,7 +276,7 @@ struct ChunkMeshSnapshot {
 	}
 
 	uint8_t GetBoundaryLight(int x, int y, int z, bool did_X_exceed) {
-		//����x���͈͊O�̂��̂Ȃ�z�������Bz�����ɂ͂ݏo���Ă�Ȃ�x���g���d�g�݂ł��B
+		//もしxが範囲外のものならzをつかう。z方向にはみ出してるならxを使う仕組みです。
 
 		int index = 0;
 		if (did_X_exceed) {

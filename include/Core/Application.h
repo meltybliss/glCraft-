@@ -95,7 +95,7 @@ private:
 	RaycastHit lastHit;
 
 
-	int selectedBlockId = 3;//‚¢‚¸‚êinventory‚ÉˆÚ‚·
+	int selectedBlockId = 3;//ã„ãšã‚Œinventoryã«ç§»ã™
 	DebugDataBuilder m_debugBuilder;
 	std::unique_ptr<DebugUI> m_debugUI;
 

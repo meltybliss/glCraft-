@@ -127,7 +127,7 @@ void WorldThread::StopThread() {
 	}
 
 
-	//‚±‚±‚Å‹­§“I‚Éworld‚ğsave‚µAdirtyToSave‚Ìchunks‚ğtask‰»‚·‚éB
+	//ã“ã“ã§å¼·åˆ¶çš„ã«worldã‚’saveã—ã€dirtyToSaveã®chunksã‚’taskåŒ–ã™ã‚‹ã€‚
 	ForcedSave_World();
 	ForcedSave_Chunks();
 
@@ -320,7 +320,7 @@ void WorldThread::ApplyEditBlock(
 	}
 	else if (!oldIsAir && newIsAir) {
 
-		//‚±‚ê‚ç‚Åblock light task‚ª—á‚¦‚ÎI‚í‚Á‚½‚çmesh‚ªƒAƒbƒvƒf[ƒg‚³‚ê‚Ä‚³‚ç‚Ésky light task‚¨‚í‚Á‚½‚çÄ“x‚Ü‚½‚µ‚Ä‚µ‚Ü‚¤‚Ì‚Å–³‘Ê‚ª‚ ‚é‚©‚à
+		//ã“ã‚Œã‚‰ã§block light taskãŒä¾‹ãˆã°çµ‚ã‚ã£ãŸã‚‰meshãŒã‚¢ãƒƒãƒ—ãƒ‡ãƒ¼ãƒˆã•ã‚Œã¦ã•ã‚‰ã«sky light taskãŠã‚ã£ãŸã‚‰å†åº¦ã¾ãŸã—ã¦ã—ã¾ã†ã®ã§ç„¡é§„ãŒã‚ã‚‹ã‹ã‚‚
 		if (isLightSourceBlock(oldBlock)) {
 			Start_RemoveBlockLightTask(
 				x,
@@ -801,7 +801,7 @@ void WorldThread::CheckBlockLightChangesForLightVolume(
 		}
 	}
 
-	//¡‰ñŠm”F‚µ‚½•ÏX‚ÍÁ‚·
+	//ä»Šå›ç¢ºèªã—ãŸå¤‰æ›´ã¯æ¶ˆã™
 	task.changedBlockLight = false;
 	task.changedBlockLightsPos.clear();
 }
@@ -1007,7 +1007,7 @@ void WorldThread::ProcOne_Disk_ChunkLoadResult() {
 		chunks[coord] = std::move(c);
 
 
-
+		Start_BlockLightTaskForNewChunk(*chunks[coord]);
 		Start_SkyLightTaskForNewChunk(*chunks[coord]);
 
 	}
@@ -1170,7 +1170,7 @@ void WorldThread::UpdateChunksAround_step() {
 	}
 
 	if (!hasChunksToCreate && !hasChunksToErase) {
-		m_streamNeedsUpdate = false;//‚à‚¤chunkˆÚ“®‚É‚æ‚Á‚Ä¶‚¶‚éload, unload‚ª‘S•”ˆ—Ï‚İ
+		m_streamNeedsUpdate = false;//ã‚‚ã†chunkç§»å‹•ã«ã‚ˆã£ã¦ç”Ÿã˜ã‚‹load, unloadãŒå…¨éƒ¨å‡¦ç†æ¸ˆã¿
 	}
 }
 
@@ -1187,10 +1187,10 @@ void WorldThread::UpdateChunksAround() {
 
 	auto& chunks = m_world.GetChunks();
 
-	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {//‚±‚ê‚¢‚¢©•ª‚ÌüˆÍ‚©‚çload‚·‚éƒAƒ‹ƒSƒŠƒYƒ€
+	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {//ã“ã‚Œã„ã„è‡ªåˆ†ã®å‘¨å›²ã‹ã‚‰loadã™ã‚‹ã‚¢ãƒ«ã‚´ãƒªã‚ºãƒ 
 		for (int32_t dx = -r; dx <= r && !createDone; ++dx) {
 			for (int32_t dz = -r; dz <= r; ++dz) {
-				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//“à‘¤‚Íˆ—Ï‚İ‚È‚Ì‚ÅŠOü‚¾‚¯
+				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//å†…å´ã¯å‡¦ç†æ¸ˆã¿ãªã®ã§å¤–å‘¨ã ã‘
 					continue;
 				}
 
@@ -1274,7 +1274,7 @@ void WorldThread::UpdateChunksAround() {
 
 		}
 		else {
-			++it;//Á‚µ‚½‚Æ‚«‚Í—v‘f‚ª©“®‚Å‹l‚ß‚ç‚ê‚é‚©‚çÁ‚µ‚Ä‚È‚¢‚Æ‚«‚¾‚¯it‚ğ‘‚â‚µ‚ÄŸ‚Ì—v‘f
+			++it;//æ¶ˆã—ãŸã¨ãã¯è¦ç´ ãŒè‡ªå‹•ã§è©°ã‚ã‚‰ã‚Œã‚‹ã‹ã‚‰æ¶ˆã—ã¦ãªã„ã¨ãã ã‘itã‚’å¢—ã‚„ã—ã¦æ¬¡ã®è¦ç´ 
 		}
 
 	}
@@ -1282,7 +1282,7 @@ void WorldThread::UpdateChunksAround() {
 
 
 	if (allRequestedChunks_Created && allRequestedChunks_Destroyed) {
-		m_streamNeedsUpdate = false;//‚à‚¤chunkˆÚ“®‚É‚æ‚Á‚Ä¶‚¶‚éload, unload‚ª‘S•”ˆ—Ï‚İ
+		m_streamNeedsUpdate = false;//ã‚‚ã†chunkç§»å‹•ã«ã‚ˆã£ã¦ç”Ÿã˜ã‚‹load, unloadãŒå…¨éƒ¨å‡¦ç†æ¸ˆã¿
 	}
 
 }
@@ -1544,7 +1544,7 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 	
 	if (task.bfs_queue.empty()) {
 		
-		FinishLightTask(task);//üˆÍƒ`ƒƒƒ“ƒN‚ğdirty‚·‚é‚½‚ß‚É
+		FinishLightTask(task);//å‘¨å›²ãƒãƒ£ãƒ³ã‚¯ã‚’dirtyã™ã‚‹ãŸã‚ã«
 		return;
 	}
 	
@@ -1554,6 +1554,64 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 	
 	m_lightTasks.push_back(task);
 	
+}
+
+
+void WorldThread::Start_BlockLightTaskForNewChunk(Chunk& c) {
+	LightTask task;
+	task.sourceCoord = c.coord;
+	task.lightType = LightType::BLOCK;
+
+	const int64_t chunkWorldX =
+		c.coord.x * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
+	const int64_t chunkWorldZ =
+		c.coord.z * static_cast<int64_t>(Chunk::CHUNK_DEPTH);
+
+	bool foundPointLight = false;
+
+	for (int y = 0; y < Chunk::CHUNK_HEIGHT; ++y) {
+		for (int z = 0; z < Chunk::CHUNK_DEPTH; ++z) {
+			for (int x = 0; x < Chunk::CHUNK_WIDTH; ++x) {
+				const BlockType block =
+					static_cast<BlockType>(c.GetBlock(x, y, z));
+
+				if (!isLightSourceBlock(block)) {
+					continue;
+				}
+
+				const int64_t worldX = chunkWorldX + x;
+				const int64_t worldZ = chunkWorldZ + z;
+				const glm::vec3 color = lightColor[static_cast<int>(block)];
+
+				c.SetPointLight(
+					glm::i64vec3(worldX, y, worldZ),
+					color,
+					pointLightRadius[static_cast<int>(block)],
+					4.5f
+				);
+
+				m_lightEngine.AddLightLevel(
+					m_world,
+					worldX,
+					y,
+					worldZ,
+					GetEmission(block),
+					color,
+					task
+				);
+
+				foundPointLight = true;
+			}
+		}
+	}
+
+	if (foundPointLight) {
+		m_pointLightDirty.store(true);
+	}
+
+	if (!task.bfs_queue.empty()) {
+		m_lightTasks.push_back(std::move(task));
+	}
 }
 
 
@@ -1803,7 +1861,7 @@ void WorldThread::DispatchDirtyMeshJobs() {
 }
 
 
-void WorldThread::DispatchOneDirtyMeshJob() {//TODO: d‘g‚İ‚ğunordered_set‚ğg‚¤‚â‚è•û‚É•Ï‚¦‚éŒã‚Å
+void WorldThread::DispatchOneDirtyMeshJob() {//TODO: ä»•çµ„ã¿ã‚’unordered_setã‚’ä½¿ã†ã‚„ã‚Šæ–¹ã«å¤‰ãˆã‚‹å¾Œã§
 
 	auto& chunks = m_world.GetChunks();
 
@@ -2314,13 +2372,19 @@ bool WorldThread::IsInsideLightVolume(int64_t x, int64_t y, int64_t z) {
 		o = m_lightVolumeCenter;
 	}
 
+	const glm::i64vec3 origin{
+		o.x - LIGHT_VOLUME_WIDTH / 2,
+		o.y - LIGHT_VOLUME_HEIGHT / 2,
+		o.z - LIGHT_VOLUME_DEPTH / 2
+	};
+
 	return
-		x >= o.x &&
-		x <= o.x + LIGHT_VOLUME_WIDTH &&
-		y >= o.y &&
-		y <= o.y + LIGHT_VOLUME_HEIGHT &&
-		z >= o.z &&
-		z <= o.z + LIGHT_VOLUME_DEPTH;
+		x >= origin.x &&
+		x < origin.x + LIGHT_VOLUME_WIDTH &&
+		y >= origin.y &&
+		y < origin.y + LIGHT_VOLUME_HEIGHT &&
+		z >= origin.z &&
+		z < origin.z + LIGHT_VOLUME_DEPTH;
 	
 
 }

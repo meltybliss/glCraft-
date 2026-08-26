@@ -218,7 +218,10 @@ public:
 		double warpStrength = 220.0;
 	};
 
-	RealisticTerrain2D(uint64_t seed, Settings settings = {})
+	explicit RealisticTerrain2D(uint64_t seed)
+		: RealisticTerrain2D(seed, Settings{}) {}
+
+	RealisticTerrain2D(uint64_t seed, Settings settings)
 		:
 		m_settings(settings),
 

@@ -46,7 +46,7 @@ void TerrainGenerator::GenerateTerrain_V1(Chunk& c) {
 					b = BlockType::STONE;
 				}
 
-				c.SetBlockForGenerator(x, y, z, b);//‚±‚±‚Ì“_‚ÅworldThread‚É‚Íchunk‚Í‚È‚¢‚Ì‚Åthread safe‚Å‚·
+				c.SetBlockForGenerator(x, y, z, b);//ã“ã“ã®æ™‚ç‚¹ã§worldThreadã«ã¯chunkã¯ãªã„ã®ã§thread safeã§ã™
 			}
 		}
 	}
@@ -70,7 +70,7 @@ double TerrainGenerator::MountainMask(double region) {
 	constexpr double start = 0.10;
 	constexpr double end = 0.60;
 
-	double t = (region - start) / (end - start);//start‚©‚ç‚Ç‚ê‚¾‚¯i‚ñ‚Å‚é‚© / start‚©‚ç‘S’·
+	double t = (region - start) / (end - start);//startã‹ã‚‰ã©ã‚Œã ã‘é€²ã‚“ã§ã‚‹ã‹ / startã‹ã‚‰å…¨é•·
 	t = std::clamp(t, 0.0, 1.0);
 
 	return t * t * (3.0 - 2.0 * t);

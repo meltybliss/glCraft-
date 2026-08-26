@@ -4,7 +4,7 @@
 
 class TerrainGenerator {
 public:
-	//*’ˆÓ* Generator‚ÍŠeƒo[ƒWƒ‡ƒ“‚Ì¶¬ŒvZ‚Ìd‘g‚İ‚ğc‚µ‚Ä‚¨‚­‚±‚Æ 
+	//*æ³¨æ„* Generatorã¯å„ãƒãƒ¼ã‚¸ãƒ§ãƒ³ã®ç”Ÿæˆè¨ˆç®—ã®ä»•çµ„ã¿ã‚’æ®‹ã—ã¦ãŠãã“ã¨
 	explicit TerrainGenerator(uint64_t seed) : m_perlinNoise(seed) {}
 
 	void GenerateTerrain(Chunk& c);

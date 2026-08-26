@@ -38,7 +38,7 @@ void PersistenceIO::StopThread() {
 
 void PersistenceIO::StartThreadLoop() {
 
-	while (true) {//StopThrerad‚µ‚½‚Æ‚«‚Ésave‚È‚Ç‚ğ‚·‚×‚Äs‚Á‚Ä‚©‚çthread‚ğI—¹‚³‚¹‚½‚¢‚Ì‚Åtrue‚Å‰ñ‚·
+	while (true) {//StopThreradã—ãŸã¨ãã«saveãªã©ã‚’ã™ã¹ã¦è¡Œã£ã¦ã‹ã‚‰threadã‚’çµ‚äº†ã•ã›ãŸã„ã®ã§trueã§å›ã™
 
 	
 		{
@@ -261,7 +261,7 @@ void PersistenceIO::ProcLoadTasks() {
 		switch (result.status)
 		{
 		case ChunkLoadStatus::Loaded:
-			// •Û‘¶Ï‚İƒ`ƒƒƒ“ƒN‚ğg‚¤
+			// ä¿å­˜æ¸ˆã¿ãƒãƒ£ãƒ³ã‚¯ã‚’ä½¿ã†
 
 			{
 				std::lock_guard<std::mutex> lock(m_loadResultMutex);
@@ -277,7 +277,7 @@ void PersistenceIO::ProcLoadTasks() {
 			break;
 
 		case ChunkLoadStatus::Corrupted:
-			// ‰ó‚ê‚Ä‚¢‚é‚Ì‚ÅƒƒOE•œ‹Œ•ûj
+			// å£Šã‚Œã¦ã„ã‚‹ã®ã§ãƒ­ã‚°ãƒ»å¾©æ—§æ–¹é‡
 			break;
 
 		case ChunkLoadStatus::IOError:

@@ -203,7 +203,7 @@ void LightEngine::Propagate_BlockLight(
 
 void LightEngine::InitializeSkylightForChunk(Chunk& c) {
 
-	//AIR‚¶‚á‚È‚­‚È‚é‚Ü‚Å‚»‚Ìã‚©‚ç‚ÌAIR‚Ì‚Æ‚±‚ğ15light level‚É‚µ‚Ä‚¢‚­
+	//AIRã˜ã‚ƒãªããªã‚‹ã¾ã§ãã®ä¸Šã‹ã‚‰ã®AIRã®ã¨ã“ã‚’15light levelã«ã—ã¦ã„ã
 
 	c.skyLights.fill(0);
 
@@ -260,7 +260,7 @@ void LightEngine::CreateSkylightLeakSeeds(Chunk& c, LightTask& task) {
 					int nx = x + dir[0];
 					int nz = z + dir[1];
 					
-					// ‚Ü‚¸‚Íƒ`ƒƒƒ“ƒN“à‚¾‚¯ˆµ‚¤
+					// ã¾ãšã¯ãƒãƒ£ãƒ³ã‚¯å†…ã ã‘æ‰±ã†
 					if (nx < 0 || nx >= Chunk::CHUNK_WIDTH ||
 						nz < 0 || nz >= Chunk::CHUNK_DEPTH) {
 						continue;
