@@ -76,435 +76,288 @@ const vec2 disk[12] = vec2[12](
 
 float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 {
-
-	//透視除算
-    vec3 projCoords =
-        fragPosLightSpace.xyz / fragPosLightSpace.w;
- 
-
-	//-1～1 を 0～1 に変換
+    if (fragPosLightSpace.w <= 0.0) return 0.0;
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
     projCoords = projCoords * 0.5 + 0.5;
- 
-	if (projCoords.x < 0.0 || projCoords.x > 1.0 ||
-		projCoords.y < 0.0 || projCoords.y > 1.0 ||
-		projCoords.z < 0.0 || projCoords.z > 1.0)
-	{
-		return 0.0;
-	}
+    if (any(lessThan(projCoords, vec3(0.0))) ||
+        any(greaterThan(projCoords, vec3(1.0)))) return 0.0;
 
-
-	 //今描いているfragment自身の深さ
-    float currentDepth = projCoords.z;
-
-
-	float normalLight =
-		max(
-			dot(normal, sunDirection),
-			0.0
-		);
-
-	float ndotl =
-		max(dot(normal, sunDirection), 0.0);
-
-	float bias =
-		max(
-			0.0008,
-			0.0030 * (1.0 - ndotl)
-		);
-
-	vec2 texelSize =
-        1.0 / vec2(textureSize(shadowMap, 0));
-	
-
-
-	float visibility = 0.0;
-
-    float filterRadius = 1.5;
-
-	for (int i = 0; i < 12; i++) {
-		vec2 sampleUV = 
-			projCoords.xy +
-			disk[i] *
-			texelSize *
-			filterRadius;
-
-		visibility += 
-			texture(
-				shadowMap,
-				vec3(
-					sampleUV,
-					currentDepth - bias
-				)
-			);
-	}
-
-	visibility /= 12.0;
-	//visibility
-	//1.0 = 日向
-    //0.0 = 影
-
-    return 1.0 - visibility;
-
+    // Keep the geometric normal here: micro-detail must not change shadow bias.
+    float ndotl = max(dot(normal, normalize(sunDirection)), 0.0);
+    float bias = max(0.00065, 0.0022 * (1.0 - ndotl));
+    vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
+    float visibility = 0.0;
+    for (int i = 0; i < 12; ++i) {
+        visibility += texture(shadowMap, vec3(
+            projCoords.xy + disk[i] * texelSize * 1.65,
+            projCoords.z - bias));
+    }
+    return 1.0 - visibility / 12.0;
 }
 
+// All positions are camera-relative, so the camera is at (0, 0, 0).
+const float PI = 3.14159265359;
+const float DETAIL_STRENGTH = 0.22;
+const float BLOCK_LIGHT_STRENGTH = 0.85;
+const float POINT_LIGHT_STRENGTH = 1.0;
 
-vec3 CalcPointLights(vec3 normal) {
-
-	vec3 result = vec3(0.0);
-
-	for (int i = 0; i < uPointLightCount; i++) {
-		
-		vec3 toLight = uPointLights[i].position - FragPos;
-
-		float distanceToLight = length(toLight);
-		if (distanceToLight > uPointLights[i].radius) continue;
-
-		vec3 lightDir = normalize(toLight);
-
-		//面が光源の方向を向いているかからわかる、どれだけ光を受け取るか
-		float diffuseFactor = max(dot(normal, lightDir), 0.0);
-
-		float softLight = 0.15;
-		float lightingFactor = mix(softLight, 1.0, diffuseFactor); 
-
-
-
-		//光源から遠くなるほど弱くする
-		float attenuation = clamp(1.0 - distanceToLight / uPointLights[i].radius, 0.0, 1.0);
-
-		//減衰を少し自然にする
-		attenuation = attenuation * attenuation * attenuation;
-
-		result +=
-			uPointLights[i].color *
-			uPointLights[i].intensity *
-			lightingFactor *
-			attenuation;
-
-
-
-		
-	}
-
-
-	return result;
+vec3 SafeNormalize(vec3 v, vec3 fallback) {
+    float len2 = dot(v, v);
+    return len2 > 0.000001 ? v * inversesqrt(len2) : fallback;
 }
 
+float Luminance(vec3 color) {
+    return dot(color, vec3(0.2126, 0.7152, 0.0722));
+}
+
+// Uses the existing 32 x 16 atlas, not a new material/normal texture.
+ivec2 AtlasTile() {
+    return ivec2(floor(vec2(TexCoord.x, 1.0 - TexCoord.y) * vec2(32.0, 16.0)));
+}
+
+bool IsTile(ivec2 tile, ivec2 target) {
+    return all(equal(tile, target));
+}
+
+float MaterialRoughness(vec3 albedo) {
+    ivec2 tile = AtlasTile();
+    float roughness = 0.86;
+    if (IsTile(tile, ivec2(19, 0))) {
+        // Albedo is not a gloss map. Dry stone only has small roughness variation.
+        roughness = mix(0.82, 0.74, smoothstep(0.025, 0.32, Luminance(albedo)));
+    } else if (IsTile(tile, ivec2(18, 1))) {
+        roughness = 0.96;
+    } else if (IsTile(tile, ivec2(2, 0)) || IsTile(tile, ivec2(3, 0))) {
+        roughness = 0.93;
+    } else if (IsTile(tile, ivec2(5, 7))) {
+        roughness = 0.62;
+    }
+    return roughness;
+}
+
+vec3 MaterialNormal(vec3 geometricNormal) {
+    vec2 atlasSize = vec2(textureSize(u_Texture, 0));
+    vec2 texel = 1.0 / atlasSize;
+    vec2 uvDx = dFdx(TexCoord);
+    vec2 uvDy = dFdy(TexCoord);
+    vec3 posDx = dFdx(FragPos);
+    vec3 posDy = dFdy(FragPos);
+
+    // Clamp taps to the current tile so another material cannot leak in.
+    vec2 tileCount = vec2(32.0, 16.0);
+    vec2 tileMin = floor(TexCoord * tileCount) / tileCount + texel * 0.5;
+    vec2 tileMax = tileMin + 1.0 / tileCount - texel;
+    float left = Luminance(textureGrad(u_Texture,
+        clamp(TexCoord - vec2(texel.x, 0.0), tileMin, tileMax), uvDx, uvDy).rgb);
+    float right = Luminance(textureGrad(u_Texture,
+        clamp(TexCoord + vec2(texel.x, 0.0), tileMin, tileMax), uvDx, uvDy).rgb);
+    float down = Luminance(textureGrad(u_Texture,
+        clamp(TexCoord - vec2(0.0, texel.y), tileMin, tileMax), uvDx, uvDy).rgb);
+    float up = Luminance(textureGrad(u_Texture,
+        clamp(TexCoord + vec2(0.0, texel.y), tileMin, tileMax), uvDx, uvDy).rgb);
+
+    vec3 r1 = cross(posDy, geometricNormal);
+    vec3 r2 = cross(geometricNormal, posDx);
+    vec3 tangent = r1 * uvDx.x + r2 * uvDy.x;
+    vec3 bitangent = r1 * uvDx.y + r2 * uvDy.y;
+    float basisLength = max(dot(tangent, tangent), dot(bitangent, bitangent));
+    float footprint = max(length(uvDx * atlasSize), length(uvDy * atlasSize));
+    float detailFade = 1.0 - smoothstep(1.0, 3.0, footprint);
+    // The narrow torch atlas strips are not a surface-height map.
+    detailFade *= 1.0 - float(AtlasTile().y == 14);
+    vec3 gradient = (tangent * (right - left) + bitangent * (up - down)) *
+        inversesqrt(max(basisLength, 0.000001));
+    return SafeNormalize(geometricNormal - gradient * DETAIL_STRENGTH * detailFade,
+        geometricNormal);
+}
+
+// Dielectric GGX highlight. It is added separately from albedo, not painted on it.
+float SpecularBRDF(vec3 normal, vec3 viewDir, vec3 lightDir, float roughness) {
+    float nl = max(dot(normal, lightDir), 0.0);
+    float nv = max(dot(normal, viewDir), 0.001);
+    if (nl <= 0.0) return 0.0;
+    vec3 halfDir = SafeNormalize(viewDir + lightDir, normal);
+    float nh = max(dot(normal, halfDir), 0.0);
+    float vh = max(dot(viewDir, halfDir), 0.0);
+    float alpha = roughness * roughness;
+    float a2 = alpha * alpha;
+    float denominator = nh * nh * (a2 - 1.0) + 1.0;
+    float distribution = a2 / max(PI * denominator * denominator, 0.00001);
+    float k = (roughness + 1.0) * (roughness + 1.0) * 0.125;
+    float geometryV = nv / (nv * (1.0 - k) + k);
+    float geometryL = nl / (nl * (1.0 - k) + k);
+    float fresnel = 0.04 + 0.96 * pow(1.0 - vh, 5.0);
+    // Lighting intensities below are diffuse irradiance / PI: use the same units
+    // for specular. The cosine term is already included in this expression.
+    return PI * distribution * geometryV * geometryL * fresnel / max(4.0 * nv, 0.001);
+}
+
+vec3 SunColor() {
+    float height = max(normalize(sunDirection).y, 0.0);
+    float airMass = inversesqrt(height * height + 0.0025);
+    // Approximate chromatic extinction on a longer path through the atmosphere.
+    // uSunIntensity already supplies the brightness fade near the horizon.
+    return exp(-vec3(0.0, 0.045, 0.12) * max(airMass - 1.0, 0.0));
+}
+
+// Same horizon model as sky.frag, keeping the stream-distance fog unobtrusive.
+vec3 HorizonColor(vec3 viewDir) {
+    float day = clamp(uDayFactor, 0.0, 1.0);
+    vec3 sunDir = normalize(sunDirection);
+    float afterglow = smoothstep(-0.18, 0.02, sunDir.y);
+    float skyEnergy = max(day, afterglow * 0.28);
+    float twilight = (1.0 - smoothstep(0.02, 0.24, sunDir.y)) * afterglow;
+    float horizonLuma = dot(dayHorizonColor, vec3(0.2126, 0.7152, 0.0722));
+    vec3 daylightHaze = mix(vec3(horizonLuma), dayHorizonColor, 0.32) * 0.55;
+    vec3 color = mix(nightHorizonColor * 0.45, daylightHaze, skyEnergy);
+    vec2 horizonSun = sunDir.xz / max(length(sunDir.xz), 0.001);
+    vec2 horizonView = viewDir.xz / max(length(viewDir.xz), 0.001);
+    float towardSun = pow(max(dot(horizonSun, horizonView), 0.0), 4.0);
+    vec3 sunsetHaze = mix(vec3(0.46, 0.16, 0.055), vec3(0.52, 0.31, 0.15),
+        smoothstep(-0.06, 0.12, sunDir.y));
+    return mix(color, sunsetHaze, twilight * towardSun * 0.82);
+}
+
+vec3 CalcPointLights(vec3 normal, vec3 geometricNormal, vec3 viewDir,
+    float roughness, out vec3 specular) {
+    vec3 result = vec3(0.0);
+    specular = vec3(0.0);
+    for (int i = 0; i < min(uPointLightCount, 16); ++i) {
+        vec3 toLight = uPointLights[i].position - FragPos;
+        float distance2 = dot(toLight, toLight);
+        float radius = max(uPointLights[i].radius, 0.001);
+        if (distance2 >= radius * radius) continue;
+        vec3 lightDir = SafeNormalize(toLight, geometricNormal);
+        float facing = max(dot(geometricNormal, lightDir), 0.0);
+        if (facing <= 0.0) continue;
+        float range2 = distance2 / (radius * radius);
+        float window = max(1.0 - range2 * range2, 0.0);
+        // Smooth finite range, with a softened inverse-square falloff near the source.
+        float attenuation = window * window / (1.0 + 1.5 * distance2);
+        vec3 radiance = max(uPointLights[i].color, vec3(0.0)) *
+            max(uPointLights[i].intensity, 0.0) * attenuation * POINT_LIGHT_STRENGTH;
+        result += radiance * max(dot(normal, lightDir), 0.0) * 0.96;
+        float lightRoughness = max(roughness, 0.28);
+        specular += radiance * SpecularBRDF(normal, viewDir, lightDir, lightRoughness);
+    }
+    return result;
+}
 
 vec3 GetLightFromLightV(vec3 fallbackLight) {
-	
-	vec3 samplePos =
-        FragPos + normalize(vNormal) * 0.501;
+    vec3 samplePos = FragPos + normalize(vNormal) * 0.501;
+    vec3 localPos = samplePos - uLightVolumeOrigin;
+    if (any(lessThan(localPos, vec3(0.0))) ||
+        any(greaterThanEqual(localPos, uLightVolumeSize))) return fallbackLight;
 
-	vec3 localPos =
-		samplePos - uLightVolumeOrigin;
-
-    bool insideVolume =
-        all(greaterThanEqual(
-            localPos,
-            vec3(0.0)
-        )) &&
-        all(lessThan(
-            localPos,
-            uLightVolumeSize
-        ));
-
-    if (!insideVolume) {
-        return fallbackLight;
-    }
-
-
-	vec3 texturePos =
-        localPos / uLightVolumeSize;
-
-    return texture(
-        uLightVolumeTexture,
-        texturePos
-    ).rgb;
+    vec4 sampleLight = texture(uLightVolumeTexture, localPos / uLightVolumeSize);
+    vec3 edgeDistance = min(localPos, uLightVolumeSize - localPos);
+    float edge = min(edgeDistance.x, min(edgeDistance.y, edgeDistance.z));
+    // Alpha is zero before a valid volume is uploaded. Fade to the vertex fallback
+    // at the volume boundary instead of a visible lighting discontinuity.
+    float valid = step(0.5, sampleLight.a) * smoothstep(0.0, 1.5, edge);
+    return mix(fallbackLight, max(sampleLight.rgb, vec3(0.0)), valid);
 }
-
-
 
 float CalcFogFactor() {
-	const float PI = 3.14159265359;
-	vec2 fragXZ = FragPos.xz;//relative
-
-	float fragDist = length(fragXZ);
-
-	if (fragDist < 0.0001) {
-	
-		return 0.0;
-	}
-
-	vec2 dir = fragXZ / fragDist;
-	float angle = atan(dir.y, dir.x);
-
-	if (angle < 0.0) {
-        angle += 2.0 * PI;
-    }
-
-
-	float fogTextureCoord = angle / (2.0 * PI);
-
-	float renderableDist = 
-		texture(
-			uRenderableDistancesTexture,
-			fogTextureCoord
-		).r;
-
-	
-	float fogEnd = max(0.0, renderableDist - uFogEndMargin);
-	float fogStart = max(0.0, fogEnd - uFogWidth);
-
-
-	return 
-		smoothstep(
-			fogStart,
-			fogEnd,
-			fragDist
-		);
-
+    float fragDist = length(FragPos.xz);
+    if (fragDist < 0.0001) return 0.0;
+    float angle = atan(FragPos.z, FragPos.x);
+    if (angle < 0.0) angle += 2.0 * PI;
+    float renderableDist = texture(uRenderableDistancesTexture, angle / (2.0 * PI)).r;
+    float fogEnd = max(0.001, renderableDist - uFogEndMargin);
+    float fogStart = max(0.0, fogEnd - max(uFogWidth, 0.001));
+    return smoothstep(fogStart, max(fogEnd, fogStart + 0.001), fragDist);
 }
 
-
-
 void main() {
-	vec4 texColor = texture(u_Texture, TexCoord);
-	vec3 caveAmbient =
-		vec3(
-			0.012,
-			0.016,
-			0.024
-		);
-
-
-	vec3 sunColor =
-		vec3(1.00, 0.90, 0.72);
-
-		
-	vec3 normal = normalize(vNormal);
-
-	float shadow = CalculateShadow(FragPosLightSpace, normal);
-
-
-	float skyLevel =
-		clamp(vSkyLightLevel / 15.0, 0.0, 1.0);
-
-	//地表, 穴の深さによる空光の到達量
-	float skyVisibility =
-		pow(skyLevel, 1.6);
-
-	//昼夜も含めた最終的な強さ
-	float skyAmount =
-		skyVisibility *
-		u_skyStrength;
-	
-
-	float B_brightness = vBlockLightLevel / 15.0;
-
-	
-	vec3 oldBlockLight = vLightColor * B_brightness;
-
-
-
-	vec3 rawBlockLight =
-        GetLightFromLightV(oldBlockLight);
-
-	float blockIntensity =
-		max(
-			rawBlockLight.r,
-			max(rawBlockLight.g, rawBlockLight.b)
-		);
-
-	//強度と色を分離
-    vec3 blockColor =
-        blockIntensity > 0.00001
-        ? rawBlockLight / blockIntensity
-        : vec3(0.0);
-
-	//低レベルのBlock Lightを弱くする
-    blockIntensity =
-        pow(
-            clamp(blockIntensity, 0.0, 1.0),
-            4.0
-        );
-
-	vec3 blockLight =
-		blockColor *
-		blockIntensity *
-		1.2;
-
-
-	
-
-	float wrappedDiffuse =
-		clamp(
-			(dot(normal, sunDirection) + 0.08) / 1.08,
-			0.0,
-			1.0
-		);
-
-	vec3 sunLight =
-		sunColor *
-		wrappedDiffuse *
-		skyVisibility *
-		uSunIntensity *
-		(1.0 - shadow * 0.88);
-
-
-	// 地面からの弱い暖色反射
-	vec3 groundBounce =
-		vec3(0.055, 0.035, 0.020) *
-		max(-normal.y, 0.0) *
-		skyAmount;
-
-
-	vec3 ambientSkyColor = vec3(0.58, 0.72, 0.92);
-
-	float hemisphere =
-		mix(
-			0.45,
-			1.0,
-			normal.y * 0.5 + 0.5
-		);
-
-	vec3 skyLight =
-		ambientSkyColor *
-		mix(0.035, 1.0, skyVisibility) *
-		u_skyStrength *
-		hemisphere;
-
-	//空が届かない場所ほど洞窟Ambientを強くする
-    float caveFactor =
-        1.0 -
-        smoothstep(
-            0.0,
-            0.25,
-            skyLevel
-        );
-
-
-	vec3 caveLight =
-        caveAmbient * caveFactor;
-
-
-	vec3 pointLight = CalcPointLights(normal);
-
-	float fogFactor = CalcFogFactor();
-
-
-
-	float ao =
-		clamp(vAO, 0.45, 1.0);
-
-
-
-	vec3 finalLight =
-		(skyLight + groundBounce + caveLight) * ao +
-		sunLight * mix(0.72, 1.0, ao) +
-		blockLight +
-		pointLight;
-
-
-	vec3 litColor =
-		texColor.rgb *
-		finalLight;
-
-
-	vec2 torchLocalUV =
-		(TexCoord - torchMinUV) /
-		(torchMaxUV - torchMinUV);
-
-	float insideTorch =
-		step(0.0, torchLocalUV.x) *
-		step(torchLocalUV.x, 1.0) *
-		step(0.0, torchLocalUV.y) *
-		step(torchLocalUV.y, 1.0);
-	
-
-	float flameY = 1.0 - torchLocalUV.y;
-
-	float whiteRegionStart = 0.125;
-	float whiteRegionEnd = 0.250;
-
-	float whiteRegion =
-		step(whiteRegionStart, flameY) *
-		(1.0 - step(whiteRegionEnd, flameY));
-
-
-	float orangeRegionStart = 0.0;
-	float orangeRegionEnd = 0.125;
-
-
-
-	float orangeRegion =
-		step(orangeRegionStart, flameY) *
-		(1.0 - step(orangeRegionEnd, flameY));
-
-	float textureBrightness =
-		max(texColor.r, max(texColor.g, texColor.b));
-
-
-	float visiblePixelMask =
-		smoothstep(0.18, 0.65, textureBrightness);
-
-
-
-	float whiteMask =
-		insideTorch *
-		whiteRegion *
-		visiblePixelMask;
-
-	float orangeMask =
-		insideTorch *
-		orangeRegion *
-		visiblePixelMask;
-
-	vec3 whiteEmission =
-		texColor.rgb *
-		vec3(1.15, 1.05, 0.80) *
-		4.0 *
-		whiteMask;
-
-	vec3 orangeEmission =
-		texColor.rgb *
-		vec3(1.30, 0.95, 0.45) *
-		4.5 *
-		orangeMask;
-
-
-		
-
-	vec3 fogColor = 
-		mix(
-			nightHorizonColor,
-			dayHorizonColor,
-			uDayFactor
-		
-		);
-
-
-
-	litColor +=
-		whiteEmission +
-		orangeEmission;
-
-
-	
-	vec3 finalLitColor = 
-		mix(
-			litColor,
-			fogColor,
-			fogFactor
-		
-		);
-
-	
-
-	FragColor =
-        vec4(
-            finalLitColor,
-            texColor.a
-        );
-
+    vec4 texColor = texture(u_Texture, TexCoord);
+    vec3 albedo = max(texColor.rgb, vec3(0.0));
+    vec3 geometricNormal = normalize(vNormal);
+    vec3 normal = MaterialNormal(geometricNormal);
+    vec3 viewDir = SafeNormalize(-FragPos, geometricNormal);
+    float roughness = MaterialRoughness(albedo);
+    // Broaden unresolved highlights instead of letting tiny normal changes sparkle.
+    vec3 normalDx = dFdx(normal);
+    vec3 normalDy = dFdy(normal);
+    float normalVariance = dot(normalDx, normalDx) + dot(normalDy, normalDy);
+    roughness = sqrt(clamp(roughness * roughness + min(normalVariance * 0.25, 0.12),
+        0.04, 1.0));
+    float ao = clamp(vAO, 0.45, 1.0);
+    float skyLevel = clamp(vSkyLightLevel / 15.0, 0.0, 1.0);
+    float skyVisibility = pow(skyLevel, 1.6);
+    float day = clamp(uDayFactor, 0.0, 1.0);
+    vec3 sunDir = normalize(sunDirection);
+    float shadow = CalculateShadow(FragPosLightSpace, geometricNormal);
+    float sunVisibility = (1.0 - shadow) * skyVisibility * max(uSunIntensity, 0.0);
+
+    vec3 sunRadiance = SunColor() * 1.65 * sunVisibility;
+    vec3 sunLight = sunRadiance *
+        max(dot(normal, sunDir), 0.0) * 0.96 *
+        step(0.0, dot(geometricNormal, sunDir));
+    float sunSpecular = SpecularBRDF(normal, viewDir, sunDir, roughness) *
+        step(0.0, dot(geometricNormal, sunDir));
+
+    float hemisphere = mix(0.30, 1.0, geometricNormal.y * 0.5 + 0.5);
+    // Integrated sky illumination is much less saturated than a patch of blue sky.
+    vec3 ambientSkyColor = mix(vec3(0.24, 0.27, 0.34),
+        vec3(0.30, 0.35, 0.43), smoothstep(0.0, 0.45, sunDir.y));
+    float duskAmbient = smoothstep(-0.16, 0.02, sunDir.y) *
+        (1.0 - smoothstep(0.02, 0.20, sunDir.y));
+    vec3 skyLight = mix(vec3(0.012, 0.021, 0.042),
+        ambientSkyColor * max(u_skyStrength, 0.0), day) *
+        skyVisibility * hemisphere;
+    skyLight += vec3(0.028, 0.023, 0.022) * duskAmbient * skyVisibility * hemisphere;
+
+    vec3 groundBounce = vec3(0.085, 0.078, 0.066) *
+        (1.0 - geometricNormal.y * 0.5 - 0.5) * skyVisibility * day;
+    vec3 caveLight = vec3(0.0015, 0.0020, 0.0030) * (1.0 - skyVisibility);
+
+    // Moon illumination is a skylight approximation; no second shadow map exists.
+    vec3 moonLight = vec3(0.24, 0.35, 0.58) * 0.12 *
+        (1.0 - day) * smoothstep(0.0, 0.25, -sunDir.y) *
+        skyVisibility * max(dot(normal, -sunDir), 0.0) *
+        step(0.0, dot(geometricNormal, -sunDir));
+
+    vec3 oldBlockLight = vLightColor * clamp(vBlockLightLevel / 15.0, 0.0, 1.0);
+    vec3 rawBlockLight = GetLightFromLightV(oldBlockLight);
+    float blockIntensity = max(rawBlockLight.r, max(rawBlockLight.g, rawBlockLight.b));
+    vec3 blockColor = blockIntensity > 0.00001 ?
+        rawBlockLight / blockIntensity : vec3(0.0);
+    vec3 blockLight = blockColor * pow(clamp(blockIntensity, 0.0, 1.0), 2.4) *
+        BLOCK_LIGHT_STRENGTH;
+
+    vec3 pointSpecular;
+    vec3 pointLight = CalcPointLights(normal, geometricNormal, viewDir,
+        roughness, pointSpecular);
+    vec3 finalLight = (skyLight + groundBounce + caveLight) * ao +
+        sunLight + moonLight + blockLight * mix(0.65, 1.0, ao) + pointLight;
+    vec3 litColor = albedo * finalLight +
+        (sunRadiance * sunSpecular + pointSpecular) *
+        mix(0.65, 1.0, ao);
+
+    // Retain your existing flame regions and the current 5.5 orange emission.
+    vec2 torchLocalUV = (TexCoord - torchMinUV) /
+        max(torchMaxUV - torchMinUV, vec2(0.00001));
+    float insideTorch = step(0.0, torchLocalUV.x) * step(torchLocalUV.x, 1.0) *
+        step(0.0, torchLocalUV.y) * step(torchLocalUV.y, 1.0);
+    float flameY = 1.0 - torchLocalUV.y;
+    float whiteRegion = step(0.125, flameY) * (1.0 - step(0.250, flameY));
+    float orangeRegion = step(0.0, flameY) * (1.0 - step(0.125, flameY));
+    float textureBrightness = max(albedo.r, max(albedo.g, albedo.b));
+    float visiblePixelMask = smoothstep(0.18, 0.65, textureBrightness);
+    vec3 whiteEmission = albedo * vec3(1.15, 1.05, 0.80) *
+        4.0 * insideTorch * whiteRegion * visiblePixelMask;
+    vec3 orangeEmission = albedo * vec3(1.30, 0.95, 0.45) *
+        5.5 * insideTorch * orangeRegion * visiblePixelMask;
+    float glowstoneMask = float(IsTile(AtlasTile(), ivec2(5, 7)));
+    vec3 glowstoneEmission = albedo * vec3(1.0, 0.70, 0.35) *
+        2.8 * glowstoneMask * smoothstep(0.06, 0.45, Luminance(albedo));
+    litColor += whiteEmission + orangeEmission + glowstoneEmission;
+
+    float streamFog = CalcFogFactor();
+    float aerialFog = (1.0 - exp(-length(FragPos) * 0.0016)) *
+        skyVisibility * mix(0.25, 1.0, day);
+    float fogFactor = 1.0 - (1.0 - streamFog) * (1.0 - aerialFog);
+    vec3 fogColor = HorizonColor(-viewDir) * mix(0.025, 1.0, skyVisibility);
+    FragColor = vec4(max(mix(litColor, fogColor, fogFactor), vec3(0.0)), texColor.a);
 }

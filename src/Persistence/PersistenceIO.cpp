@@ -261,7 +261,7 @@ void PersistenceIO::ProcLoadTasks() {
 		switch (result.status)
 		{
 		case ChunkLoadStatus::Loaded:
-			// 保存済みチャンクを使う
+			//保存済みチャンクを使う
 
 			{
 				std::lock_guard<std::mutex> lock(m_loadResultMutex);
@@ -277,7 +277,7 @@ void PersistenceIO::ProcLoadTasks() {
 			break;
 
 		case ChunkLoadStatus::Corrupted:
-			// 壊れているのでログ・復旧方針
+			//壊れているのでログ・復旧方針
 			break;
 
 		case ChunkLoadStatus::IOError:

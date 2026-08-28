@@ -45,7 +45,7 @@ void WorldRenderer::InitBaseShader() {
 	baseShader->SetVec3("nightHorizonColor", nightHorizonColor);
 	baseShader->SetVec3("nightTopColor", nightTopColor);
 
-	blockAtlas = std::make_unique<ImageTexture2D>("assets/textures/block_atlas2.png");
+	blockAtlas = std::make_unique<ImageTexture2D>("assets/textures/atlas.png");
 
 }
 
