@@ -82,7 +82,7 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
     if (any(lessThan(projCoords, vec3(0.0))) ||
         any(greaterThan(projCoords, vec3(1.0)))) return 0.0;
 
-    // Keep the geometric normal here: micro-detail must not change shadow bias.
+   
     float ndotl = max(dot(normal, normalize(sunDirection)), 0.0);
     float bias = max(0.00065, 0.0022 * (1.0 - ndotl));
     vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
@@ -95,7 +95,7 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
     return 1.0 - visibility / 12.0;
 }
 
-// All positions are camera-relative, so the camera is at (0, 0, 0).
+
 const float PI = 3.14159265359;
 const float DETAIL_STRENGTH = 0.22;
 const float BLOCK_LIGHT_STRENGTH = 0.85;
@@ -110,7 +110,7 @@ float Luminance(vec3 color) {
     return dot(color, vec3(0.2126, 0.7152, 0.0722));
 }
 
-// Uses the existing 32 x 16 atlas, not a new material/normal texture.
+
 ivec2 AtlasTile() {
     return ivec2(floor(vec2(TexCoord.x, 1.0 - TexCoord.y) * vec2(32.0, 16.0)));
 }
@@ -123,7 +123,7 @@ float MaterialRoughness(vec3 albedo) {
     ivec2 tile = AtlasTile();
     float roughness = 0.86;
     if (IsTile(tile, ivec2(19, 0))) {
-        // Albedo is not a gloss map. Dry stone only has small roughness variation.
+       
         roughness = mix(0.82, 0.74, smoothstep(0.025, 0.32, Luminance(albedo)));
     } else if (IsTile(tile, ivec2(18, 1))) {
         roughness = 0.96;
@@ -143,7 +143,7 @@ vec3 MaterialNormal(vec3 geometricNormal) {
     vec3 posDx = dFdx(FragPos);
     vec3 posDy = dFdy(FragPos);
 
-    // Clamp taps to the current tile so another material cannot leak in.
+   
     vec2 tileCount = vec2(32.0, 16.0);
     vec2 tileMin = floor(TexCoord * tileCount) / tileCount + texel * 0.5;
     vec2 tileMax = tileMin + 1.0 / tileCount - texel;
@@ -163,7 +163,8 @@ vec3 MaterialNormal(vec3 geometricNormal) {
     float basisLength = max(dot(tangent, tangent), dot(bitangent, bitangent));
     float footprint = max(length(uvDx * atlasSize), length(uvDy * atlasSize));
     float detailFade = 1.0 - smoothstep(1.0, 3.0, footprint);
-    // The narrow torch atlas strips are not a surface-height map.
+  
+
     detailFade *= 1.0 - float(AtlasTile().y == 14);
     vec3 gradient = (tangent * (right - left) + bitangent * (up - down)) *
         inversesqrt(max(basisLength, 0.000001));
@@ -171,7 +172,7 @@ vec3 MaterialNormal(vec3 geometricNormal) {
         geometricNormal);
 }
 
-// Dielectric GGX highlight. It is added separately from albedo, not painted on it.
+
 float SpecularBRDF(vec3 normal, vec3 viewDir, vec3 lightDir, float roughness) {
     float nl = max(dot(normal, lightDir), 0.0);
     float nv = max(dot(normal, viewDir), 0.001);
@@ -187,20 +188,19 @@ float SpecularBRDF(vec3 normal, vec3 viewDir, vec3 lightDir, float roughness) {
     float geometryV = nv / (nv * (1.0 - k) + k);
     float geometryL = nl / (nl * (1.0 - k) + k);
     float fresnel = 0.04 + 0.96 * pow(1.0 - vh, 5.0);
-    // Lighting intensities below are diffuse irradiance / PI: use the same units
-    // for specular. The cosine term is already included in this expression.
+   
     return PI * distribution * geometryV * geometryL * fresnel / max(4.0 * nv, 0.001);
 }
 
 vec3 SunColor() {
     float height = max(normalize(sunDirection).y, 0.0);
     float airMass = inversesqrt(height * height + 0.0025);
-    // Approximate chromatic extinction on a longer path through the atmosphere.
-    // uSunIntensity already supplies the brightness fade near the horizon.
+   
+
     return exp(-vec3(0.0, 0.045, 0.12) * max(airMass - 1.0, 0.0));
 }
 
-// Same horizon model as sky.frag, keeping the stream-distance fog unobtrusive.
+
 vec3 HorizonColor(vec3 viewDir) {
     float day = clamp(uDayFactor, 0.0, 1.0);
     vec3 sunDir = normalize(sunDirection);
@@ -232,7 +232,8 @@ vec3 CalcPointLights(vec3 normal, vec3 geometricNormal, vec3 viewDir,
         if (facing <= 0.0) continue;
         float range2 = distance2 / (radius * radius);
         float window = max(1.0 - range2 * range2, 0.0);
-        // Smooth finite range, with a softened inverse-square falloff near the source.
+     
+
         float attenuation = window * window / (1.0 + 1.5 * distance2);
         vec3 radiance = max(uPointLights[i].color, vec3(0.0)) *
             max(uPointLights[i].intensity, 0.0) * attenuation * POINT_LIGHT_STRENGTH;
@@ -252,8 +253,9 @@ vec3 GetLightFromLightV(vec3 fallbackLight) {
     vec4 sampleLight = texture(uLightVolumeTexture, localPos / uLightVolumeSize);
     vec3 edgeDistance = min(localPos, uLightVolumeSize - localPos);
     float edge = min(edgeDistance.x, min(edgeDistance.y, edgeDistance.z));
-    // Alpha is zero before a valid volume is uploaded. Fade to the vertex fallback
-    // at the volume boundary instead of a visible lighting discontinuity.
+    
+
+
     float valid = step(0.5, sampleLight.a) * smoothstep(0.0, 1.5, edge);
     return mix(fallbackLight, max(sampleLight.rgb, vec3(0.0)), valid);
 }
@@ -276,7 +278,9 @@ void main() {
     vec3 normal = MaterialNormal(geometricNormal);
     vec3 viewDir = SafeNormalize(-FragPos, geometricNormal);
     float roughness = MaterialRoughness(albedo);
-    // Broaden unresolved highlights instead of letting tiny normal changes sparkle.
+
+
+
     vec3 normalDx = dFdx(normal);
     vec3 normalDy = dFdy(normal);
     float normalVariance = dot(normalDx, normalDx) + dot(normalDy, normalDy);
@@ -298,7 +302,8 @@ void main() {
         step(0.0, dot(geometricNormal, sunDir));
 
     float hemisphere = mix(0.30, 1.0, geometricNormal.y * 0.5 + 0.5);
-    // Integrated sky illumination is much less saturated than a patch of blue sky.
+
+
     vec3 ambientSkyColor = mix(vec3(0.24, 0.27, 0.34),
         vec3(0.30, 0.35, 0.43), smoothstep(0.0, 0.45, sunDir.y));
     float duskAmbient = smoothstep(-0.16, 0.02, sunDir.y) *
@@ -312,7 +317,8 @@ void main() {
         (1.0 - geometricNormal.y * 0.5 - 0.5) * skyVisibility * day;
     vec3 caveLight = vec3(0.0015, 0.0020, 0.0030) * (1.0 - skyVisibility);
 
-    // Moon illumination is a skylight approximation; no second shadow map exists.
+
+
     vec3 moonLight = vec3(0.24, 0.35, 0.58) * 0.12 *
         (1.0 - day) * smoothstep(0.0, 0.25, -sunDir.y) *
         skyVisibility * max(dot(normal, -sunDir), 0.0) *
@@ -335,24 +341,31 @@ void main() {
         (sunRadiance * sunSpecular + pointSpecular) *
         mix(0.65, 1.0, ao);
 
-    // Retain your existing flame regions and the current 5.5 orange emission.
+
+
     vec2 torchLocalUV = (TexCoord - torchMinUV) /
         max(torchMaxUV - torchMinUV, vec2(0.00001));
     float insideTorch = step(0.0, torchLocalUV.x) * step(torchLocalUV.x, 1.0) *
         step(0.0, torchLocalUV.y) * step(torchLocalUV.y, 1.0);
     float flameY = 1.0 - torchLocalUV.y;
-    float whiteRegion = step(0.125, flameY) * (1.0 - step(0.250, flameY));
+
+    float redRegion = step(0.125, flameY) * (1.0 - step(0.250, flameY));
     float orangeRegion = step(0.0, flameY) * (1.0 - step(0.125, flameY));
+
+
     float textureBrightness = max(albedo.r, max(albedo.g, albedo.b));
     float visiblePixelMask = smoothstep(0.18, 0.65, textureBrightness);
-    vec3 whiteEmission = albedo * vec3(1.15, 1.05, 0.80) *
-        4.0 * insideTorch * whiteRegion * visiblePixelMask;
+
+    vec3 redEmission = albedo * vec3(1.05, 0.40, 0.18) *
+        4.0 * insideTorch * redRegion * visiblePixelMask;
     vec3 orangeEmission = albedo * vec3(1.30, 0.95, 0.45) *
         5.5 * insideTorch * orangeRegion * visiblePixelMask;
+
+
     float glowstoneMask = float(IsTile(AtlasTile(), ivec2(5, 7)));
     vec3 glowstoneEmission = albedo * vec3(1.0, 0.70, 0.35) *
         2.8 * glowstoneMask * smoothstep(0.06, 0.45, Luminance(albedo));
-    litColor += whiteEmission + orangeEmission + glowstoneEmission;
+    litColor += redEmission + orangeEmission + glowstoneEmission;
 
     float streamFog = CalcFogFactor();
     float aerialFog = (1.0 - exp(-length(FragPos) * 0.0016)) *
