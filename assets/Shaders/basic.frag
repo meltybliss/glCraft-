@@ -356,10 +356,22 @@ void main() {
     float textureBrightness = max(albedo.r, max(albedo.g, albedo.b));
     float visiblePixelMask = smoothstep(0.18, 0.65, textureBrightness);
 
-    vec3 redEmission = albedo * vec3(1.05, 0.40, 0.18) *
-        4.0 * insideTorch * redRegion * visiblePixelMask;
-    vec3 orangeEmission = albedo * vec3(1.30, 0.95, 0.45) *
-        5.5 * insideTorch * orangeRegion * visiblePixelMask;
+    //良い感じにbloomを効かせれる値にしたい
+    vec3 redEmission =
+        albedo *
+        vec3(1.15, 0.32, 0.12) *
+        17.0 *
+        insideTorch *
+        redRegion *
+        visiblePixelMask;
+
+    vec3 orangeEmission =
+        albedo *
+        vec3(1.40, 0.82, 0.30) *
+        19.0 *
+        insideTorch *
+        orangeRegion *
+        visiblePixelMask;
 
 
     float glowstoneMask = float(IsTile(AtlasTile(), ivec2(5, 7)));
