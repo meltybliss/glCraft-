@@ -212,7 +212,7 @@ public:
 
 		// 山の最大規模。
 		// World heightを512などにするなら200～400くらいまで上げられる。
-		double mountainHeight = 145.0;
+		double mountainHeight = 170.0;
 
 		// 山脈を曲げる強さ
 		double warpStrength = 220.0;
@@ -241,232 +241,76 @@ public:
 	}
 
 	double GetHeight(int64_t worldX, int64_t worldZ) const {
+		// Only the height function changes. Coordinates stay int64_t, and no
+		// neighboring chunks, caches, or generation order are needed.
+		// Existing saved chunks retain their old terrain: test in a new world.
 
-		// ----------------------------------------
-		// 1. Domain Warp
-		// ----------------------------------------
+		// 1. Broad, gentle domain warp. Short-wave warp can fold slopes into walls.
+		const double warpX = FBmWorld(
+			m_warpX, worldX, worldZ, 0.0, 0.0, 1600, 2, 0.40);
+		const double warpZ = FBmWorld(
+			m_warpZ, worldX, worldZ, 173.5, -91.7, 1600, 2, 0.40);
+		const double warpOffsetX = warpX * m_settings.warpStrength;
+		const double warpOffsetZ = warpZ * m_settings.warpStrength;
 
-		const double warpX =
-			FBmWorld(
-				m_warpX,
-				worldX,
-				worldZ,
-				0.0,       // offsetX
-				0.0,       // offsetZ
-				900,       // scale
-				3,
-				0.5
-			);
+		// 2. Continental relief and foothills have a much larger wavelength
+		// than the ridges. The height limit and the chunk layout are unchanged.
+		const double continent = FBmWorld(
+			m_continent, worldX, worldZ,
+			warpOffsetX, warpOffsetZ, 4800, 3, 0.42);
+		const double landMask = Smoothstep(0.38, 0.58, continent * 0.5 + 0.5);
+		const double macro = FBmWorld(
+			m_base, worldX, worldZ,
+			warpOffsetX, warpOffsetZ, 1800, 3, 0.40);
+		double height = m_settings.seaLevel + continent * 60.0 + macro * 20.0;
 
-		const double warpZ =
-			FBmWorld(
-				m_warpZ,
-				worldX,
-				worldZ,
-				173.5,
-				-91.7,
-				900,
-				3,
-				0.5
-			);
+		const double hills = FBmWorld(
+			m_hills, worldX, worldZ,
+			warpOffsetX, warpOffsetZ, 640, 3, 0.40);
+		height += hills * 14.0 * landMask;
 
-		const double warpOffsetX =
-			warpX * m_settings.warpStrength;
+		// 3. A continuous mountain envelope creates long foothills rather
+		// than a high ridge abruptly appearing at the edge of a mountain region.
+		const double mountainRegionNoise = FBmWorld(
+			m_mountainRegion, worldX, worldZ,
+			warpOffsetX, warpOffsetZ, 2600, 3, 0.42);
+		const double mountainMask = landMask *
+			Smoothstep(0.43, 0.64, mountainRegionNoise * 0.5 + 0.5);
 
-		const double warpOffsetZ =
-			warpZ * m_settings.warpStrength;
+		// 4. Broad connected ridges; the smallest octave is 72 blocks, not 16.
+		// Fine relief loses amplitude faster than its frequency increases.
+		const double ridges = RidgedFBmWorld(
+			m_ridges, worldX, worldZ,
+			warpOffsetX, warpOffsetZ, 1152, 5, 0.38);
+		const double ridgeShape = std::pow(std::clamp(ridges, 0.0, 1.0), 1.20);
+		const double mountainRelief = mountainMask *
+			(28.0 + ridgeShape * m_settings.mountainHeight);
 
+		// 5. A broad valley floor blends into the surrounding mountain relief.
+		// Do not subtract an independent 72-block trench from the completed
+		// terrain: that can cut across both a ridge and its foothill.
+		const double valleyNoise = std::abs(FBmWorld(
+			m_valleys, worldX, worldZ,
+			warpOffsetX, warpOffsetZ, 1536, 3, 0.40));
+		const double valley = 1.0 - Smoothstep(0.018, 0.18, valleyNoise);
+		height += mountainRelief * (1.0 - 0.72 * valley);
 
-		// ----------------------------------------
-		// 2. Continentalness
-		// ----------------------------------------
+		// 6. Small details stay small, especially on the valley floor.
+		const double detail = FBmWorld(
+			m_detail, worldX, worldZ, 0.0, 0.0, 96, 2, 0.35);
+		height += detail * (1.8 + 1.8 * mountainMask) *
+			landMask * (1.0 - 0.65 * valley * mountainMask);
 
-		const double continent =
-			FBmWorld(
-				m_continent,
-				worldX,
-				worldZ,
-				warpOffsetX,
-				warpOffsetZ,
-				3200,
-				5,
-				0.5
-			);
-
-		const double continent01 =
-			continent * 0.5 + 0.5;
-
-		const double landMask =
-			Smoothstep(
-				0.43,
-				0.60,
-				continent01
-			);
-
-
-		// ----------------------------------------
-		// 3. 平野 / 高原
-		// ----------------------------------------
-
-		const double macro =
-			FBmWorld(
-				m_base,
-				worldX,
-				worldZ,
-				warpOffsetX,
-				warpOffsetZ,
-				1100,
-				4,
-				0.50
-			);
-
-		double height =
-			m_settings.seaLevel
-			+ continent * 72.0
-			+ macro * 24.0;
-
-
-		// ----------------------------------------
-		// 4. 丘
-		// ----------------------------------------
-
-		const double hills =
-			FBmWorld(
-				m_hills,
-				worldX,
-				worldZ,
-				warpOffsetX,
-				warpOffsetZ,
-				420,
-				4,
-				0.48
-			);
-
-		height +=
-			hills *
-			18.0 *
-			landMask;
-
-
-		// ----------------------------------------
-		// 5. 山岳地域
-		// ----------------------------------------
-
-		const double mountainRegionNoise =
-			FBmWorld(
-				m_mountainRegion,
-				worldX,
-				worldZ,
-				warpOffsetX,
-				warpOffsetZ,
-				1900,
-				3,
-				0.55
-			);
-
-		const double mountainRegion01 =
-			mountainRegionNoise * 0.5 + 0.5;
-
-		double mountainMask =
-			Smoothstep(
-				0.48,
-				0.72,
-				mountainRegion01
-			);
-
-		mountainMask *= landMask;
-
-
-		// ----------------------------------------
-		// 6. 山の尾根
-		// ----------------------------------------
-
-		const double ridges =
-			RidgedFBmWorld(
-				m_ridges,
-				worldX,
-				worldZ,
-				warpOffsetX,
-				warpOffsetZ,
-				512,
-				6,
-				0.52
-			);
-
-		const double ridgeShape =
-			std::pow(
-				std::clamp(ridges, 0.0, 1.0),
-				1.55
-			);
-
-		height +=
-			mountainMask *
-			(
-				24.0 +
-				ridgeShape *
-				m_settings.mountainHeight
-				);
-
-
-		// ----------------------------------------
-		// 7. 谷
-		// ----------------------------------------
-
-		const double valleyNoise =
-			std::abs(
-				FBmWorld(
-					m_valleys,
-					worldX,
-					worldZ,
-					warpOffsetX,
-					warpOffsetZ,
-					720,
-					4,
-					0.52
-				)
-			);
-
-		const double valley =
-			1.0 -
-			Smoothstep(
-				0.025,
-				0.19,
-				valleyNoise
-			);
-
-		height -=
-			valley *
-			mountainMask *
-			72.0;
-
-
-		// ----------------------------------------
-		// 8. 細かい凹凸
-		// ----------------------------------------
-
-		const double detail =
-			FBmWorld(
-				m_detail,
-				worldX,
-				worldZ,
-				0.0,
-				0.0,
-				75,
-				3,
-				0.43
-			);
-
-		height +=
-			detail *
-			5.5 *
-			landMask;
-
-
-		return std::clamp(
-			height,
-			m_settings.minHeight,
-			m_settings.maxHeight
-		);
+		// Approach the ceiling smoothly, avoiding flat clipped mountaintops.
+		// The final clamp is only a safety bound, not the mountain shape.
+		const double headroom = std::min(24.0,
+			(m_settings.maxHeight - m_settings.minHeight) * 0.15);
+		const double shoulder = m_settings.maxHeight - headroom;
+		if (headroom > 0.0 && height > shoulder) {
+			height = shoulder + headroom *
+				(1.0 - std::exp(-(height - shoulder) / headroom));
+		}
+		return std::clamp(height, m_settings.minHeight, m_settings.maxHeight);
 	}
 
 
@@ -683,19 +527,24 @@ private:
 		int64_t scale = baseScale;
 
 		for (int i = 0; i < octaves; ++i) {
+			// Shift each octave in noise-cell space so shared grid zeroes do
+			// not stack into identical sharp crests at every octave.
+			const double octaveOffsetX = i * 37.17 * static_cast<double>(scale);
+			const double octaveOffsetZ = i * -53.43 * static_cast<double>(scale);
 
 			const double n =
 				noise.NoiseWorld(
 					worldX,
 					worldZ,
-					offsetX,
-					offsetZ,
+						offsetX + octaveOffsetX,
+						offsetZ + octaveOffsetZ,
 					scale
 				);
 
-			// 普通のPerlinを尾根型にする
-			double ridge =
-				1.0 - std::abs(n);
+			// A smooth absolute value rounds just the very top of a ridge.
+			// abs(n) has a cusp at zero; stacking it creates knife-edge crests.
+			const double roundedAbs = std::sqrt(n * n + 0.0016) - 0.04;
+			double ridge = std::clamp(1.0 - roundedAbs * 1.65, 0.0, 1.0);
 
 			ridge *= ridge;
 

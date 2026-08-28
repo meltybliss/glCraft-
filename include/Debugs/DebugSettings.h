@@ -11,7 +11,7 @@ struct DebugSettings {
 
 	bool timePaused = false;
 	double timeOfDay = 0.5;
-	double dayLengthSeconds = 30.0;
+	double dayLengthSeconds = 160.0;
 	double timeScale = 1.0;
 
 };
