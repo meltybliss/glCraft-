@@ -19,7 +19,7 @@ void ChunkPipeline::StartWorkerThreads() {
 	unsigned hw = std::thread::hardware_concurrency();
 
 	WorkerCount = std::clamp<int>(
-		static_cast<int>(hw) - 2,
+		static_cast<int>(hw) - 3,
 		1,
 		MAX_WORKER_COUNT
 	);
@@ -155,6 +155,7 @@ void ChunkPipeline::StartLoop() {
 			}
 			const ChunkCoord center{m_curStreamCx.load(), m_curStreamCz.load()};
 
+			//urgentなら最優先、urgentがないなら距離で優先度をつける、距離が同じならjobで優先度をつけます。
 			auto bestJob = std::min_element(
 				m_jobQueue.begin(),
 				m_jobQueue.end(),

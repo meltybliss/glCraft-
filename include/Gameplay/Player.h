@@ -117,7 +117,7 @@ private:
 
 
 	float speed = 10.f;
-	float flySpeed = 30.0f;
+	float flySpeed = 23.0f;
 
 	float jumpPower = 8.0f;
 

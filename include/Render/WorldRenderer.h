@@ -149,4 +149,6 @@ private:
 
 
 	glm::mat4 m_lightSpaceMatrix{ 1.0f };
+
+	static constexpr int PENDING_MESH_BUDGET = 5;
 };

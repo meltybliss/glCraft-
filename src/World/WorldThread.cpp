@@ -1199,7 +1199,7 @@ void WorldThread::UpdateChunksAround() {
 
 	auto& chunks = m_world.GetChunks();
 
-	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {//これいい自分の周囲からloadするアルゴリズム
+	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {
 		for (int32_t dx = -r; dx <= r && !createDone; ++dx) {
 			for (int32_t dz = -r; dz <= r; ++dz) {
 				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//内側は処理済みなので外周だけ
@@ -1503,8 +1503,29 @@ bool WorldThread::PopPendingMeshData(PendingMesh& out) {
 		return false;
 	}
 
-	out = std::move(m_pendingMeshData.front());
-	m_pendingMeshData.pop_front();
+	auto nearest = std::min_element(
+
+		m_pendingMeshData.begin(),
+		m_pendingMeshData.end(),
+		[&](const PendingMesh& a, const PendingMesh& b) {
+
+			const int64_t adx = std::abs(a.key.x - m_lastStreamCoord.x);
+			const int64_t adz = std::abs(a.key.z - m_lastStreamCoord.z);
+
+			const int64_t bdx = std::abs(b.key.x - m_lastStreamCoord.x);
+			const int64_t bdz = std::abs(b.key.z - m_lastStreamCoord.z);
+
+			const int64_t distanceA = std::max(adx, adz);
+			const int64_t distanceB = std::max(bdx, bdz);
+
+
+			return distanceA < distanceB;
+		}
+
+	);
+
+	out = std::move(*nearest);
+	m_pendingMeshData.erase(nearest);
 	return true;
 }
 

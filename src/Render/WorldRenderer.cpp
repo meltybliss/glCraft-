@@ -834,13 +834,18 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 	PendingMesh out;
 
+	int budget = PENDING_MESH_BUDGET;
 	
-	while (wt.PopPendingMeshData(out)) {
+	while (budget > 0 && wt.PopPendingMeshData(out)) {
+		
 		auto [it, inserted] = m_chunkMeshes.try_emplace(out.key);
 
 		if (!inserted) {
 			it->second.DeleteGL();
 		}
+
+		budget--;
+
 		it->second.Upload(out.meshData);
 		
 	}
