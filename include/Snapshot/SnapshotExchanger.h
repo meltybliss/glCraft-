@@ -1,7 +1,6 @@
 #pragma once
 #include "Snapshot/DayNightSnapshot.h"
 #include "Snapshot/SnapshotChannel.h"
-#include "Snapshot/ChunkMeshSnapshot.h"
 #include "Snapshot/LightVolumeSnapshot.h"
 #include "Snapshot/PlayerSnapshot.h"
 
@@ -16,9 +15,6 @@ public:
 		m_daynightC.publish(std::move(s));
 	}
 
-	void PublishChunkMeshSnap(ChunkMeshSnapshot&& s) {
-		m_chunkMeshC.publish(std::move(s));
-	}
 
 	void PublishLightVolumeSnap(std::unique_ptr<LightVolumeSnapshot> s) {
 		m_lightVolumeC.publish(std::move(s));
@@ -38,10 +34,7 @@ public:
 		return m_daynightC.acquire();
 	}
 
-	std::optional<ChunkMeshSnapshot>
-	AcquireChunkMeshSnap() {
-		return m_chunkMeshC.acquire();
-	}
+	
 
 	std::unique_ptr<LightVolumeSnapshot>
 	AcquireLightVolumeSnap() {
@@ -62,7 +55,6 @@ public:
 private:
 	
 	SnapshotChannel<DayNightSnapshot> m_daynightC;
-	SnapshotChannel<ChunkMeshSnapshot> m_chunkMeshC;
 	PtrSnapshotChannel<LightVolumeSnapshot> m_lightVolumeC;
 
 	PtrSnapshotChannel<PointLightsSnapshot> m_pointLightC;

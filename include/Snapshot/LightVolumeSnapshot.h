@@ -5,9 +5,9 @@
 #include <vector>
 
 namespace LIGHT_VOLUME_SIZE {
-	constexpr int LIGHT_VOLUME_WIDTH = 32;
-	constexpr int LIGHT_VOLUME_HEIGHT = 32;
-	constexpr int LIGHT_VOLUME_DEPTH = 32;
+	constexpr int LIGHT_VOLUME_WIDTH = 64;
+	constexpr int LIGHT_VOLUME_HEIGHT = 64;
+	constexpr int LIGHT_VOLUME_DEPTH = 64;
 }
 struct LightVolumeSnapshot {
 

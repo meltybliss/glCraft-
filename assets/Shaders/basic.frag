@@ -20,8 +20,6 @@ in float vBlockLightLevel;
 in float vSkyLightLevel;
 in float vAO;
 in vec4 FragPosLightSpace;
-in vec3 vLightColor;
-
 
 
 uniform sampler2D u_Texture;
@@ -324,7 +322,9 @@ void main() {
         skyVisibility * max(dot(normal, -sunDir), 0.0) *
         step(0.0, dot(geometricNormal, -sunDir));
 
-    vec3 oldBlockLight = vLightColor * clamp(vBlockLightLevel / 15.0, 0.0, 1.0);
+    vec3 oldBlockLight = vec3(1.0, 0.42, 0.14) * clamp(vBlockLightLevel / 15.0, 0.0, 1.0);
+
+
     vec3 rawBlockLight = GetLightFromLightV(oldBlockLight);
     float blockIntensity = max(rawBlockLight.r, max(rawBlockLight.g, rawBlockLight.b));
     vec3 blockColor = blockIntensity > 0.00001 ?

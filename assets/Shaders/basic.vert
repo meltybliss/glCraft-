@@ -6,7 +6,6 @@ layout (location = 2) in vec3 aNormal;
 layout (location = 3) in float aBlockLightLevel;
 layout (location = 4) in float aSkyLightLevel;
 layout (location = 5) in float aAO;
-layout (location = 6) in vec3 aLightColor;
 
 
 out vec3 FragPos;
@@ -16,8 +15,6 @@ out float vBlockLightLevel;
 out float vSkyLightLevel;
 out float vAO;
 out vec4 FragPosLightSpace;
-out vec3 vLightColor;
-
 
 uniform mat4 projection;
 uniform mat4 view;
@@ -46,6 +43,5 @@ void main() {
 	vBlockLightLevel = aBlockLightLevel;
 	vSkyLightLevel = aSkyLightLevel;
 	vAO = aAO;
-	vLightColor = aLightColor;
 
 }

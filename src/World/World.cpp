@@ -393,8 +393,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 	snapshot->centerLights = c.blockLights;
 	snapshot->centerSkyLights = c.skyLights; 
 
-	snapshot->centerBlockLightColors =
-		c.blockLightColors;
 
 	//leftFront
 	{
@@ -515,8 +513,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 					const size_t dst =
 						ChunkMeshSnapshot::IndexYZ(y, z);
 
-					snapshot->leftBlockLightColors[dst] =
-						neighbor->blockLightColors[src];
 				}
 			}
 		}
@@ -557,8 +553,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 					const size_t dst =
 						ChunkMeshSnapshot::IndexYZ(y, z);
 
-					snapshot->rightBlockLightColors[dst] =
-						neighbor->blockLightColors[src];
 				}
 			}
 		}
@@ -598,8 +592,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 					const size_t dst =
 						ChunkMeshSnapshot::IndexYX(y, x);
 
-					snapshot->frontBlockLightColors[dst] =
-						neighbor->blockLightColors[src];
 				}
 			}
 		}
@@ -645,8 +637,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshot(Chunk& c) {
 					const size_t dst =
 						ChunkMeshSnapshot::IndexYX(y, x);
 
-					snapshot->backBlockLightColors[dst] =
-						neighbor->blockLightColors[src];
 				}
 			}
 		}
@@ -675,7 +665,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(ChunkCoord k
 
 	snapshot->centerSkyLights = c.skyLights;
 
-	snapshot->centerBlockLightColors = c.blockLightColors;
 
 	//leftFront
 	{
@@ -786,8 +775,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(ChunkCoord k
 					const size_t dst =
 						ChunkMeshSnapshot::IndexYZ(y, z);
 
-					snapshot->leftBlockLightColors[dst] =
-						c->blockLightColors[src];
 				}
 			}
 		}
@@ -825,8 +812,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(ChunkCoord k
 					const size_t dst =
 						ChunkMeshSnapshot::IndexYZ(y, z);
 
-					snapshot->rightBlockLightColors[dst] =
-						c->blockLightColors[src];
 				}
 			}
 		}
@@ -863,8 +848,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(ChunkCoord k
 					const size_t dst =
 						ChunkMeshSnapshot::IndexYX(y, x);
 
-					snapshot->frontBlockLightColors[dst] =
-						c->blockLightColors[src];
 				}
 			}
 		}
@@ -904,8 +887,6 @@ std::unique_ptr<ChunkMeshSnapshot> World::CreateMeshSnapshotFromKey(ChunkCoord k
 					const size_t dst =
 						ChunkMeshSnapshot::IndexYX(y, x);
 
-					snapshot->backBlockLightColors[dst] =
-						c->blockLightColors[src];
 				}
 			}
 		}

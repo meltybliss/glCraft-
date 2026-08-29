@@ -4,10 +4,14 @@
 #include <iostream>
 #include <cmath>
 
-Application::Application() : m_exchanger(), m_session(m_exchanger, m_persistenceIO), m_wRenderer(m_exchanger) {}
 
-
-
+Application::Application()
+	: m_exchanger(),
+	m_persistenceIO(),
+	m_session(m_exchanger, m_persistenceIO),
+	m_wRenderer(m_exchanger)
+{
+}
 
 void Application::UpdateStreamCenter() {
 
@@ -658,14 +662,17 @@ void Application::ApplyCameraStatus() {
 	
 
 	m_camera.position = WorldPosLerp(previous.pos, cur.pos, static_cast<double>(alpha));
-	/*m_camera.front = glm::mix(previous.front, cur.front, alpha);
-	m_camera.right = glm::mix(previous.right, cur.right, alpha);
-	m_camera.up = glm::mix(previous.up, cur.up, alpha);
-	*/
+	m_camera.front = glm::normalize(
+		glm::mix(previous.front, cur.front, alpha)
+	);
 
-	m_camera.front = cur.front;
-	m_camera.right = cur.right;
-	m_camera.up = cur.up;
+	m_camera.right = glm::normalize(
+		glm::mix(previous.right, cur.right, alpha)
+	);
+
+	m_camera.up = glm::normalize(
+		glm::mix(previous.up, cur.up, alpha)
+	);
 
 }
 

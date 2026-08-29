@@ -710,7 +710,7 @@ void MeshBuilder::AppendFace(
 ) {
 
 
-	unsigned int base = static_cast<unsigned int>(vertices.size() / 14);
+	unsigned int base = static_cast<unsigned int>(vertices.size() / 11);
 
 
 	const auto& centerLights = snapshot.centerLights;
@@ -835,7 +835,6 @@ void MeshBuilder::AppendFace(
 		next_skyLightLevel = snapshot.GetBoundary_SkyLight(tx, ty, tz, true);
 
 
-		blockLightColor = snapshot.GetBoundaryBlockLightColor(tx, ty, tz, true);
 	}
 	else if (tz >= Chunk::CHUNK_DEPTH ||
 		tz < 0) {
@@ -843,8 +842,6 @@ void MeshBuilder::AppendFace(
 		next_lightLevel = snapshot.GetBoundaryLight(tx, ty, tz, false);
 		next_skyLightLevel = snapshot.GetBoundary_SkyLight(tx, ty, tz, false);
 
-
-		blockLightColor = snapshot.GetBoundaryBlockLightColor(tx, ty, tz, false);
 	}
 	else {
 
@@ -852,7 +849,6 @@ void MeshBuilder::AppendFace(
 		next_skyLightLevel = centerSkyLights[Chunk::Index(tx, ty, tz)];
 
 
-		blockLightColor = snapshot.GetBlockLightColorFromCenter(tx, ty, tz);
 	}
 
 
@@ -872,10 +868,7 @@ void MeshBuilder::AppendFace(
 				static_cast<float>(faceBlockLightLevel),
 				static_cast<float>(next_skyLightLevel),
 				AO[i],
-				blockLightColor.x,
-				blockLightColor.y,
-				blockLightColor.z
-
+				
 			}
 		);
 

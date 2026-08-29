@@ -77,14 +77,14 @@ private:
 	float m_lastMouseX = 400.0f;
 	float m_lastMouseY = 300.0f;
 
-
-	GameSession m_session;
-	WorldSelectionUI m_selectionUI;
-
-	WorldRenderer m_wRenderer;
-	SelectionOutlineRenderer m_outlineRenderer;
 	SnapshotExchanger m_exchanger;
 	PersistenceIO m_persistenceIO;
+
+	GameSession m_session;
+	WorldRenderer m_wRenderer;
+
+	WorldSelectionUI m_selectionUI;
+	SelectionOutlineRenderer m_outlineRenderer;
 
 	Camera m_camera;
 
