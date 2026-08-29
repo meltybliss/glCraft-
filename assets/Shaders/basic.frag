@@ -337,6 +337,8 @@ void main() {
         roughness, pointSpecular);
     vec3 finalLight = (skyLight + groundBounce + caveLight) * ao +
         sunLight + moonLight + blockLight * mix(0.65, 1.0, ao) + pointLight;
+
+
     vec3 litColor = albedo * finalLight +
         (sunRadiance * sunSpecular + pointSpecular) *
         mix(0.65, 1.0, ao);

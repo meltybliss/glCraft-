@@ -3,6 +3,7 @@
 #include "Render/Camera.h"
 #include "World/TerrainGenerator.h"
 #include <iostream>
+#include <algorithm>
 
 
 
@@ -735,6 +736,11 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 	using clock = std::chrono::steady_clock;
 
+	constexpr auto LIGHT_SLICE = std::chrono::microseconds(700);
+	constexpr auto MESH_RESERVE = std::chrono::microseconds(500);
+
+
+	
 	CheckAutoSave();
 
 
@@ -768,9 +774,15 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 		ProcOne_Disk_ChunkLoadResult();
 
-		if (clock::now() >= deadline) break;
+		const auto now = clock::now();
+		const auto lightDeadline = std::min(
+			now + LIGHT_SLICE,
+			deadline - MESH_RESERVE
+		);
+		if (now < lightDeadline) {
+			ProcLightTasks(lightDeadline);
+		}
 
-		ProcLightTasks(deadline);
 		if (clock::now() >= deadline) break;
 
 		DispatchOneDirtyMeshJob();
@@ -1468,8 +1480,10 @@ void WorldThread::EnqueueMeshJob(Chunk& c) {
 
 	ChunkJob job;
 	job.coord = c.coord;
+
 	job.snapshot = m_world.CreateMeshSnapshot(c);
 	job.type = JobType::BUILD_MESH;
+
 
 	if (c.urgentUpdateMesh) {
 		c.urgentUpdateMesh = false;
@@ -1847,16 +1861,6 @@ void WorldThread::DispatchDirtyMeshJobs() {
 
 	}
 
-	/*for (auto& [key, chunkPtr] : chunks) {
-		
-		if (!chunkPtr->dirty) continue;
-
-		//if (chunkPtr->meshJobInFlight) continue;
-
-		EnqueueMeshJob(*chunkPtr);
-
-		chunkPtr->dirty = false;
-	}*/
 
 }
 
