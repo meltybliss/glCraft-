@@ -199,6 +199,7 @@ private:
 
 	std::mutex m_lightVolumeCenterMutex;
 	std::atomic<bool> m_lightVolumeDirty = true;
+	std::atomic<bool> m_lightVolumeForceFullUpdate = true;
 	std::atomic<bool> m_pointLightDirty = false;
 
 	std::atomic<uint64_t> m_debugBusyTimeNs = 0;
@@ -211,6 +212,7 @@ private:
 	std::atomic<size_t> m_debugPendingMeshUploads = 0;
 
 	glm::i64vec3 m_lightVolumeCenter{0};
+	std::optional<glm::i64vec3> m_lastLightVolumeSnapshotOrigin;
 
 
 

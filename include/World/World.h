@@ -17,6 +17,7 @@
 #include <unordered_set>
 #include <stdint.h>
 #include <deque>
+#include <optional>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -106,7 +107,11 @@ public:
 
 	std::unique_ptr<ChunkMeshSnapshot> CreateMeshSnapshotFromKey(ChunkCoord key);
 
-	std::unique_ptr<LightVolumeSnapshot> CreateLightVSnapshot(const glm::i64vec3 camBlockPos) const;
+	std::unique_ptr<LightVolumeSnapshot> CreateLightVSnapshot(
+		const glm::i64vec3& camBlockPos,
+		const std::optional<glm::i64vec3>& previousOrigin,
+		bool forceFullUpdate
+	) const;
 
 
 	bool CanCollideBlock(int64_t x, int64_t y, int64_t z) const {

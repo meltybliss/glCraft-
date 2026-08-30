@@ -36,6 +36,7 @@ uniform PointLight uPointLights[16];
 uniform sampler3D uLightVolumeTexture; 
 uniform vec3 uLightVolumeOrigin;
 uniform vec3 uLightVolumeSize;
+uniform vec3 uLightVolumeRingOffset;
 
 
 uniform vec2 torchMinUV;
@@ -248,7 +249,13 @@ vec3 GetLightFromLightV(vec3 fallbackLight) {
     if (any(lessThan(localPos, vec3(0.0))) ||
         any(greaterThanEqual(localPos, uLightVolumeSize))) return fallbackLight;
 
-    vec4 sampleLight = texture(uLightVolumeTexture, localPos / uLightVolumeSize);
+    // Clamp only the logical outer edge. GL_REPEAT then joins physical ring
+    // boundaries while the volume moves without copying retained texels.
+    vec3 sampleTexel = clamp(localPos, vec3(0.5), uLightVolumeSize - vec3(0.5));
+    vec3 ringTexel = mod(sampleTexel + uLightVolumeRingOffset,
+        uLightVolumeSize);
+    vec4 sampleLight = texture(uLightVolumeTexture,
+        ringTexel / uLightVolumeSize);
     vec3 edgeDistance = min(localPos, uLightVolumeSize - localPos);
     float edge = min(edgeDistance.x, min(edgeDistance.y, edgeDistance.z));
     

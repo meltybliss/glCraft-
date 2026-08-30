@@ -1005,97 +1005,93 @@ RaycastHit World::Raycast(
 
 
 
-std::unique_ptr<LightVolumeSnapshot> World::CreateLightVSnapshot(const glm::i64vec3 camBlockPos) const {
-
-	std::unique_ptr<LightVolumeSnapshot> out;
-
-	constexpr int channel_count = 4;
-
+std::unique_ptr<LightVolumeSnapshot> World::CreateLightVSnapshot(
+	const glm::i64vec3& camBlockPos,
+	const std::optional<glm::i64vec3>& previousOrigin,
+	bool forceFullUpdate
+) const {
+	constexpr int channelCount = 4;
 	using namespace LIGHT_VOLUME_SIZE;
 
-	std::vector<float> pixels(
-		static_cast<size_t>(LIGHT_VOLUME_WIDTH) *
-		static_cast<size_t>(LIGHT_VOLUME_HEIGHT) *
-		static_cast<size_t>(LIGHT_VOLUME_DEPTH) *
-		channel_count,
-		0.0f
-	);
-
-
-
-	auto GetPixelsIndex = [=](int x, int y, int z) -> size_t {
-
-		size_t texelIndex = (size_t)x + (size_t)y * LIGHT_VOLUME_WIDTH + (size_t)z * LIGHT_VOLUME_WIDTH * LIGHT_VOLUME_HEIGHT;
-
-		return texelIndex * channel_count;
-
+	const glm::i64vec3 origin{
+		camBlockPos.x - LIGHT_VOLUME_WIDTH / 2,
+		camBlockPos.y - LIGHT_VOLUME_HEIGHT / 2,
+		camBlockPos.z - LIGHT_VOLUME_DEPTH / 2
+	};
+	const glm::i64vec3 volumeSize{
+		LIGHT_VOLUME_WIDTH,
+		LIGHT_VOLUME_HEIGHT,
+		LIGHT_VOLUME_DEPTH
 	};
 
+	auto out = std::make_unique<LightVolumeSnapshot>();
+	out->origin = origin;
+	out->previousOrigin = previousOrigin.value_or(origin);
 
-	auto SetPixel = [&](size_t index, const glm::vec3& color, uint8_t blockLightLevel) -> void {
+	const glm::i64vec3 delta = origin - out->previousOrigin;
+	const glm::i64vec3 absoluteDelta = glm::abs(delta);
+	out->fullUpdate =
+		forceFullUpdate ||
+		!previousOrigin.has_value() ||
+		absoluteDelta.x >= volumeSize.x ||
+		absoluteDelta.y >= volumeSize.y ||
+		absoluteDelta.z >= volumeSize.z;
 
-		float intensity = blockLightLevel / 15.0f;
+	auto createPixels = [&](const glm::ivec3& regionOffset,
+		const glm::ivec3& regionSize) {
+		std::vector<float> pixels(
+			static_cast<size_t>(regionSize.x) *
+			static_cast<size_t>(regionSize.y) *
+			static_cast<size_t>(regionSize.z) *
+			channelCount,
+			0.0f
+		);
 
-		const glm::vec3 rgb = color * intensity;
+		for (int z = 0; z < regionSize.z; ++z) {
+			for (int y = 0; y < regionSize.y; ++y) {
+				for (int x = 0; x < regionSize.x; ++x) {
+					const glm::i64vec3 worldPos =
+						origin + glm::i64vec3(regionOffset) + glm::i64vec3(x, y, z);
+					if (worldPos.y < 0 || worldPos.y >= Chunk::CHUNK_HEIGHT) {
+						continue;
+					}
 
+					const uint8_t lightLevel = GetBlockLightGlobal(
+						worldPos.x, worldPos.y, worldPos.z);
+					if (lightLevel == 0) {
+						continue;
+					}
 
-		pixels[index] = rgb.r;
-		pixels[index + 1] = rgb.g;
-		pixels[index + 2] = rgb.b;
-		pixels[index + 3] = 1.0f;
-
-
-	};
-
-
-	glm::i64vec3 m_lightVolumeOrigin = glm::i64vec3(
-		camBlockPos.x
-		- LIGHT_VOLUME_WIDTH / 2,
-
-		camBlockPos.y
-		- LIGHT_VOLUME_HEIGHT / 2,
-
-		camBlockPos.z
-		- LIGHT_VOLUME_DEPTH / 2
-	);
-
-
-	for (int z = 0; z < LIGHT_VOLUME_DEPTH; ++z) {
-		for (int y = 0; y < LIGHT_VOLUME_HEIGHT; ++y) {
-			for (int x = 0; x < LIGHT_VOLUME_WIDTH; ++x) {
-
-				glm::i64vec3 texelToWorldPos = m_lightVolumeOrigin + glm::i64vec3(x, y, z);
-
-				size_t index = GetPixelsIndex(x, y, z);
-
-
-				if (texelToWorldPos.y >= Chunk::CHUNK_HEIGHT ||
-					texelToWorldPos.y < 0) continue;
-
-				glm::vec3 lightColor = GetBlockLightColorGlobal(
-					texelToWorldPos.x,
-					texelToWorldPos.y,
-					texelToWorldPos.z
-				);
-				uint8_t lightLevel = GetBlockLightGlobal(
-					texelToWorldPos.x,
-					texelToWorldPos.y,
-					texelToWorldPos.z
-				);
-
-
-
-				SetPixel(index, lightColor, lightLevel);
-
+					const glm::vec3 color = GetBlockLightColorGlobal(
+						worldPos.x, worldPos.y, worldPos.z);
+					const glm::vec3 rgb = color * (lightLevel / 15.0f);
+					const size_t index = (
+						static_cast<size_t>(x) +
+						static_cast<size_t>(y) * regionSize.x +
+						static_cast<size_t>(z) * regionSize.x * regionSize.y
+					) * channelCount;
+					pixels[index] = rgb.r;
+					pixels[index + 1] = rgb.g;
+					pixels[index + 2] = rgb.b;
+					pixels[index + 3] = 1.0f;
+				}
 			}
 		}
+		return pixels;
+	};
+
+	if (out->fullUpdate) {
+		out->pixels = createPixels(
+			glm::ivec3(0),
+			glm::ivec3(volumeSize)
+		);
+		return out;
 	}
 
-
-	out = std::make_unique<LightVolumeSnapshot>(
-		pixels, m_lightVolumeOrigin
-	);
-
+	out->regions = BuildLightVolumeMovementRegions(delta);
+	for (auto& region : out->regions) {
+		region.pixels = createPixels(region.offset, region.size);
+	}
 	return out;
 }
 

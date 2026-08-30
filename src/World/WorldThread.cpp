@@ -9,12 +9,26 @@
 
 void WorldThread::CreateNewWorld(uint64_t seed) {
 
+	m_exchanger.ClearLightVolumeSnaps();
+	m_lastLightVolumeSnapshotOrigin.reset();
+	m_lightVolumeForceFullUpdate.store(true);
+	m_lightVolumeDirty.store(true);
+
 	m_world.SetWorldSeed(seed);
 
 	m_chunkPipeline.SetWorldSeed(seed);
 }
 
 void WorldThread::ApplyLoadedWorld(WorldSaveData& saveData) {
+
+	m_exchanger.ClearLightVolumeSnaps();
+	m_lastLightVolumeSnapshotOrigin.reset();
+	m_lightVolumeForceFullUpdate.store(true);
+	m_lightVolumeDirty.store(true);
+	{
+		std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
+		m_lightVolumeCenter = saveData.playerPos.block;
+	}
 
 	m_world.SetWorldSeed(saveData.seed);
 	m_chunkPipeline.SetWorldSeed(saveData.seed);
@@ -808,6 +822,7 @@ void WorldThread::CheckBlockLightChangesForLightVolume(
 			pos.y,
 			pos.z))
 		{
+			m_lightVolumeForceFullUpdate.store(true);
 			m_lightVolumeDirty.store(true);
 			break;
 		}
@@ -2209,7 +2224,16 @@ void WorldThread::ProcCreateLightVSnap() {
 
 
 
-	std::unique_ptr<LightVolumeSnapshot> snap = m_world.CreateLightVSnapshot(std::move(center));
+	const bool forceFullUpdate =
+		m_lightVolumeForceFullUpdate.exchange(false);
+
+	std::unique_ptr<LightVolumeSnapshot> snap =
+		m_world.CreateLightVSnapshot(
+			center,
+			m_lastLightVolumeSnapshotOrigin,
+			forceFullUpdate
+		);
+	m_lastLightVolumeSnapshotOrigin = snap->origin;
 
 
 	m_exchanger.PublishLightVolumeSnap(std::move(snap));
@@ -2372,14 +2396,32 @@ void WorldThread::SetDebugStateFromDebug(const DebugActions& actions) {
 
 void WorldThread::SetLightVolumeCenter(const glm::i64vec3& origin) {
 
+	bool changed = false;
 
-	std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
+	{
+		std::lock_guard<std::mutex> lock(
+			m_lightVolumeCenterMutex
+		);
 
+		const glm::i64vec3 delta =
+			glm::abs(origin - m_lightVolumeCenter);
 
-	if (m_lightVolumeCenter == origin) return;
+		constexpr int64_t UPDATE_STEP = 4;
 
-	m_lightVolumeDirty.store(true);
-	m_lightVolumeCenter = origin;
+		if (delta.x < UPDATE_STEP &&
+			delta.y < UPDATE_STEP &&
+			delta.z < UPDATE_STEP) {
+			return;
+		}
+
+		m_lightVolumeCenter = origin;
+		m_lightVolumeDirty.store(true);
+		changed = true;
+	}
+
+	if (changed) {
+		Wake();
+	}
 
 }
 

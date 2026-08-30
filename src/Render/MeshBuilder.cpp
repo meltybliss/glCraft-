@@ -188,8 +188,8 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 
 	for (int y = 0; y < Chunk::CHUNK_HEIGHT; y++) {
-		for (int x = 0; x < Chunk::CHUNK_WIDTH; x++) {
-			for (int z = 0; z < Chunk::CHUNK_DEPTH; z++) {
+		for (int z = 0; z < Chunk::CHUNK_DEPTH; z++) {
+			for (int x = 0; x < Chunk::CHUNK_WIDTH; x++) {
 
 
 				unsigned int b = (unsigned int)center[Chunk::Index(x, y, z)];

@@ -129,6 +129,8 @@ private:
 	
 
 	glm::i64vec3 m_lightVolumeOrigin{ 0 };
+	glm::ivec3 m_lightVolumeRingOffset{ 0 };
+	bool m_hasLightVolume = false;
 
 
 	unsigned int m_skyVAO = 0;

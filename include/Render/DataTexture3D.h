@@ -1,5 +1,6 @@
 #pragma once
 #include "TextureObject.h"
+#include <glm/glm.hpp>
 
 class DataTexture3D : public TextureObject {
 public:
@@ -18,6 +19,13 @@ public:
 	);
 
 	void UpdateSub(const float* data) const;
+	void UpdateSubRegion(
+		const glm::ivec3& offset,
+		const glm::ivec3& size,
+		const float* data,
+		int sourceRowLength,
+		int sourceImageHeight
+	) const;
 
 
 	void Bind(unsigned int unit = 0) const;

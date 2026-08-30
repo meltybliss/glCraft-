@@ -17,7 +17,17 @@ public:
 
 
 	void PublishLightVolumeSnap(std::unique_ptr<LightVolumeSnapshot> s) {
-		m_lightVolumeC.publish(std::move(s));
+		if (s->fullUpdate) {
+			// A full snapshot contains all state, so older queued deltas are obsolete.
+			m_lightVolumeC.replace(std::move(s));
+		}
+		else {
+			// Movement deltas depend on order and must not overwrite each other.
+			m_lightVolumeC.publish(std::move(s));
+		}
+	}
+	void ClearLightVolumeSnaps() {
+		m_lightVolumeC.clear();
 	}
 
 	void PublishPointLightSnap(std::unique_ptr<PointLightsSnapshot> s) {
@@ -55,7 +65,7 @@ public:
 private:
 	
 	SnapshotChannel<DayNightSnapshot> m_daynightC;
-	PtrSnapshotChannel<LightVolumeSnapshot> m_lightVolumeC;
+	PtrSnapshotQueueChannel<LightVolumeSnapshot> m_lightVolumeC;
 
 	PtrSnapshotChannel<PointLightsSnapshot> m_pointLightC;
 	SnapshotChannel<PlayerRenderSnapshot> m_plrRenderC;

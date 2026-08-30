@@ -228,6 +228,8 @@ void WorldRenderer::InitLightVolumeTexture() {
 
 
 	m_lightVolumeTexture = std::make_unique<DataTexture3D>(GL_RGBA16F, GL_RGBA, GL_FLOAT);
+	m_lightVolumeRingOffset = glm::ivec3(0);
+	m_hasLightVolume = false;
 
 }
 
@@ -353,38 +355,83 @@ void WorldRenderer::InitBloom() {
 
 
 void WorldRenderer::UpdateLightVolume(const LightVolumeSnapshot& snapshot) {
-
-
 	constexpr int channelCount = 4;
-
 	using namespace LIGHT_VOLUME_SIZE;
-
-
-	constexpr std::size_t expectedSize =
-		static_cast<std::size_t>(LIGHT_VOLUME_WIDTH) *
-		static_cast<std::size_t>(LIGHT_VOLUME_HEIGHT) *
-		static_cast<std::size_t>(LIGHT_VOLUME_DEPTH) *
+	const glm::ivec3 volumeSize{
+		LIGHT_VOLUME_WIDTH,
+		LIGHT_VOLUME_HEIGHT,
+		LIGHT_VOLUME_DEPTH
+	};
+	const std::size_t fullSize =
+		static_cast<std::size_t>(volumeSize.x) *
+		static_cast<std::size_t>(volumeSize.y) *
+		static_cast<std::size_t>(volumeSize.z) *
 		channelCount;
 
-	if (snapshot.pixels.size() != expectedSize) {
-		std::cerr
-			<< "Invalid LightVolumeSnapshot size: "
-			<< snapshot.pixels.size()
-			<< " expected: "
-			<< expectedSize
-			<< '\n';
+	m_lightVolumeTexture->Bind();
+	if (snapshot.fullUpdate) {
+		if (snapshot.pixels.size() != fullSize) {
+			std::cerr << "Invalid full LightVolumeSnapshot size: "
+				<< snapshot.pixels.size() << " expected: " << fullSize << '\n';
+			m_lightVolumeTexture->Unbind();
+			return;
+		}
+		m_lightVolumeTexture->UpdateSub(snapshot.pixels.data());
+		m_lightVolumeRingOffset = glm::ivec3(0);
+	} else {
+		if (!m_hasLightVolume || snapshot.previousOrigin != m_lightVolumeOrigin) {
+			std::cerr << "Out-of-order partial LightVolumeSnapshot; "
+				"waiting for a full update\n";
+			m_lightVolumeTexture->Unbind();
+			return;
+		}
 
-		return;
+		for (const auto& region : snapshot.regions) {
+			const std::size_t expectedSize =
+				static_cast<std::size_t>(region.size.x) *
+				static_cast<std::size_t>(region.size.y) *
+				static_cast<std::size_t>(region.size.z) *
+				channelCount;
+			if (region.pixels.size() != expectedSize) {
+				std::cerr << "Invalid partial LightVolumeSnapshot region size\n";
+				m_lightVolumeTexture->Unbind();
+				return;
+			}
+		}
+
+		const glm::i64vec3 delta64 = snapshot.origin - snapshot.previousOrigin;
+		m_lightVolumeRingOffset = {
+			WrapLightVolumeIndex(
+				m_lightVolumeRingOffset.x + static_cast<int>(delta64.x), volumeSize.x),
+			WrapLightVolumeIndex(
+				m_lightVolumeRingOffset.y + static_cast<int>(delta64.y), volumeSize.y),
+			WrapLightVolumeIndex(
+				m_lightVolumeRingOffset.z + static_cast<int>(delta64.z), volumeSize.z)
+		};
+
+		for (const auto& region : snapshot.regions) {
+			for (const auto& box : SplitLightVolumeUpload(
+				region.offset, region.size, m_lightVolumeRingOffset)) {
+				const size_t sourceIndex = (
+					static_cast<size_t>(box.sourceOffset.x) +
+					static_cast<size_t>(box.sourceOffset.y) * region.size.x +
+					static_cast<size_t>(box.sourceOffset.z) *
+						region.size.x * region.size.y
+				) * channelCount;
+				m_lightVolumeTexture->UpdateSubRegion(
+					box.textureOffset,
+					box.size,
+					region.pixels.data() + sourceIndex,
+					region.size.x,
+					region.size.y
+				);
+			}
+		}
 	}
 
-	m_lightVolumeOrigin = snapshot.origin;
-
-	m_lightVolumeTexture->Bind();
-
-	m_lightVolumeTexture->UpdateSub(snapshot.pixels.data());
-
 	m_lightVolumeTexture->Unbind();
-
+	m_lightVolumeOrigin = snapshot.origin;
+	m_hasLightVolume = true;
 }
 
 
@@ -578,12 +625,10 @@ void WorldRenderer::UpdateSnapshots() {
 
 
 
-	if (auto opt = m_exchanger.AcquireLightVolumeSnap())
-	{
+	while (auto opt = m_exchanger.AcquireLightVolumeSnap()) {
 		UpdateLightVolume(
 			*opt
 		);
-
 	}
 
 }
@@ -776,6 +821,10 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 	baseShader->SetVec3("uLightVolumeOrigin", relativeOrigin);
 	baseShader->SetVec3("uLightVolumeSize", glm::vec3(LIGHT_VOLUME_WIDTH, LIGHT_VOLUME_HEIGHT, LIGHT_VOLUME_DEPTH));
+	baseShader->SetVec3(
+		"uLightVolumeRingOffset",
+		glm::vec3(m_lightVolumeRingOffset)
+	);
 
 	blockAtlas->Bind(0);
 	m_shadowDepthTexture->Bind(1);
