@@ -1137,16 +1137,19 @@
     <ClInclude Include="include\Render\MeshStagingBuffer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="include\Render\MeshGeneration.h">
+      <Filter>ヘッダー ファイル</Filter>
+    </ClInclude>
     <ClInclude Include="third_party\glad\glad.h">
       <Filter>third_party</Filter>
     </ClInclude>
     <ClInclude Include="third_party\KHR\khrplatform.h">
       <Filter>third_party</Filter>
     </ClInclude>
-    <ClInclude Include="include\Render\MeshUploadCommand.h">
+    <ClInclude Include="include\Render\StagedMeshData.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="include\Render\StagedMeshData.h">
+    <ClInclude Include="include\Render\MeshUpdateContext.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
   </ItemGroup>

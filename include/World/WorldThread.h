@@ -37,6 +37,7 @@ struct ChunkOffset {
 
 
 class PersistenceIO;
+class MeshUpdateContext;
 
 
 class WorldThread {
@@ -310,13 +311,15 @@ private:
 		int64_t z,
 		uint8_t level,
 		const glm::vec3& color,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 	void Start_RemoveBlockLightTask(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void Start_RemoveBlockLightTask_WithEmissionTask(
@@ -324,23 +327,26 @@ private:
 		int64_t y,
 		int64_t z,
 		uint8_t emissionAfterRemove,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void Start_RemoveSkyLightTask(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
-	void Start_SkyLightTaskForNewChunk(Chunk& c);
-	void Start_BlockLightTaskForNewChunk(Chunk& c);
+	void Start_SkyLightTaskForNewChunk(Chunk& c, const std::shared_ptr<MeshUpdateContext>& ctx);
+	void Start_BlockLightTaskForNewChunk(Chunk& c, const std::shared_ptr<MeshUpdateContext>& ctx);
 	void Start_BlockLightTaskFromNeighbors(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void Start_SkyLightTask(
@@ -348,14 +354,16 @@ private:
 		int64_t y,
 		int64_t z,
 		int level,
-		bool urgent
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void Add_SkylightTask(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		bool urgent
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void ProcLightTasks(std::chrono::steady_clock::time_point deadline);
@@ -366,11 +374,23 @@ private:
 	void DispatchDirtyMeshJobs();
 	void DispatchOneDirtyMeshJob();
 
-	void MarkChunkDirty(Chunk& c);
-	void MarkNeighborChunksDirty(ChunkCoord coord);
-	void MarkNeighborChunksUrgentDirty(ChunkCoord coord);
+	void MarkChunkDirty(
+		Chunk& c,
+		MeshUpdateContext* context = nullptr
+	);
+	void MarkNeighborChunksDirty(
+		ChunkCoord coord,
+		MeshUpdateContext* context = nullptr
+	);
+	void MarkNeighborChunksUrgentDirty(
+		ChunkCoord coord,
+		MeshUpdateContext* context = nullptr
+	);
 
-	void MarkChunkUrgentDirty(Chunk& c);
+	void MarkChunkUrgentDirty(
+		Chunk& c,
+		MeshUpdateContext* context = nullptr
+	);
 
 	bool HasImmediateTask();
 	void Wake();

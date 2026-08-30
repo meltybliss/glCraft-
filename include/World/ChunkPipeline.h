@@ -66,7 +66,7 @@ private:
 private:
 
 	int WorkerCount = 0;
-	constexpr static int MAX_WORKER_COUNT = 2;
+	constexpr static int MAX_WORKER_COUNT = 4;
 
 private:
 	World* m_world = nullptr;

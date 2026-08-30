@@ -3,19 +3,25 @@
 #include "glad/glad.h"
 #include "GLFW/glfw3.h"
 #include "MeshData.h"
+#include "Render/MeshGeneration.h"
 
 struct ChunkMesh {
 	unsigned int vao = 0;
 	unsigned int vbo = 0;
 	unsigned int ebo = 0;
 	GLsizei indexCount = 0;
+	std::shared_ptr<MeshGenerationState> generationState;
+	std::uint64_t uploadedGeneration = 0;
 
 	std::size_t vertexCapacity = 0;
 	std::size_t indexCapacity = 0;
 
 
 	void EnsureCreated() {
-		if (!vao) return;
+		if (vao != 0)
+		{
+			return;
+		}
 
 		glGenVertexArrays(
 			1,

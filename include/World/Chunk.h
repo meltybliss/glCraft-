@@ -5,6 +5,7 @@
 #include "World/BlockData.h"
 #include "PointLight.h"
 #include "ChunkCoord.h"
+#include "Render/MeshGeneration.h"
 
 #include <array>
 #include <algorithm>
@@ -33,6 +34,29 @@ struct Chunk {
 	}
 
 	ChunkCoord coord;
+
+	uint64_t meshGeneration = 0;
+	std::shared_ptr<MeshGenerationState> meshGenerationState =
+		std::make_shared<MeshGenerationState>();
+
+	void AdvanceMeshGeneration() noexcept {
+		++meshGeneration;
+		meshGenerationState->latest.store(
+			meshGeneration,
+			std::memory_order_release
+		);
+	}
+
+	[[nodiscard]] MeshGenerationStamp CaptureMeshGeneration() const noexcept {
+		return {meshGenerationState, meshGeneration};
+	}
+
+	[[nodiscard]] bool MatchesMeshGeneration(
+		const MeshGenerationStamp& stamp
+	) const noexcept {
+		return stamp.state == meshGenerationState && stamp.IsCurrent();
+	}
+
 
 	bool dirty = false;
 	bool dirtyToSave = false;

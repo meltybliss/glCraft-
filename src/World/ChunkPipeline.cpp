@@ -7,6 +7,7 @@
 #include <memory>
 #include <iostream>
 #include <algorithm>
+#include <cstring>
 #include "Util/ThreadSafeLogUtils.h"
 
 void ChunkPipeline::StartWorkerThreads() {
@@ -113,8 +114,17 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 		
 		case JobType::BUILD_MESH: {
-			if (targetJob.snapshot) {
-				MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
+			if (targetJob.snapshot && targetJob.meshGeneration.IsCurrent()) {
+
+				thread_local MeshData data{};
+
+				if (!MeshBuilder::BuildChunkMesh(
+					*targetJob.snapshot,
+					data,
+					targetJob.meshGeneration
+				)) {
+					break;
+				}
 
 
 				const std::size_t vertexBytes =
@@ -146,6 +156,12 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 
 				auto reservation = m_meshStagingBuffer->Acquire();
+				if (!targetJob.meshGeneration.IsCurrent()) {
+					m_meshStagingBuffer->ReleaseWithoutGPU(
+						reservation.slotIndex
+					);
+					break;
+				}
 
 
 
@@ -174,6 +190,13 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 					);
 
 
+				}
+
+				if (!targetJob.meshGeneration.IsCurrent()) {
+					m_meshStagingBuffer->ReleaseWithoutGPU(
+						reservation.slotIndex
+					);
+					break;
 				}
 
 
@@ -205,7 +228,8 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 					m_meshChunkResult.push_back({
 						targetJob.coord,
-						std::move(staged)
+						std::move(staged),
+						targetJob.meshGeneration
 
 					});
 				}
@@ -354,6 +378,21 @@ bool ChunkPipeline::PopFrontMeshResult(MeshChunkResult& out) {
 
 	{
 		std::lock_guard<std::mutex> lock(meshResultMutex);
+		for (auto it = m_meshChunkResult.begin();
+			it != m_meshChunkResult.end();) {
+			if (it->generation.IsCurrent()) {
+				++it;
+				continue;
+			}
+
+			if (it->stagedMesh) {
+				m_meshStagingBuffer->ReleaseWithoutGPU(
+					it->stagedMesh->slotIndex
+				);
+			}
+			it = m_meshChunkResult.erase(it);
+		}
+
 		if (m_meshChunkResult.empty()) {
 			return false;
 		}
@@ -501,12 +540,20 @@ std::vector<ChunkCoord> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 	{
 		std::lock_guard<std::mutex> lock(meshResultMutex);
 
-		std::erase_if(
-			m_meshChunkResult,
-			[this](const MeshChunkResult& result) {
-				return IsOutsideUnloadDistance(result.key);
+		for (auto it = m_meshChunkResult.begin();
+			it != m_meshChunkResult.end();) {
+			if (!IsOutsideUnloadDistance(it->key)) {
+				++it;
+				continue;
 			}
-		);
+
+			if (it->stagedMesh) {
+				m_meshStagingBuffer->ReleaseWithoutGPU(
+					it->stagedMesh->slotIndex
+				);
+			}
+			it = m_meshChunkResult.erase(it);
+		}
 	}
 
 	{

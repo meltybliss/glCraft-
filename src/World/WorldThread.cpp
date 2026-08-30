@@ -2,6 +2,7 @@
 #include "Persistence/PersistenceIO.h"
 #include "Render/Camera.h"
 #include "World/TerrainGenerator.h"
+#include "Render/MeshUpdateContext.h"
 #include <iostream>
 #include <algorithm>
 
@@ -309,6 +310,20 @@ void WorldThread::ApplyEditBlock(
 	const bool newIsAir = (b == BlockType::AIR);
 
 	auto result = m_world.SetBlockGlobal_User(x, y, z, b);
+
+	if (!result.blockChanged) {
+
+		return;
+	}
+
+
+	auto context = std::make_shared<MeshUpdateContext>();
+
+
+
+	InvalidateMeshGeneration(*c, *context);//世代を新しくします
+
+
 	if (result.pointLightChanged) {
 		m_pointLightDirty = true;
 	}
@@ -322,14 +337,16 @@ void WorldThread::ApplyEditBlock(
 			y,
 			z,
 			GetEmission(b),
-			true
+			true,
+			context
 		);
 
 		Start_RemoveSkyLightTask(
 			x,
 			y,
 			z,
-			true
+			true,
+			context
 		);
 
 	}
@@ -341,7 +358,8 @@ void WorldThread::ApplyEditBlock(
 				x,
 				y,
 				z,
-				true
+				true,
+				context
 			);
 			
 
@@ -352,12 +370,13 @@ void WorldThread::ApplyEditBlock(
 				x,
 				y,
 				z,
-				true
+				true,
+				context
 			);
 		}
 
 
-		Add_SkylightTask(x, y, z, true);
+		Add_SkylightTask(x, y, z, true, context);
 
 		
 	}
@@ -370,7 +389,8 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 
 	static constexpr int dirs[6][3] = {
@@ -418,7 +438,8 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 		z,
 		strongest - 1,
 		color,
-		urgent
+		urgent,
+		ctx
 	);
 
 }
@@ -428,7 +449,8 @@ void WorldThread::Start_RemoveBlockLightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 	
@@ -444,6 +466,8 @@ void WorldThread::Start_RemoveBlockLightTask(
 	task.emissionAfterRemove = 0;
 
 	task.urgent = urgent;
+
+	task.ctx = ctx;
 
 	m_lightEngine.StartRemoveBlockLightTask(
 		m_world,
@@ -475,7 +499,8 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 	int64_t y,
 	int64_t z,
 	uint8_t emissionAfterRemove,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
@@ -491,7 +516,7 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 	task.phase = Phase::REMOVE;
 	task.emissionAfterRemove = emissionAfterRemove;
 	task.urgent = urgent;
-
+	task.ctx = ctx;
 
 	m_lightEngine.StartRemoveBlockLightTask(
 		m_world,
@@ -518,7 +543,8 @@ void WorldThread::Start_RemoveSkyLightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 
 ) {
 
@@ -532,7 +558,7 @@ void WorldThread::Start_RemoveSkyLightTask(
 	task.lightType = LightType::SKY;
 	task.phase = Phase::REMOVE;
 	task.urgent = urgent;
-
+	task.ctx = ctx;
 
 	m_lightEngine.StartRemoveSkyLightTask(
 		m_world,
@@ -564,7 +590,8 @@ void WorldThread::Start_BlockLightTask(
 	int64_t z,
 	uint8_t level,
 	const glm::vec3& color,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
@@ -580,7 +607,7 @@ void WorldThread::Start_BlockLightTask(
 	task.lightType = LightType::BLOCK;
 
 	task.urgent = urgent;
-
+	task.ctx = ctx;
 
 	m_lightEngine.AddLightLevel(
 		m_world,
@@ -610,7 +637,8 @@ void WorldThread::Start_SkyLightTask(
 	int64_t y,
 	int64_t z,
 	int level,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) return;
 	//if (level == 0) return;
@@ -622,6 +650,7 @@ void WorldThread::Start_SkyLightTask(
 	);
 	task.lightType = LightType::SKY;
 	task.urgent = urgent;
+	task.ctx = ctx;
 
 
 	if (level <= 0) {
@@ -665,7 +694,8 @@ void WorldThread::Add_SkylightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 
 	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) {
@@ -692,7 +722,7 @@ void WorldThread::Add_SkylightTask(
 
 		if (aboveIsAir && aboveSky == 15) {
 			
-			Start_SkyLightTask(x, y, z, 15, urgent);
+			Start_SkyLightTask(x, y, z, 15, urgent, ctx);
 			return;
 		}
 
@@ -718,7 +748,7 @@ void WorldThread::Add_SkylightTask(
 
 
 	
-	Start_SkyLightTask(x, y, z, strongest - 1, urgent);
+	Start_SkyLightTask(x, y, z, strongest - 1, urgent, ctx);
 	
 	
 }
@@ -1034,8 +1064,11 @@ void WorldThread::ProcOne_Disk_ChunkLoadResult() {
 		chunks[coord] = std::move(c);
 
 
-		Start_BlockLightTaskForNewChunk(*chunks[coord]);
-		Start_SkyLightTaskForNewChunk(*chunks[coord]);
+		auto ctx = std::make_shared<MeshUpdateContext>();
+
+
+		Start_BlockLightTaskForNewChunk(*chunks[coord], ctx);
+		Start_SkyLightTaskForNewChunk(*chunks[coord], ctx);
 
 	}
 }
@@ -1103,6 +1136,10 @@ bool WorldThread::IsChunkWithinUnloadRange(ChunkCoord coord) const {
 
 
 void WorldThread::QueueMeshDeletion(ChunkCoord key) {
+	if (Chunk* chunk = m_world.GetTargetChunkFromKey(key)) {
+		chunk->AdvanceMeshGeneration();
+	}
+
 	{
 		std::lock_guard<std::mutex> lock(pendingMeshMutex);
 
@@ -1417,6 +1454,7 @@ void WorldThread::ProcOneChunkResult() {
 			PendingMesh mesh;
 			mesh.stagedMesh = std::move(*meshResult.stagedMesh);
 			mesh.key = key;
+			mesh.generation = std::move(meshResult.generation);
 
 			PushPendingMesh(std::move(mesh));
 		}
@@ -1445,7 +1483,9 @@ void WorldThread::ProcOneChunkResult() {
 		chunks[key] = std::move(genResult.chunk);
 
 
-		Start_SkyLightTaskForNewChunk(*chunks[key]);
+		auto ctx = std::make_shared<MeshUpdateContext>();
+
+		Start_SkyLightTaskForNewChunk(*chunks[key], ctx);
 
 	}
 
@@ -1468,6 +1508,7 @@ void WorldThread::ProcChunkResults() {
 			PendingMesh mesh;
 			mesh.stagedMesh = std::move(*meshResult.stagedMesh);
 			mesh.key = key;
+			mesh.generation = std::move(meshResult.generation);
 
 			PushPendingMesh(std::move(mesh));
 		}
@@ -1498,7 +1539,10 @@ void WorldThread::ProcChunkResults() {
 		chunks[key] = std::move(genResult.chunk);
 
 
-		Start_SkyLightTaskForNewChunk(*chunks[key]);
+		auto ctx = std::make_shared<MeshUpdateContext>();
+
+
+		Start_SkyLightTaskForNewChunk(*chunks[key], ctx);
 	}
 }
 
@@ -1512,6 +1556,7 @@ void WorldThread::EnqueueMeshJob(Chunk& c) {
 
 	job.snapshot = m_world.CreateMeshSnapshot(c);
 	job.type = JobType::BUILD_MESH;
+	job.meshGeneration = c.CaptureMeshGeneration();
 
 
 	if (c.urgentUpdateMesh) {
@@ -1527,10 +1572,21 @@ void WorldThread::EnqueueMeshJob(Chunk& c) {
 bool WorldThread::PopPendingMeshData(PendingMesh& out) {
 
 	std::lock_guard<std::mutex> lock(pendingMeshMutex);
-	
-	if (m_pendingMeshData.empty()) {
-		return false;
+
+	for (auto it = m_pendingMeshData.begin();
+		it != m_pendingMeshData.end();) {
+		if (it->generation.IsCurrent()) {
+			++it;
+			continue;
+		}
+
+		m_meshStagingBuffer.ReleaseWithoutGPU(
+			it->stagedMesh.slotIndex
+		);
+		it = m_pendingMeshData.erase(it);
 	}
+
+	if (m_pendingMeshData.empty()) return false;
 
 	auto nearest = std::min_element(
 
@@ -1576,8 +1632,10 @@ bool WorldThread::PopPendingDeleteMeshKey(ChunkCoord& out) {
 
 
 void WorldThread::PushPendingMesh(PendingMesh&& mesh) {
+	Chunk* chunk = m_world.GetTargetChunkFromKey(mesh.key);
 	if (!IsChunkWithinUnloadRange(mesh.key) ||
-		!m_world.GetTargetChunkFromKey(mesh.key)) {
+		!chunk ||
+		!chunk->MatchesMeshGeneration(mesh.generation)) {
 
 		m_meshStagingBuffer
 			.ReleaseWithoutGPU(
@@ -1589,6 +1647,26 @@ void WorldThread::PushPendingMesh(PendingMesh&& mesh) {
 	}
 
 	std::lock_guard<std::mutex> lock(pendingMeshMutex);
+	for (auto it = m_pendingMeshData.begin();
+		it != m_pendingMeshData.end();) {
+		if (it->key != mesh.key) {
+			++it;
+			continue;
+		}
+
+		if (it->generation.state == mesh.generation.state &&
+			it->generation.value > mesh.generation.value) {
+			m_meshStagingBuffer.ReleaseWithoutGPU(
+				mesh.stagedMesh.slotIndex
+			);
+			return;
+		}
+
+		m_meshStagingBuffer.ReleaseWithoutGPU(
+			it->stagedMesh.slotIndex
+		);
+		it = m_pendingMeshData.erase(it);
+	}
 
 	m_pendingMeshData.push_back(std::move(mesh));
 
@@ -1596,11 +1674,12 @@ void WorldThread::PushPendingMesh(PendingMesh&& mesh) {
 
 
 
-void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
+void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c, const std::shared_ptr<MeshUpdateContext>& ctx) {
 
 	LightTask task;
 	task.lightType = LightType::SKY;
 	task.sourceCoord = c.coord;
+	task.ctx = ctx;
 
 
 	int64_t wx = c.coord.x * Chunk::CHUNK_WIDTH;
@@ -1628,10 +1707,11 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 }
 
 
-void WorldThread::Start_BlockLightTaskForNewChunk(Chunk& c) {
+void WorldThread::Start_BlockLightTaskForNewChunk(Chunk& c, const std::shared_ptr<MeshUpdateContext>& ctx) {
 	LightTask task;
 	task.sourceCoord = c.coord;
 	task.lightType = LightType::BLOCK;
+	task.ctx = ctx;
 
 	const int64_t chunkWorldX =
 		c.coord.x * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
@@ -1748,6 +1828,12 @@ void WorldThread::ProcessLightTask(LightTask& task, int budget) {
 
 
 void WorldThread::FinishLightTask(LightTask& task) {
+	MeshUpdateContext fallbackContext;
+	MeshUpdateContext* context = &fallbackContext;
+	if (task.ctx) {
+		task.ctx->BeginBatch();
+		context = task.ctx.get();
+	}
 
 
 	for (auto& key : task.dirtyChunks_light) {
@@ -1760,13 +1846,13 @@ void WorldThread::FinishLightTask(LightTask& task) {
 		}
 
 		if (task.urgent) {
-			MarkChunkUrgentDirty(*c);
+			MarkChunkUrgentDirty(*c, context);
 		}
 		else {
-			MarkChunkDirty(*c);
+			MarkChunkDirty(*c, context);
 		}
 
-		MarkNeighborChunksDirty(c->coord);
+		MarkNeighborChunksDirty(c->coord, context);
 
 	}
 
@@ -1780,13 +1866,13 @@ void WorldThread::FinishLightTask(LightTask& task) {
 		}
 
 		if (task.urgent) {
-			MarkChunkUrgentDirty(*c);
+			MarkChunkUrgentDirty(*c, context);
 		}
 		else {
-			MarkChunkDirty(*c);
+			MarkChunkDirty(*c, context);
 		}
 
-		MarkNeighborChunksDirty(c->coord);
+		MarkNeighborChunksDirty(c->coord, context);
 
 	}
 
@@ -1968,7 +2054,16 @@ void WorldThread::DispatchOneDirtyMeshJob() {//TODO: 仕組みをunordered_set�
 }
 
 
-void WorldThread::MarkChunkDirty(Chunk& c) {
+void WorldThread::MarkChunkDirty(
+	Chunk& c,
+	MeshUpdateContext* context
+) {
+	if (context) {
+		InvalidateMeshGeneration(c, *context);
+	}
+	else {
+		c.AdvanceMeshGeneration();
+	}
 
 
 	c.dirty = true;
@@ -1999,15 +2094,21 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 }
 
 
-void WorldThread::MarkChunkUrgentDirty(Chunk& c) {
+void WorldThread::MarkChunkUrgentDirty(
+	Chunk& c,
+	MeshUpdateContext* context
+) {
 
 
 	c.urgentUpdateMesh = true;
 
-	MarkChunkDirty(c);
+	MarkChunkDirty(c, context);
 }
 
-void WorldThread::MarkNeighborChunksDirty(ChunkCoord coord) {
+void WorldThread::MarkNeighborChunksDirty(
+	ChunkCoord coord,
+	MeshUpdateContext* context
+) {
 
 	auto& chunks = m_world.GetChunks();
 
@@ -2024,7 +2125,7 @@ void WorldThread::MarkNeighborChunksDirty(ChunkCoord coord) {
 		}
 
 
-		MarkChunkDirty(*it->second);
+		MarkChunkDirty(*it->second, context);
 	}
 
 	for (int64_t z = coord.z - 1; z <= coord.z + 1; ++z) {
@@ -2041,11 +2142,14 @@ void WorldThread::MarkNeighborChunksDirty(ChunkCoord coord) {
 
 		
 
-		MarkChunkDirty(*it->second);
+		MarkChunkDirty(*it->second, context);
 	}
 }
 
-void WorldThread::MarkNeighborChunksUrgentDirty(ChunkCoord coord) {
+void WorldThread::MarkNeighborChunksUrgentDirty(
+	ChunkCoord coord,
+	MeshUpdateContext* context
+) {
 
 	auto& chunks = m_world.GetChunks();
 
@@ -2062,7 +2166,7 @@ void WorldThread::MarkNeighborChunksUrgentDirty(ChunkCoord coord) {
 
 		it->second->urgentUpdateMesh = true;
 
-		MarkChunkDirty(*it->second);
+		MarkChunkDirty(*it->second, context);
 
 	}
 
@@ -2078,7 +2182,7 @@ void WorldThread::MarkNeighborChunksUrgentDirty(ChunkCoord coord) {
 
 		it->second->urgentUpdateMesh = true;
 
-		MarkChunkDirty(*it->second);
+		MarkChunkDirty(*it->second, context);
 
 
 	}

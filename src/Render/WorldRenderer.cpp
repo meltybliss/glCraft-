@@ -896,8 +896,21 @@ void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 	int budget = PENDING_MESH_BUDGET;
 	
 	while (budget > 0 && wt.PopPendingMeshData(out)) {
+		if (!out.generation.IsCurrent()) {
+			staging.ReleaseWithoutGPU(
+				out.stagedMesh.slotIndex
+			);
+			continue;
+		}
 		
 		auto [it, inserted] = m_chunkMeshes.try_emplace(out.key);
+		if (it->second.generationState == out.generation.state &&
+			it->second.uploadedGeneration >= out.generation.value) {
+			staging.ReleaseWithoutGPU(
+				out.stagedMesh.slotIndex
+			);
+			continue;
+		}
 
 		auto& staged =
 			out.stagedMesh;
@@ -916,6 +929,7 @@ void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 			)
 		);
 
+
 		//この位置までGPUが終わったら
 		//staging slotを再利用していい
 		GLsync fence =
@@ -929,6 +943,8 @@ void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 			staged.slotIndex,
 			fence
 		);
+		it->second.generationState = out.generation.state;
+		it->second.uploadedGeneration = out.generation.value;
 
 
 		budget--;

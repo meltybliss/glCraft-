@@ -1,8 +1,10 @@
 #pragma once
 #include <queue>
 #include <unordered_set>
+#include <memory>
 #include "LightNode.h"
 #include "World/ChunkCoord.h"
+#include "Render/MeshUpdateContext.h"
 
 
 enum class LightType {
@@ -42,5 +44,8 @@ struct LightTask {
 
 	bool changedBlockLight = false;
 	std::vector<glm::i64vec3> changedBlockLightsPos{};
+
+
+	std::shared_ptr<MeshUpdateContext> ctx;
 
 };

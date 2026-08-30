@@ -11,6 +11,7 @@
 #include "BlockFace.h"
 #include "Math/UV.h"
 #include "Math/Vec3.h"
+#include "Render/MeshGeneration.h"
 
 
 enum class UVPoint {
@@ -43,7 +44,11 @@ struct UVMinMax {
 class MeshBuilder {
 public:
 
-	static MeshData BuildChunkMesh(ChunkMeshSnapshot& snapshot);
+	[[nodiscard]] static bool BuildChunkMesh(
+		ChunkMeshSnapshot& snapshot,
+		MeshData& result,
+		const MeshGenerationStamp& generation
+	);
 
 	static UVMinMax GetTorchUVMinMax();
 	

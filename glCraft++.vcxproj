@@ -164,7 +164,8 @@
     <ClInclude Include="include\Render\DataTexture3D.h" />
     <ClInclude Include="include\Render\DepthTexture2D.h" />
     <ClInclude Include="include\Render\MeshStagingBuffer.h" />
-    <ClInclude Include="include\Render\MeshUploadCommand.h" />
+    <ClInclude Include="include\Render\MeshGeneration.h" />
+    <ClInclude Include="include\Render\MeshUpdateContext.h" />
     <ClInclude Include="include\Render\RenderTexture2D.h" />
     <ClInclude Include="include\Render\Camera.h" />
     <ClInclude Include="include\Render\ChunkMesh.h" />

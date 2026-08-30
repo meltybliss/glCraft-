@@ -133,8 +133,16 @@ void MeshBuilder::BuildTorchMesh(
 
 }
 
-MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
-	MeshData result;
+bool MeshBuilder::BuildChunkMesh(
+	ChunkMeshSnapshot& snapshot,
+	MeshData& result,
+	const MeshGenerationStamp& generation
+) {
+
+
+	result.vertices.clear();
+	result.indices.clear();
+
 
 	auto& center = snapshot.center;
 	auto& v = result.vertices;
@@ -188,6 +196,12 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 
 	for (int y = 0; y < Chunk::CHUNK_HEIGHT; y++) {
+		if (!generation.IsCurrent()) {
+			result.vertices.clear();
+			result.indices.clear();
+			return false;
+		}
+
 		for (int z = 0; z < Chunk::CHUNK_DEPTH; z++) {
 			for (int x = 0; x < Chunk::CHUNK_WIDTH; x++) {
 
@@ -367,10 +381,7 @@ MeshData MeshBuilder::BuildChunkMesh(ChunkMeshSnapshot& snapshot) {
 
 	}
 
-
-	return result;
-
-
+	return generation.IsCurrent();
 }
 
 
