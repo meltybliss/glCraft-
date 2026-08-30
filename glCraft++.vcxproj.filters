@@ -24,16 +24,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="third_party\glad\glad.h">
-      <Filter>third_party</Filter>
-    </ClInclude>
     <ClInclude Include="third_party\GLFW\glfw3.h">
       <Filter>third_party</Filter>
     </ClInclude>
     <ClInclude Include="third_party\GLFW\glfw3native.h">
-      <Filter>third_party</Filter>
-    </ClInclude>
-    <ClInclude Include="third_party\KHR\khrplatform.h">
       <Filter>third_party</Filter>
     </ClInclude>
     <ClInclude Include="third_party\stb\stb_image.h">
@@ -1143,11 +1137,14 @@
     <ClInclude Include="include\Render\MeshStagingBuffer.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="third_party\glad\glad.h">
+      <Filter>third_party</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\KHR\khrplatform.h">
+      <Filter>third_party</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="third_party\glad.c">
-      <Filter>third_party</Filter>
-    </ClCompile>
     <ClCompile Include="src\Core\main.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
@@ -1255,6 +1252,9 @@
     </ClCompile>
     <ClCompile Include="src\Render\MeshStagingBuffer.cpp">
       <Filter>ソース ファイル</Filter>
+    </ClCompile>
+    <ClCompile Include="third_party\glad.c">
+      <Filter>third_party</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
