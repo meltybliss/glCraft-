@@ -881,6 +881,16 @@ void WorldRenderer::RenderWorld(const Camera& cam, World* w) {
 
 
 void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
+
+	auto& staging =
+		wt.GetMeshStagingBuffer();
+
+	//前のframeのGPU copyが
+	//終わっていたslotをFreeに戻す
+	staging.ReclaimCompleted();
+
+
+
 	PendingMesh out;
 
 	int budget = PENDING_MESH_BUDGET;
@@ -889,13 +899,40 @@ void WorldRenderer::UploadPendingMeshData(WorldThread& wt) {
 		
 		auto [it, inserted] = m_chunkMeshes.try_emplace(out.key);
 
-		if (!inserted) {
-			it->second.DeleteGL();
-		}
+		auto& staged =
+			out.stagedMesh;
+
+		it->second.UploadFromStaging(
+			staging.GetBuffer(),
+
+			staged.vertexOffset,
+			staged.vertexBytes,
+
+			staged.indexOffset,
+			staged.indexBytes,
+
+			static_cast<GLsizei>(
+				staged.indexCount
+			)
+		);
+
+		//この位置までGPUが終わったら
+		//staging slotを再利用していい
+		GLsync fence =
+			glFenceSync(
+				GL_SYNC_GPU_COMMANDS_COMPLETE,
+				0
+			);
+
+
+		staging.MarkGpuInFlight(
+			staged.slotIndex,
+			fence
+		);
+
 
 		budget--;
 
-		it->second.Upload(out.meshData);
 		
 	}
 

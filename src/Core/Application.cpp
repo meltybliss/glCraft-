@@ -176,6 +176,13 @@ void Application::Run() {
 
 	m_session.Stop();
 
+
+	m_session
+		.GetWorldThread()
+		.GetMeshStagingBuffer()
+		.Destroy();
+
+
 	m_imguiRenderer.Shutdown();
 
 
@@ -423,6 +430,12 @@ bool Application::InitGL() {
 		glfwTerminate();
 		return false;
 	}
+
+
+	m_session
+		.GetWorldThread()
+		.GetMeshStagingBuffer()
+		.Init();
 
 
 	glfwSetWindowUserPointer(m_window, this);

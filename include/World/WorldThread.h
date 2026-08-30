@@ -14,6 +14,7 @@
 #include "Snapshot/SnapshotExchanger.h"
 #include "Debugs/DebugSettings.h"
 #include "WorldConfig.h"
+#include "Render/MeshStagingBuffer.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -42,7 +43,7 @@ class WorldThread {
 public:
 
 	WorldThread(SnapshotExchanger& exchanger, PersistenceIO& pIO)
-		: m_chunkPipeline(&m_world), m_persistenceIO(pIO), m_exchanger(exchanger)  {}
+		: m_chunkPipeline(&m_world, &m_meshStagingBuffer), m_persistenceIO(pIO), m_exchanger(exchanger)  {}
 
 
 	void SetWorldSelectionResult(WorldSelectionResult& info);
@@ -111,10 +112,18 @@ public:
 	void SetLightVolumeCenter(const glm::i64vec3& origin);
 	WorldThreadDebugStats GetDebugStats();
 
+
+	[[nodiscard]] MeshStagingBuffer& GetMeshStagingBuffer()
+	{
+		return m_meshStagingBuffer;
+	}
+
 private:
 	
 
 	World m_world;
+	MeshStagingBuffer m_meshStagingBuffer;
+
 	ChunkPipeline m_chunkPipeline;
 	LightEngine m_lightEngine;
 	SnapshotExchanger& m_exchanger;

@@ -1106,12 +1106,26 @@ void WorldThread::QueueMeshDeletion(ChunkCoord key) {
 	{
 		std::lock_guard<std::mutex> lock(pendingMeshMutex);
 
-		std::erase_if(
-			m_pendingMeshData,
-			[key](const PendingMesh& mesh) {
-				return mesh.key == key;
+		for (auto it = m_pendingMeshData.begin();
+			it != m_pendingMeshData.end();
+			)
+		{
+			if (it->key == key)
+			{
+				m_meshStagingBuffer
+					.ReleaseWithoutGPU(
+						it->stagedMesh.slotIndex
+					);
+
+
+				it =
+					m_pendingMeshData.erase(it);
 			}
-		);
+			else
+			{
+				++it;
+			}
+		}
 	}
 
 	{
@@ -1399,9 +1413,9 @@ void WorldThread::ProcOneChunkResult() {
 	if (m_chunkPipeline.PopFrontMeshResult(meshResult)) {
 		const auto& key = meshResult.key;
 
-		if (meshResult.meshData) {
+		if (meshResult.stagedMesh) {
 			PendingMesh mesh;
-			mesh.meshData = std::move(*meshResult.meshData);
+			mesh.stagedMesh = std::move(*meshResult.stagedMesh);
 			mesh.key = key;
 
 			PushPendingMesh(std::move(mesh));
@@ -1450,9 +1464,9 @@ void WorldThread::ProcChunkResults() {
 		const auto& key = meshResult.key;
 
 
-		if (meshResult.meshData) {
+		if (meshResult.stagedMesh) {
 			PendingMesh mesh;
-			mesh.meshData = std::move(*meshResult.meshData);
+			mesh.stagedMesh = std::move(*meshResult.stagedMesh);
 			mesh.key = key;
 
 			PushPendingMesh(std::move(mesh));
@@ -1564,6 +1578,13 @@ bool WorldThread::PopPendingDeleteMeshKey(ChunkCoord& out) {
 void WorldThread::PushPendingMesh(PendingMesh&& mesh) {
 	if (!IsChunkWithinUnloadRange(mesh.key) ||
 		!m_world.GetTargetChunkFromKey(mesh.key)) {
+
+		m_meshStagingBuffer
+			.ReleaseWithoutGPU(
+				mesh.stagedMesh.slotIndex
+			);
+
+
 		return;
 	}
 

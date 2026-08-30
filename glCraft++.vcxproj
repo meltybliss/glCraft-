@@ -164,6 +164,7 @@
     <ClInclude Include="include\Render\DataTexture3D.h" />
     <ClInclude Include="include\Render\DepthTexture2D.h" />
     <ClInclude Include="include\Render\MeshStagingBuffer.h" />
+    <ClInclude Include="include\Render\MeshUploadCommand.h" />
     <ClInclude Include="include\Render\RenderTexture2D.h" />
     <ClInclude Include="include\Render\Camera.h" />
     <ClInclude Include="include\Render\ChunkMesh.h" />
@@ -174,6 +175,7 @@
     <ClInclude Include="include\Render\SelectionOutlineRenderer.h" />
     <ClInclude Include="include\Render\Shader.h" />
     <ClInclude Include="include\Render\SkyRenderingConfig.h" />
+    <ClInclude Include="include\Render\StagedMeshData.h" />
     <ClInclude Include="include\Render\Texture1D.h" />
     <ClInclude Include="include\Render\TextureObject.h" />
     <ClInclude Include="include\Render\WorldRenderer.h" />

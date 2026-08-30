@@ -3,6 +3,7 @@
 #include "Render/MeshBuilder.h"
 #include "World/WorldThread.h"
 #include "World/LightEngine.h"
+#include "Render/StagedMeshData.h"
 #include <memory>
 #include <iostream>
 #include <algorithm>
@@ -115,12 +116,96 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 			if (targetJob.snapshot) {
 				MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
 
+
+				const std::size_t vertexBytes =
+					data.vertices.size()
+					* sizeof(float);
+
+
+				const std::size_t indexBytes =
+					data.indices.size()
+					* sizeof(unsigned int);
+
+
+				const std::size_t totalBytes =
+					vertexBytes
+					+ indexBytes;
+
+				if (
+					totalBytes >
+					MeshStagingBuffer::SLOT_SIZE
+					)
+				{
+					std::cerr
+						<< "mesh too large for staging slot: "
+						<< totalBytes
+						<< " bytes\n";
+
+					break;
+				}
+
+
+				auto reservation = m_meshStagingBuffer->Acquire();
+
+
+
+				if (vertexBytes > 0) {
+
+					std::memcpy(
+						reservation.ptr,
+						data.vertices.data(),
+						vertexBytes
+
+					);
+
+				}
+
+
+				if (indexBytes > 0) {
+
+					std::memcpy(
+						reservation.ptr
+						+ vertexBytes,
+						data.indices.data(),
+
+						indexBytes
+
+
+					);
+
+
+				}
+
+
+				
+				StagedMeshData staged;
+
+				staged.slotIndex = reservation.slotIndex;
+
+				staged.vertexOffset = reservation.baseOffset;
+
+				staged.vertexBytes = vertexBytes;
+
+				staged.indexOffset =
+					reservation.baseOffset
+					+ vertexBytes;
+
+				staged.indexBytes =
+					indexBytes;
+
+
+				staged.indexCount =
+					static_cast<uint32_t>(
+						data.indices.size()
+					);
+
+
 				{
 					std::lock_guard<std::mutex> lock(meshResultMutex);
 
 					m_meshChunkResult.push_back({
 						targetJob.coord,
-						std::move(data)
+						std::move(staged)
 
 					});
 				}

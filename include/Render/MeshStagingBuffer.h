@@ -56,6 +56,8 @@ private:
         Free,
         //Worker‚ªŒ»İ‘‚¢‚Ä‚¢‚é
         CPUWriting,
+        ///memcpyŠ®—¹
+        ReadyForGPU,
 
         //GPU‚ªŒ»İ“Ç‚ñ‚Å‚¢‚é
         GPUReading
