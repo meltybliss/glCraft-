@@ -9,11 +9,20 @@
 
 
 void WorldThread::CreateNewWorld(uint64_t seed) {
+	if (!m_persistenceIO.ResetWorldStorage()) {
+		std::cerr << "failed to remove the previous world data\n";
+	}
 
 	m_exchanger.ClearLightVolumeSnaps();
 	m_lastLightVolumeSnapshotOrigin.reset();
 	m_lightVolumeForceFullUpdate.store(true);
 	m_lightVolumeDirty.store(true);
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+		m_pendingRaycast.reset();
+		m_latestRaycastHit = {};
+		m_hasPendingRaycast.store(false);
+	}
 
 	m_world.SetWorldSeed(seed);
 
@@ -52,6 +61,12 @@ void WorldThread::StartThread() {
 		return;
 	}
 
+	{
+		std::lock_guard<std::mutex> lock(waitMutex);
+		requestedToWake = false;
+	}
+	m_nextAutoSaveTime = Clock::now() + AUTO_SAVE_INTERVAL;
+	m_worldStarted = true;
 	runningWorldThread.store(true);
 
 	m_chunkPipeline.SetResultReadyCallback(
@@ -119,10 +134,9 @@ void WorldThread::StartThread() {
 
 					return !runningWorldThread.load() || requestedToWake;
 				});
+
+				requestedToWake = false;
 			}
-
-
-			requestedToWake = false;
 
 		}
 
@@ -133,6 +147,7 @@ void WorldThread::StartThread() {
 
 
 void WorldThread::StopThread() {
+	const bool hadStartedWorld = m_worldStarted;
 
 	runningWorldThread.store(false);
 
@@ -143,13 +158,15 @@ void WorldThread::StopThread() {
 	}
 
 
-	//ここで強制的にworldをsaveし、dirtyToSaveのchunksをtask化する。
-	ForcedSave_World();
-	ForcedSave_Chunks();
+	if (hadStartedWorld) {
+		m_chunkPipeline.StopWorkerThreads();
 
+		// Worldを実際に開始した場合だけ、終了時の状態を保存する。
+		ForcedSave_World();
+		ForcedSave_Chunks();
+	}
 
-
-	m_chunkPipeline.StopWorkerThreads();
+	m_worldStarted = false;
 	m_persistenceIO.StopThread();
 }
 
@@ -204,7 +221,7 @@ void WorldThread::CheckAutoSave() {
 	QueueChunksToAutoSave();
 	m_persistenceIO.SaveWorld(CreateWorldSaveData());
 
-	m_nextAutoSaveTime += AUTO_SAVE_INTERVAL;
+	m_nextAutoSaveTime = now + AUTO_SAVE_INTERVAL;
 }
 
 
@@ -786,6 +803,9 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 	
 	CheckAutoSave();
+	if (m_hasPendingRaycast.load()) {
+		ProcRaycastRequest();
+	}
 
 
 	if (clock::now() >= deadline) return;
@@ -989,8 +1009,6 @@ bool WorldThread::RequestOneMissingChunkAround() {
 
 	auto& chunks = m_world.GetChunks();
 
-	auto worldInfo = m_world.GetWorldInfo();
-
 	while (m_nextLoadOffset < m_loadOffsets.size()) {
 
 		auto& offset = m_loadOffsets[m_nextLoadOffset];
@@ -1019,8 +1037,7 @@ bool WorldThread::RequestOneMissingChunkAround() {
 		}
 
 
-		if (worldInfo.action == WorldSelectionAction::LoadWorld && 
-			m_persistenceIO.CheckDataExistence(coord)) {
+		if (m_persistenceIO.CheckDataExistence(coord)) {
 
 
 			m_persistenceIO.RequestToLoadChunk(coord);
@@ -1217,6 +1234,10 @@ bool WorldThread::RequestEraseOneChunkAround() {
 
 		if (!shouldDestroy) {
 			continue;
+		}
+
+		if (c && c->dirtyToSave) {
+			QueueChunkToSave(*c);
 		}
 
 		QueueMeshDeletion(it->first);
@@ -1954,23 +1975,26 @@ void WorldThread::QueueChunksToAutoSave() {
 
 	for (auto& [key, c_ptr] : chunks) {
 		if (!c_ptr) continue;
-		if (!c_ptr->dirtyToSave) continue;
-		
-
-		ChunkSaveData data;
-		data.coord = c_ptr->coord;
-
-		data.blocks.assign(
-			c_ptr->blocks.begin(),
-			c_ptr->blocks.end()
-		);
-
-		m_persistenceIO.RequestToSaveChunk(std::move(data));
-
-		c_ptr->dirtyToSave = false;
-
+		QueueChunkToSave(*c_ptr);
 	}
 
+}
+
+
+void WorldThread::QueueChunkToSave(Chunk& chunk) {
+	if (!chunk.dirtyToSave) {
+		return;
+	}
+
+	ChunkSaveData data;
+	data.coord = chunk.coord;
+	data.blocks.assign(
+		chunk.blocks.begin(),
+		chunk.blocks.end()
+	);
+
+	m_persistenceIO.RequestToSaveChunk(std::move(data));
+	chunk.dirtyToSave = false;
 }
 
 
@@ -2206,19 +2230,60 @@ bool WorldThread::HasImmediateTask() {
 
 	return !m_lightTasks.empty() || !m_urgentLightTasks.empty() || 
 		    m_streamNeedsUpdate  ||  m_hasSettedDesireStreamC.load() ||
-		    m_hasSettedInput.load() || m_hasMovedMouse.load();
+		    m_hasSettedInput.load() || m_hasMovedMouse.load() ||
+			m_hasPendingRaycast.load();
 
 }
 
 
 
-RaycastHit WorldThread::RequestRaycast(const WorldPos& origin, const glm::vec3& dir, float distance) const {
+RaycastHit WorldThread::RequestRaycast(
+	const WorldPos& origin,
+	const glm::vec3& dir,
+	float distance
+) {
+	RaycastHit latest;
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+		latest = m_latestRaycastHit;
+		m_pendingRaycast = RaycastRequest{
+			origin,
+			dir,
+			distance
+		};
+		m_hasPendingRaycast.store(true);
+	}
 
-	return m_world.Raycast(
-		origin,
-		dir,
-		distance
+	Wake();
+	return latest;
+
+}
+
+
+void WorldThread::ProcRaycastRequest() {
+	std::optional<RaycastRequest> request;
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+		if (!m_pendingRaycast) {
+			m_hasPendingRaycast.store(false);
+			return;
+		}
+
+		request = std::move(m_pendingRaycast);
+		m_pendingRaycast.reset();
+		m_hasPendingRaycast.store(false);
+	}
+
+	const RaycastHit hit = m_world.Raycast(
+		request->origin,
+		request->direction,
+		request->distance
 	);
+
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+		m_latestRaycastHit = hit;
+	}
 
 }
 

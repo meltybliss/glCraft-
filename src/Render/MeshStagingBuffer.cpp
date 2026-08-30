@@ -5,6 +5,10 @@
 
 
 void MeshStagingBuffer::Init() {
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		acceptingReservations = true;
+	}
 
 	glGenBuffers(1, &buffer);
 
@@ -67,7 +71,7 @@ void MeshStagingBuffer::Init() {
 }
 
 
-MeshStagingBuffer::Reservation
+std::optional<MeshStagingBuffer::Reservation>
 MeshStagingBuffer::Acquire()
 {
 	std::unique_lock<std::mutex>
@@ -83,6 +87,10 @@ MeshStagingBuffer::Acquire()
 
 		[this, &freeIndex]()
 		{
+			if (!acceptingReservations) {
+				return true;
+			}
+
 			for (
 				std::size_t i = 0;
 				i < SLOT_COUNT;
@@ -105,6 +113,10 @@ MeshStagingBuffer::Acquire()
 		}
 	);
 
+	if (!acceptingReservations) {
+		return std::nullopt;
+	}
+
 
 	slots[freeIndex].state =
 		SlotState::CPUWriting;
@@ -125,6 +137,17 @@ MeshStagingBuffer::Acquire()
 
 
 	return result;
+}
+
+
+void MeshStagingBuffer::CancelPendingAcquires()
+{
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		acceptingReservations = false;
+	}
+
+	cv.notify_all();
 }
 
 
@@ -239,7 +262,7 @@ void MeshStagingBuffer::Destroy()
 	}
 
 
-	//I—¹‚¾‚¯‚È‚Ì‚Å‘Ò‚Á‚Ä‚æ‚¢
+	//çµ‚äº†æ™‚ã ã‘ãªã®ã§å¾…ã£ã¦ã‚ˆã„
 	glFinish();
 
 

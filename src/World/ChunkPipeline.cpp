@@ -156,9 +156,13 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 
 				auto reservation = m_meshStagingBuffer->Acquire();
+				if (!reservation) {
+					break;
+				}
+
 				if (!targetJob.meshGeneration.IsCurrent()) {
 					m_meshStagingBuffer->ReleaseWithoutGPU(
-						reservation.slotIndex
+						reservation->slotIndex
 					);
 					break;
 				}
@@ -168,7 +172,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 				if (vertexBytes > 0) {
 
 					std::memcpy(
-						reservation.ptr,
+						reservation->ptr,
 						data.vertices.data(),
 						vertexBytes
 
@@ -180,7 +184,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 				if (indexBytes > 0) {
 
 					std::memcpy(
-						reservation.ptr
+						reservation->ptr
 						+ vertexBytes,
 						data.indices.data(),
 
@@ -194,7 +198,7 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 				if (!targetJob.meshGeneration.IsCurrent()) {
 					m_meshStagingBuffer->ReleaseWithoutGPU(
-						reservation.slotIndex
+						reservation->slotIndex
 					);
 					break;
 				}
@@ -203,14 +207,14 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 				
 				StagedMeshData staged;
 
-				staged.slotIndex = reservation.slotIndex;
+				staged.slotIndex = reservation->slotIndex;
 
-				staged.vertexOffset = reservation.baseOffset;
+				staged.vertexOffset = reservation->baseOffset;
 
 				staged.vertexBytes = vertexBytes;
 
 				staged.indexOffset =
-					reservation.baseOffset
+					reservation->baseOffset
 					+ vertexBytes;
 
 				staged.indexBytes =
@@ -322,6 +326,7 @@ void ChunkPipeline::StartLoop() {
 
 void ChunkPipeline::StopWorkerThreads() {
 	runningWorker = false;
+	m_meshStagingBuffer->CancelPendingAcquires();
 
 	workerCv.notify_all();
 

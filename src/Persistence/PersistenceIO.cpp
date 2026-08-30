@@ -2,6 +2,7 @@
 #include "World/ChunkUtil.h"
 #include <algorithm>
 #include <iostream>
+#include <limits>
 
 void PersistenceIO::StartThread() {
 
@@ -63,8 +64,8 @@ void PersistenceIO::StartThreadLoop() {
 		}
 		
 
-		ProcLoadTasks();
 		ProcSaveTasks();
+		ProcLoadTasks();
 
 	}
 
@@ -74,9 +75,11 @@ void PersistenceIO::StartThreadLoop() {
 
 
 void PersistenceIO::RequestToSaveChunk(ChunkSaveData&& data) {
+	const ChunkCoord coord = data.coord;
 
 	{
 		std::lock_guard<std::mutex> lock(m_TaskMutex);
+		++m_pendingSaveCounts[coord];
 
 		m_chunkSaveTasks.push_back(
 			ChunkSaveTask{
@@ -190,6 +193,15 @@ void PersistenceIO::ProcSaveTasks() {
 		if (!ok) {
 			pendingResaveTasks.push_back(std::move(task));
 		}
+		else {
+			std::lock_guard<std::mutex> lock(m_TaskMutex);
+			auto pending = m_pendingSaveCounts.find(task.saveData.coord);
+			if (pending != m_pendingSaveCounts.end()) {
+				if (--pending->second == 0) {
+					m_pendingSaveCounts.erase(pending);
+				}
+			}
+		}
 
 	}
 
@@ -229,22 +241,27 @@ void PersistenceIO::ProcLoadTasks() {
 			if (m_chunkLoadTasks.empty()) break;
 			const ChunkCoord center = m_streamCoord;
 
-			auto nearestTask = std::min_element(
-				m_chunkLoadTasks.begin(),
-				m_chunkLoadTasks.end(),
-				[center](const ChunkLoadTask& a, const ChunkLoadTask& b) {
-					const int64_t distanceA = std::max(
-						std::abs(a.coord.x - center.x),
-						std::abs(a.coord.z - center.z)
-					);
-					const int64_t distanceB = std::max(
-						std::abs(b.coord.x - center.x),
-						std::abs(b.coord.z - center.z)
-					);
-
-					return distanceA < distanceB;
+			auto nearestTask = m_chunkLoadTasks.end();
+			int64_t nearestDistance = std::numeric_limits<int64_t>::max();
+			for (auto it = m_chunkLoadTasks.begin();
+				it != m_chunkLoadTasks.end(); ++it) {
+				if (m_pendingSaveCounts.contains(it->coord)) {
+					continue;
 				}
-			);
+
+				const int64_t distance = std::max(
+					std::abs(it->coord.x - center.x),
+					std::abs(it->coord.z - center.z)
+				);
+				if (distance < nearestDistance) {
+					nearestDistance = distance;
+					nearestTask = it;
+				}
+			}
+
+			if (nearestTask == m_chunkLoadTasks.end()) {
+				break;
+			}
 
 			task = std::move(*nearestTask);
 			m_chunkLoadTasks.erase(nearestTask);
@@ -311,7 +328,13 @@ void PersistenceIO::ProcLoadTasks() {
 }
 
 
-bool PersistenceIO::CheckDataExistence(ChunkCoord coord) const {
+bool PersistenceIO::CheckDataExistence(ChunkCoord coord) {
+	{
+		std::lock_guard<std::mutex> lock(m_TaskMutex);
+		if (m_pendingSaveCounts.contains(coord)) {
+			return true;
+		}
+	}
 
 	return c_diskStorage.CheckDataExistence(coord);
 
@@ -359,4 +382,33 @@ std::optional<WorldSaveData> PersistenceIO::LoadWorld() {
 		w_diskStorage.LoadFromDisk();
 
 	return data;
+}
+
+
+bool PersistenceIO::ResetWorldStorage() {
+	const bool restartThread = threadRunning.load();
+	if (restartThread) {
+		StopThread();
+	}
+
+	{
+		std::lock_guard<std::mutex> lock(m_TaskMutex);
+		m_chunkSaveTasks.clear();
+		m_chunkLoadTasks.clear();
+		m_pendingLoadKeys.clear();
+		m_pendingSaveCounts.clear();
+	}
+
+	{
+		std::lock_guard<std::mutex> lock(m_loadResultMutex);
+		m_chunkLoadedResult.clear();
+	}
+
+	const bool removed = w_diskStorage.DeleteWorldFromDisk();
+
+	if (restartThread) {
+		StartThread();
+	}
+
+	return removed;
 }

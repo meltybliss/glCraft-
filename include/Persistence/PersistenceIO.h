@@ -11,6 +11,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <deque>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -29,8 +30,9 @@ public:
 
 	void SaveWorld(WorldSaveData&& data);
 	std::optional<WorldSaveData> LoadWorld();
+	bool ResetWorldStorage();
 
-	bool CheckDataExistence(ChunkCoord coord) const;
+	bool CheckDataExistence(ChunkCoord coord);
 
 	std::optional<ChunkSaveData> PopChunkLoadedResult();
 private:
@@ -49,7 +51,7 @@ private:
 
 	std::thread chunkIOThread;
 	
-	std::atomic<bool> threadRunning;
+	std::atomic<bool> threadRunning = false;
 
 	std::mutex m_TaskMutex;
 	std::mutex m_loadResultMutex;
@@ -58,6 +60,7 @@ private:
 	std::deque<ChunkSaveTask> m_chunkSaveTasks;
 	std::deque<ChunkLoadTask> m_chunkLoadTasks;
 	std::unordered_set<ChunkCoord, ChunkCoordHash> m_pendingLoadKeys;
+	std::unordered_map<ChunkCoord, std::size_t, ChunkCoordHash> m_pendingSaveCounts;
 
 	
 

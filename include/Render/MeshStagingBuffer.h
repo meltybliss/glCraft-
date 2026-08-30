@@ -6,9 +6,10 @@
 #include <condition_variable>
 #include <cstdint>
 #include <mutex>
+#include <optional>
 
 
-//staging buffer‚Å‚·
+//staging bufferã§ã™
 class MeshStagingBuffer {
 public:
 
@@ -25,8 +26,8 @@ public:
     struct Reservation {
 
         std::size_t slotIndex = 0;
-        std::size_t baseOffset = 0;//staging buffer‘S‘Ì‚©‚çŒ©‚½æ“ªˆÊ’u
-        std::byte* ptr = nullptr;//worker‚ª‘‚«‚Şcpu pointer
+        std::size_t baseOffset = 0;//staging bufferå…¨ä½“ã‹ã‚‰è¦‹ãŸå…ˆé ­ä½ç½®
+        std::byte* ptr = nullptr;//workerãŒæ›¸ãè¾¼ã‚€cpu pointer
 
 
     };
@@ -35,9 +36,11 @@ public:
     void Destroy();
 
 
-    Reservation Acquire();
+    std::optional<Reservation> Acquire();
 
-    void ReleaseWithoutGPU(std::size_t slotIndex);//Ì‚Ä‚éê‡
+    void CancelPendingAcquires();
+
+    void ReleaseWithoutGPU(std::size_t slotIndex);//æ¨ã¦ã‚‹å ´åˆ
 
 
     void MarkGpuInFlight(std::size_t slotIndex, GLsync fence);
@@ -54,12 +57,12 @@ private:
     enum class SlotState
     {
         Free,
-        //Worker‚ªŒ»İ‘‚¢‚Ä‚¢‚é
+        //WorkerãŒç¾åœ¨æ›¸ã„ã¦ã„ã‚‹
         CPUWriting,
-        ///memcpyŠ®—¹
+        ///memcpyå®Œäº†
         ReadyForGPU,
 
-        //GPU‚ªŒ»İ“Ç‚ñ‚Å‚¢‚é
+        //GPUãŒç¾åœ¨èª­ã‚“ã§ã„ã‚‹
         GPUReading
     };
 
@@ -82,5 +85,6 @@ private:
 
     std::mutex mutex;
     std::condition_variable cv;
+    bool acceptingReservations = true;
 
 };

@@ -241,6 +241,7 @@ void Application::Tick_main() {
 					std::cerr << "failed to load the world\n";
 
 					//create new world
+					worldInfo.action = WorldSelectionAction::CreateNew;
 
 					m_session.CreateNewWorld();
 				

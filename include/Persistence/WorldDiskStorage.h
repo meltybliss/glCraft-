@@ -11,6 +11,7 @@ public:
 
 	bool SaveToDisk(const WorldSaveData& saveData) const;
 	std::optional<WorldSaveData> LoadFromDisk() const;
+	bool DeleteWorldFromDisk() const;
 
 
 private:

@@ -92,7 +92,7 @@ public:
 
 	void AddMouseDelta(float xoffset, float yoffset);
 
-	RaycastHit RequestRaycast(const WorldPos& origin, const glm::vec3& dir, float distance) const;
+	RaycastHit RequestRaycast(const WorldPos& origin, const glm::vec3& dir, float distance);
 
 
 	void Rebuild_allChunks();
@@ -153,7 +153,8 @@ private:
 		std::numeric_limits<int64_t>::max()
 	};
 
-	std::atomic<bool> runningWorldThread;
+	std::atomic<bool> runningWorldThread = false;
+	bool m_worldStarted = false;
 
 	bool m_streamNeedsUpdate = false;
 
@@ -195,7 +196,7 @@ private:
 	size_t m_nextLoadOffset = 0;
 
 
-	std::atomic<bool> m_firstTimeCreatePlSnap;
+	std::atomic<bool> m_firstTimeCreatePlSnap = true;
 
 
 	using Clock = std::chrono::steady_clock;
@@ -223,6 +224,17 @@ private:
 
 	glm::i64vec3 m_lightVolumeCenter{0};
 	std::optional<glm::i64vec3> m_lastLightVolumeSnapshotOrigin;
+
+	struct RaycastRequest {
+		WorldPos origin;
+		glm::vec3 direction{0.0f};
+		float distance = 0.0f;
+	};
+
+	std::mutex m_raycastMutex;
+	std::optional<RaycastRequest> m_pendingRaycast;
+	RaycastHit m_latestRaycastHit{};
+	std::atomic<bool> m_hasPendingRaycast = false;
 
 
 
@@ -263,6 +275,7 @@ private:
 	);
 
 	void QueueChunksToAutoSave();
+	void QueueChunkToSave(Chunk& chunk);
 	void ForcedSave_World();
 	void ForcedSave_Chunks();
 
@@ -274,6 +287,7 @@ private:
 	void ApplyStreamCenter();
 
 	void ApplyPlayerStatus(float dt);
+	void ProcRaycastRequest();
 
 	
 	void ApplyMouseMovement();
