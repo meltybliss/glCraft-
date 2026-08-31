@@ -14,6 +14,7 @@
 #include "Snapshot/SnapshotExchanger.h"
 #include "Debugs/DebugSettings.h"
 #include "WorldConfig.h"
+#include "RaycastHit.h"
 #include "Render/MeshStagingBuffer.h"
 #include <chrono>
 #include <thread>
@@ -119,6 +120,15 @@ public:
 		return m_meshStagingBuffer;
 	}
 
+
+	void SubmitRaycast(
+		const WorldPos& origin,
+		const glm::vec3& dir,
+		float distance
+	);
+
+
+	std::optional<RaycastHit> GetLatestRaycastResult();
 private:
 	
 
@@ -238,6 +248,7 @@ private:
 
 
 
+
 private:
  
 
@@ -253,6 +264,8 @@ private:
 
 private:
 
+
+
 private:
 
 	void ProcCommands();
@@ -262,6 +275,8 @@ private:
 	void ProcOneChunkResult();
 
 	void ProcOne_Disk_ChunkLoadResult();
+
+	void ProcRaycastRequest();
 
 	void ProcCreateLightVSnap();
 	void ProcCreatePointLightsSnapshot();
@@ -287,7 +302,7 @@ private:
 	void ApplyStreamCenter();
 
 	void ApplyPlayerStatus(float dt);
-	void ProcRaycastRequest();
+	
 
 	
 	void ApplyMouseMovement();

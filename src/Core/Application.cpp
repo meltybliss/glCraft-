@@ -78,7 +78,7 @@ void Application::Run() {
 			float fps = static_cast<float>(frameCount) / fpsTimer;
 
 			std::string title =
-				"glCraft++ | FPS: " + std::to_string(static_cast<int>(fps));
+				"glVoxel++ | FPS: " + std::to_string(static_cast<int>(fps));
 
 			glfwSetWindowTitle(m_window, title.c_str());
 
@@ -417,7 +417,7 @@ bool Application::InitGL() {
 	);
 
 
-	m_window = glfwCreateWindow(WindowSize::windowWidth, WindowSize::windowHeight, "glCraft++", nullptr, nullptr);
+	m_window = glfwCreateWindow(WindowSize::windowWidth, WindowSize::windowHeight, "glVoxel++", nullptr, nullptr);
 
 	if (!m_window) {
 		glfwTerminate();
@@ -647,7 +647,21 @@ void Application::UpdateRayHit() {
 
 	float distance = 4.0f;
 
-	lastHit = m_session.GetWorldThread().RequestRaycast(origin, rayDir, distance);
+	auto& worldThread =
+		m_session.GetWorldThread();
+
+	worldThread.SubmitRaycast(
+		origin,
+		rayDir,
+		distance
+	);
+
+	if (auto result =
+		worldThread.GetLatestRaycastResult())
+	{
+		lastHit = *result;
+	}
+
 
 }
 

@@ -111,7 +111,8 @@ void main() {
     float day = clamp(uDayFactor, 0.0, 1.0);
     float nightFactor = 1.0 - day;
     float aboveHorizon = smoothstep(-0.004, 0.004, worldDirection.y);
-    // A smooth positive height avoids the old hard crease exactly at the horizon.
+   
+
     float height = max(worldDirection.y, 0.0);
     height = height * height / (height + 0.025);
 
@@ -121,7 +122,8 @@ void main() {
     float skyEnergy = max(day, afterglow * 0.20);
     vec3 topColor = mix(nightTopColor * 0.38,
         dayTopColor * vec3(0.40, 0.42, 0.48), skyEnergy);
-    // Warm aerosol haze stays near the horizon; the upper sky remains blue.
+ 
+
     float horizonWeight = exp(-height * mix(4.5, 9.0, twilight));
     vec3 skyColor = mix(topColor, horizonColor, horizonWeight);
 

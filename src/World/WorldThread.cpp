@@ -1141,6 +1141,69 @@ bool WorldThread::HasChunkToCreate() {
 }
 
 
+
+void WorldThread::SubmitRaycast(
+	const WorldPos& origin,
+	const glm::vec3& dir,
+	float distance
+)
+{
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+
+		m_pendingRaycast = RaycastRequest{
+			origin,
+			dir,
+			distance
+		};
+
+		m_hasPendingRaycast.store(true);
+	}
+
+	Wake();
+}
+
+
+std::optional<RaycastHit>
+WorldThread::GetLatestRaycastResult()
+{
+	std::lock_guard<std::mutex> lock(m_raycastMutex);
+
+	return m_latestRaycastHit;
+}
+
+void WorldThread::ProcRaycastRequest()
+{
+	std::optional<RaycastRequest> request;
+
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+
+		if (!m_pendingRaycast) {
+			m_hasPendingRaycast.store(false);
+			return;
+		}
+
+		request = std::move(m_pendingRaycast);
+		m_pendingRaycast.reset();
+
+		
+		m_hasPendingRaycast.store(false);
+	}
+
+	RaycastHit result =
+		m_world.Raycast(
+			request->origin,
+			request->direction,
+			request->distance
+		);
+
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+		m_latestRaycastHit = result;
+	}
+}
+
 bool WorldThread::IsChunkWithinUnloadRange(ChunkCoord coord) const {
 	const int64_t dx =
 		coord.x - m_lastStreamCoord.x;
@@ -2260,32 +2323,6 @@ RaycastHit WorldThread::RequestRaycast(
 }
 
 
-void WorldThread::ProcRaycastRequest() {
-	std::optional<RaycastRequest> request;
-	{
-		std::lock_guard<std::mutex> lock(m_raycastMutex);
-		if (!m_pendingRaycast) {
-			m_hasPendingRaycast.store(false);
-			return;
-		}
-
-		request = std::move(m_pendingRaycast);
-		m_pendingRaycast.reset();
-		m_hasPendingRaycast.store(false);
-	}
-
-	const RaycastHit hit = m_world.Raycast(
-		request->origin,
-		request->direction,
-		request->distance
-	);
-
-	{
-		std::lock_guard<std::mutex> lock(m_raycastMutex);
-		m_latestRaycastHit = hit;
-	}
-
-}
 
 
 void WorldThread::ApplyPlayerStatus(float dt) {

@@ -41,11 +41,11 @@ static NoiseAxis SplitWorldCoordinate(
 		FloorMod(world, scale);
 
 	// ここは小さい値。
-	// 例: 45 + 23.7
+
 	const double local =
 		static_cast<double>(remainder) + offset;
 
-	// warpによって隣のnoise cellまで行く可能性がある
+	//warpによって隣のnoise cellまで行く可能性がある
 	const double shiftD =
 		std::floor(
 			local / static_cast<double>(scale)
@@ -77,7 +77,7 @@ public:
 		const int64_t x1 = x0 + 1;
 		const int64_t z1 = z0 + 1;
 
-		// 格子マス内での位置。常に 0.0 ～ 1.0
+		//格子マス内での位置。常に 0.0～1.0
 		const double tx = x - static_cast<double>(x0);
 		const double tz = z - static_cast<double>(z0);
 
@@ -86,7 +86,7 @@ public:
 		const double n01 = DotGradient(x0, z1, tx, tz - 1.0);
 		const double n11 = DotGradient(x1, z1, tx - 1.0, tz - 1.0);
 
-		// 格子の中で、急に折れないよう滑らかに混ぜる割合
+		//格子の中で、急に折れないよう滑らかに混ぜる割合
 		const double u = Fade(tx);
 		const double v = Fade(tz);
 
@@ -210,16 +210,23 @@ public:
 		double minHeight = 4.0;
 		double maxHeight = 248.0;
 
-		// 山の最大規模。
-		// World heightを512などにするなら200～400くらいまで上げられる。
+		//山の最大規模。
+
 		double mountainHeight = 170.0;
 
-		// 山脈を曲げる強さ
+		//山脈を曲げる強さ
 		double warpStrength = 220.0;
+
+		//断崖の高低差。heightmapなのでオーバーハングは作らない。
+		double cliffHeight = 42.0;
+
+		//峡谷 / ravine の最大の掘り下げ量。
+		double canyonDepth = 58.0;
 	};
 
 	explicit RealisticTerrain2D(uint64_t seed)
-		: RealisticTerrain2D(seed, Settings{}) {}
+		: RealisticTerrain2D(seed, Settings{}) {
+	}
 
 	RealisticTerrain2D(uint64_t seed, Settings settings)
 		:
@@ -236,16 +243,15 @@ public:
 		m_warpX(seed + 0x7000),
 		m_warpZ(seed + 0x8000),
 
-		m_detail(seed + 0x9000)
+		m_detail(seed + 0x9000),
+
+		m_cliffs(seed + 0xA000),
+		m_canyons(seed + 0xB000)
 	{
 	}
 
 	double GetHeight(int64_t worldX, int64_t worldZ) const {
-		// Only the height function changes. Coordinates stay int64_t, and no
-		// neighboring chunks, caches, or generation order are needed.
-		// Existing saved chunks retain their old terrain: test in a new world.
 
-		// 1. Broad, gentle domain warp. Short-wave warp can fold slopes into walls.
 		const double warpX = FBmWorld(
 			m_warpX, worldX, worldZ, 0.0, 0.0, 1600, 2, 0.40);
 		const double warpZ = FBmWorld(
@@ -253,8 +259,7 @@ public:
 		const double warpOffsetX = warpX * m_settings.warpStrength;
 		const double warpOffsetZ = warpZ * m_settings.warpStrength;
 
-		// 2. Continental relief and foothills have a much larger wavelength
-		// than the ridges. The height limit and the chunk layout are unchanged.
+
 		const double continent = FBmWorld(
 			m_continent, worldX, worldZ,
 			warpOffsetX, warpOffsetZ, 4800, 3, 0.42);
@@ -269,16 +274,14 @@ public:
 			warpOffsetX, warpOffsetZ, 640, 3, 0.40);
 		height += hills * 14.0 * landMask;
 
-		// 3. A continuous mountain envelope creates long foothills rather
-		// than a high ridge abruptly appearing at the edge of a mountain region.
+
 		const double mountainRegionNoise = FBmWorld(
 			m_mountainRegion, worldX, worldZ,
 			warpOffsetX, warpOffsetZ, 2600, 3, 0.42);
 		const double mountainMask = landMask *
 			Smoothstep(0.43, 0.64, mountainRegionNoise * 0.5 + 0.5);
 
-		// 4. Broad connected ridges; the smallest octave is 72 blocks, not 16.
-		// Fine relief loses amplitude faster than its frequency increases.
+
 		const double ridges = RidgedFBmWorld(
 			m_ridges, worldX, worldZ,
 			warpOffsetX, warpOffsetZ, 1152, 5, 0.38);
@@ -286,23 +289,70 @@ public:
 		const double mountainRelief = mountainMask *
 			(28.0 + ridgeShape * m_settings.mountainHeight);
 
-		// 5. A broad valley floor blends into the surrounding mountain relief.
-		// Do not subtract an independent 72-block trench from the completed
-		// terrain: that can cut across both a ridge and its foothill.
+
 		const double valleyNoise = std::abs(FBmWorld(
 			m_valleys, worldX, worldZ,
 			warpOffsetX, warpOffsetZ, 1536, 3, 0.40));
 		const double valley = 1.0 - Smoothstep(0.018, 0.18, valleyNoise);
 		height += mountainRelief * (1.0 - 0.72 * valley);
 
-		// 6. Small details stay small, especially on the valley floor.
+
+	
+		const double cliffNoise = FBmWorld(
+			m_cliffs, worldX, worldZ,
+			warpOffsetX + 311.0, warpOffsetZ - 197.0, 1100, 2, 0.42);
+
+		const double cliffSide =
+			Smoothstep(-0.028, 0.028, cliffNoise);
+
+	
+		const double cliffMask =
+			landMask * (0.30 + 0.70 * mountainMask) *
+			(1.0 - 0.65 * valley * mountainMask);
+
+		height +=
+			(cliffSide - 0.5) *
+			m_settings.cliffHeight *
+			cliffMask;
+
+
+		const double canyonNoise = FBmWorld(
+			m_canyons, worldX, worldZ,
+			warpOffsetX - 523.0, warpOffsetZ + 719.0, 1400, 3, 0.40);
+
+		const double canyonDistance =
+			std::abs(canyonNoise);
+
+		const double canyonBand =
+			1.0 - Smoothstep(0.012, 0.090, canyonDistance);
+
+		const double ravineCore =
+			1.0 - Smoothstep(0.004, 0.030, canyonDistance);
+
+		// Avoid carving deep trenches through the ocean / very low coast.
+		const double canyonAltitudeMask =
+			Smoothstep(
+				m_settings.seaLevel + 10.0,
+				m_settings.seaLevel + 52.0,
+				height
+			);
+
+		const double canyonCut =
+			m_settings.canyonDepth *
+			(0.68 * canyonBand + 0.32 * ravineCore) *
+			landMask *
+			canyonAltitudeMask;
+
+		height -= canyonCut;
+
+
+		
 		const double detail = FBmWorld(
 			m_detail, worldX, worldZ, 0.0, 0.0, 96, 2, 0.35);
 		height += detail * (1.8 + 1.8 * mountainMask) *
 			landMask * (1.0 - 0.65 * valley * mountainMask);
 
-		// Approach the ceiling smoothly, avoiding flat clipped mountaintops.
-		// The final clamp is only a safety bound, not the mountain shape.
+
 		const double headroom = std::min(24.0,
 			(m_settings.maxHeight - m_settings.minHeight) * 0.15);
 		const double shoulder = m_settings.maxHeight - headroom;
@@ -330,6 +380,9 @@ private:
 	PerlinNoise2D m_warpZ;
 
 	PerlinNoise2D m_detail;
+
+	PerlinNoise2D m_cliffs;
+	PerlinNoise2D m_canyons;
 
 
 	static double Smoothstep(
@@ -420,7 +473,7 @@ private:
 
 			amplitude *= persistence;
 
-			// frequency *= 2 と同じ意味
+			//frequency *= 2 と同じ意味
 			scale /= 2;
 
 			if (scale < 1) {
@@ -457,30 +510,14 @@ private:
 					z * frequency
 				);
 
-			/*
-			 * -1..1
-			 *
-			 * ↓ abs
-			 *
-			 * 0..1
-			 *
-			 * ↓ invert
-			 *
-			 * noise=0 の場所が尾根になる
-			 */
+
 
 			double ridge =
 				1.0 - std::abs(n);
 
 			ridge *= ridge;
 
-			/*
-			 * 前octaveの大きなridge付近だけ
-			 * 細かいridgeを強くする。
-			 *
-			 * 山の表面全体が均等に
-			 * ギザギザするのを防ぐ。
-			 */
+
 
 			ridge *= previous;
 
@@ -536,8 +573,8 @@ private:
 				noise.NoiseWorld(
 					worldX,
 					worldZ,
-						offsetX + octaveOffsetX,
-						offsetZ + octaveOffsetZ,
+					offsetX + octaveOffsetX,
+					offsetZ + octaveOffsetZ,
 					scale
 				);
 

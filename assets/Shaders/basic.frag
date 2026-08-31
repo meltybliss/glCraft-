@@ -97,7 +97,7 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 
 const float PI = 3.14159265359;
 const float DETAIL_STRENGTH = 0.22;
-const float BLOCK_LIGHT_STRENGTH = 0.85;
+const float BLOCK_LIGHT_STRENGTH = 0.75;
 const float POINT_LIGHT_STRENGTH = 1.0;
 
 vec3 SafeNormalize(vec3 v, vec3 fallback) {
@@ -261,8 +261,18 @@ vec3 GetLightFromLightV(vec3 fallbackLight) {
     
 
 
-    float valid = step(0.5, sampleLight.a) * smoothstep(0.0, 1.5, edge);
-    return mix(fallbackLight, max(sampleLight.rgb, vec3(0.0)), valid);
+    float volumeValid =
+        smoothstep(
+            0.0,
+            1.5,
+            edge
+        );
+
+    return mix(
+        fallbackLight,
+        max(sampleLight.rgb, vec3(0.0)),
+        volumeValid
+    );
 }
 
 float CalcFogFactor() {
