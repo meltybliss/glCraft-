@@ -417,6 +417,27 @@ bool Application::InitGL() {
 	);
 
 
+	GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+
+	if (!monitor) {
+		glfwTerminate();
+		return false;
+	}
+
+
+	const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+
+	if (!mode) {
+		glfwTerminate();
+		return false;
+	}
+
+	WindowSize::windowWidth =
+		static_cast<float>(mode->width);
+
+	WindowSize::windowHeight =
+		static_cast<float>(mode->height);
+
 	m_window = glfwCreateWindow(WindowSize::windowWidth, WindowSize::windowHeight, "glVoxel++", nullptr, nullptr);
 
 	if (!m_window) {
@@ -752,3 +773,5 @@ float Application::CalcInterpolationAlpha(const PlayerSnapshot& previous, const 
 	);
 
 }
+
+

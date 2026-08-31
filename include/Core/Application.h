@@ -107,5 +107,5 @@ private:
 
 	double lastSpacePressTime = -1000.0;
 	double spectateDoubleTime = 0.5;
-	
+
 };
