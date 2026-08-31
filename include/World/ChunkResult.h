@@ -5,6 +5,8 @@
 #include <optional>
 #include "World/ChunkCoord.h"
 
+#include "Render/StagedMeshData.h"
+#include "Render/MeshGeneration.h"
 
 struct GeneratedChunkResult {
 	ChunkCoord key;
@@ -13,5 +15,6 @@ struct GeneratedChunkResult {
 
 struct MeshChunkResult {
 	ChunkCoord key;
-	std::optional<MeshData> meshData;
+	std::optional<StagedMeshData> stagedMesh;
+	MeshGenerationStamp generation;
 };

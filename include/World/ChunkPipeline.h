@@ -20,12 +20,13 @@ using namespace ChunkUtil;
 
 class WorldThread;
 class World;
+class MeshStagingBuffer;
 
 
 class ChunkPipeline {
 public:
 
-	ChunkPipeline(World* w) : m_world(w) {}
+	ChunkPipeline(World* w, MeshStagingBuffer* stagingBuffer) : m_world(w), m_meshStagingBuffer(stagingBuffer) {}
 
 	void SetWorldSeed(uint64_t seed) {
 		m_terrainGen = std::make_unique<TerrainGenerator>(seed);
@@ -65,10 +66,12 @@ private:
 private:
 
 	int WorkerCount = 0;
-	constexpr static int MAX_WORKER_COUNT = 5;
+	constexpr static int MAX_WORKER_COUNT = 2;
 
 private:
 	World* m_world = nullptr;
+	MeshStagingBuffer* m_meshStagingBuffer = nullptr;
+
 	std::unique_ptr<TerrainGenerator> m_terrainGen;
 
 	std::vector<std::thread> m_workers;

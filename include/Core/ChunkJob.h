@@ -3,6 +3,7 @@
 #include <memory>
 #include "Snapshot/ChunkMeshSnapshot.h"
 #include "World/ChunkCoord.h"
+#include "Render/MeshGeneration.h"
 
 enum JobType {
 	CREATE_CHUNK,
@@ -17,4 +18,6 @@ struct ChunkJob {
 
 	JobType type;
 	std::unique_ptr<ChunkMeshSnapshot> snapshot;//for BUILD_MESH
+	MeshGenerationStamp meshGeneration;
+
 };

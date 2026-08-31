@@ -2,11 +2,27 @@
 #include "Persistence/PersistenceIO.h"
 #include "Render/Camera.h"
 #include "World/TerrainGenerator.h"
+#include "Render/MeshUpdateContext.h"
 #include <iostream>
+#include <algorithm>
 
 
 
 void WorldThread::CreateNewWorld(uint64_t seed) {
+	if (!m_persistenceIO.ResetWorldStorage()) {
+		std::cerr << "failed to remove the previous world data\n";
+	}
+
+	m_exchanger.ClearLightVolumeSnaps();
+	m_lastLightVolumeSnapshotOrigin.reset();
+	m_lightVolumeForceFullUpdate.store(true);
+	m_lightVolumeDirty.store(true);
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+		m_pendingRaycast.reset();
+		m_latestRaycastHit = {};
+		m_hasPendingRaycast.store(false);
+	}
 
 	m_world.SetWorldSeed(seed);
 
@@ -14,6 +30,15 @@ void WorldThread::CreateNewWorld(uint64_t seed) {
 }
 
 void WorldThread::ApplyLoadedWorld(WorldSaveData& saveData) {
+
+	m_exchanger.ClearLightVolumeSnaps();
+	m_lastLightVolumeSnapshotOrigin.reset();
+	m_lightVolumeForceFullUpdate.store(true);
+	m_lightVolumeDirty.store(true);
+	{
+		std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
+		m_lightVolumeCenter = saveData.playerPos.block;
+	}
 
 	m_world.SetWorldSeed(saveData.seed);
 	m_chunkPipeline.SetWorldSeed(saveData.seed);
@@ -36,6 +61,12 @@ void WorldThread::StartThread() {
 		return;
 	}
 
+	{
+		std::lock_guard<std::mutex> lock(waitMutex);
+		requestedToWake = false;
+	}
+	m_nextAutoSaveTime = Clock::now() + AUTO_SAVE_INTERVAL;
+	m_worldStarted = true;
 	runningWorldThread.store(true);
 
 	m_chunkPipeline.SetResultReadyCallback(
@@ -103,10 +134,9 @@ void WorldThread::StartThread() {
 
 					return !runningWorldThread.load() || requestedToWake;
 				});
+
+				requestedToWake = false;
 			}
-
-
-			requestedToWake = false;
 
 		}
 
@@ -117,6 +147,7 @@ void WorldThread::StartThread() {
 
 
 void WorldThread::StopThread() {
+	const bool hadStartedWorld = m_worldStarted;
 
 	runningWorldThread.store(false);
 
@@ -127,13 +158,15 @@ void WorldThread::StopThread() {
 	}
 
 
-	//ここで強制的にworldをsaveし、dirtyToSaveのchunksをtask化する。
-	ForcedSave_World();
-	ForcedSave_Chunks();
+	if (hadStartedWorld) {
+		m_chunkPipeline.StopWorkerThreads();
 
+		// Worldを実際に開始した場合だけ、終了時の状態を保存する。
+		ForcedSave_World();
+		ForcedSave_Chunks();
+	}
 
-
-	m_chunkPipeline.StopWorkerThreads();
+	m_worldStarted = false;
 	m_persistenceIO.StopThread();
 }
 
@@ -188,7 +221,7 @@ void WorldThread::CheckAutoSave() {
 	QueueChunksToAutoSave();
 	m_persistenceIO.SaveWorld(CreateWorldSaveData());
 
-	m_nextAutoSaveTime += AUTO_SAVE_INTERVAL;
+	m_nextAutoSaveTime = now + AUTO_SAVE_INTERVAL;
 }
 
 
@@ -294,6 +327,20 @@ void WorldThread::ApplyEditBlock(
 	const bool newIsAir = (b == BlockType::AIR);
 
 	auto result = m_world.SetBlockGlobal_User(x, y, z, b);
+
+	if (!result.blockChanged) {
+
+		return;
+	}
+
+
+	auto context = std::make_shared<MeshUpdateContext>();
+
+
+
+	InvalidateMeshGeneration(*c, *context);//世代を新しくします
+
+
 	if (result.pointLightChanged) {
 		m_pointLightDirty = true;
 	}
@@ -307,14 +354,16 @@ void WorldThread::ApplyEditBlock(
 			y,
 			z,
 			GetEmission(b),
-			true
+			true,
+			context
 		);
 
 		Start_RemoveSkyLightTask(
 			x,
 			y,
 			z,
-			true
+			true,
+			context
 		);
 
 	}
@@ -326,7 +375,8 @@ void WorldThread::ApplyEditBlock(
 				x,
 				y,
 				z,
-				true
+				true,
+				context
 			);
 			
 
@@ -337,12 +387,13 @@ void WorldThread::ApplyEditBlock(
 				x,
 				y,
 				z,
-				true
+				true,
+				context
 			);
 		}
 
 
-		Add_SkylightTask(x, y, z, true);
+		Add_SkylightTask(x, y, z, true, context);
 
 		
 	}
@@ -355,7 +406,8 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 
 	static constexpr int dirs[6][3] = {
@@ -403,7 +455,8 @@ void WorldThread::Start_BlockLightTaskFromNeighbors(
 		z,
 		strongest - 1,
 		color,
-		urgent
+		urgent,
+		ctx
 	);
 
 }
@@ -413,7 +466,8 @@ void WorldThread::Start_RemoveBlockLightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 	
@@ -429,6 +483,8 @@ void WorldThread::Start_RemoveBlockLightTask(
 	task.emissionAfterRemove = 0;
 
 	task.urgent = urgent;
+
+	task.ctx = ctx;
 
 	m_lightEngine.StartRemoveBlockLightTask(
 		m_world,
@@ -460,7 +516,8 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 	int64_t y,
 	int64_t z,
 	uint8_t emissionAfterRemove,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
 
@@ -476,7 +533,7 @@ void WorldThread::Start_RemoveBlockLightTask_WithEmissionTask(
 	task.phase = Phase::REMOVE;
 	task.emissionAfterRemove = emissionAfterRemove;
 	task.urgent = urgent;
-
+	task.ctx = ctx;
 
 	m_lightEngine.StartRemoveBlockLightTask(
 		m_world,
@@ -503,7 +560,8 @@ void WorldThread::Start_RemoveSkyLightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 
 ) {
 
@@ -517,7 +575,7 @@ void WorldThread::Start_RemoveSkyLightTask(
 	task.lightType = LightType::SKY;
 	task.phase = Phase::REMOVE;
 	task.urgent = urgent;
-
+	task.ctx = ctx;
 
 	m_lightEngine.StartRemoveSkyLightTask(
 		m_world,
@@ -549,7 +607,8 @@ void WorldThread::Start_BlockLightTask(
 	int64_t z,
 	uint8_t level,
 	const glm::vec3& color,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 
 ) {
 	if (y >= Chunk::CHUNK_HEIGHT || y < 0) return;
@@ -565,7 +624,7 @@ void WorldThread::Start_BlockLightTask(
 	task.lightType = LightType::BLOCK;
 
 	task.urgent = urgent;
-
+	task.ctx = ctx;
 
 	m_lightEngine.AddLightLevel(
 		m_world,
@@ -595,7 +654,8 @@ void WorldThread::Start_SkyLightTask(
 	int64_t y,
 	int64_t z,
 	int level,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) return;
 	//if (level == 0) return;
@@ -607,6 +667,7 @@ void WorldThread::Start_SkyLightTask(
 	);
 	task.lightType = LightType::SKY;
 	task.urgent = urgent;
+	task.ctx = ctx;
 
 
 	if (level <= 0) {
@@ -650,7 +711,8 @@ void WorldThread::Add_SkylightTask(
 	int64_t x,
 	int64_t y,
 	int64_t z,
-	bool urgent
+	bool urgent,
+	const std::shared_ptr<MeshUpdateContext>& ctx
 ) {
 
 	if (y < 0 || y >= Chunk::CHUNK_HEIGHT) {
@@ -677,7 +739,7 @@ void WorldThread::Add_SkylightTask(
 
 		if (aboveIsAir && aboveSky == 15) {
 			
-			Start_SkyLightTask(x, y, z, 15, urgent);
+			Start_SkyLightTask(x, y, z, 15, urgent, ctx);
 			return;
 		}
 
@@ -703,7 +765,7 @@ void WorldThread::Add_SkylightTask(
 
 
 	
-	Start_SkyLightTask(x, y, z, strongest - 1, urgent);
+	Start_SkyLightTask(x, y, z, strongest - 1, urgent, ctx);
 	
 	
 }
@@ -735,7 +797,15 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 	using clock = std::chrono::steady_clock;
 
+	constexpr auto LIGHT_SLICE = std::chrono::microseconds(700);
+	constexpr auto MESH_RESERVE = std::chrono::microseconds(500);
+
+
+	
 	CheckAutoSave();
+	if (m_hasPendingRaycast.load()) {
+		ProcRaycastRequest();
+	}
 
 
 	if (clock::now() >= deadline) return;
@@ -768,9 +838,15 @@ void WorldThread::TickBackground(std::chrono::steady_clock::time_point deadline)
 
 		ProcOne_Disk_ChunkLoadResult();
 
-		if (clock::now() >= deadline) break;
+		const auto now = clock::now();
+		const auto lightDeadline = std::min(
+			now + LIGHT_SLICE,
+			deadline - MESH_RESERVE
+		);
+		if (now < lightDeadline) {
+			ProcLightTasks(lightDeadline);
+		}
 
-		ProcLightTasks(deadline);
 		if (clock::now() >= deadline) break;
 
 		DispatchOneDirtyMeshJob();
@@ -796,6 +872,7 @@ void WorldThread::CheckBlockLightChangesForLightVolume(
 			pos.y,
 			pos.z))
 		{
+			m_lightVolumeForceFullUpdate.store(true);
 			m_lightVolumeDirty.store(true);
 			break;
 		}
@@ -932,8 +1009,6 @@ bool WorldThread::RequestOneMissingChunkAround() {
 
 	auto& chunks = m_world.GetChunks();
 
-	auto worldInfo = m_world.GetWorldInfo();
-
 	while (m_nextLoadOffset < m_loadOffsets.size()) {
 
 		auto& offset = m_loadOffsets[m_nextLoadOffset];
@@ -962,8 +1037,7 @@ bool WorldThread::RequestOneMissingChunkAround() {
 		}
 
 
-		if (worldInfo.action == WorldSelectionAction::LoadWorld && 
-			m_persistenceIO.CheckDataExistence(coord)) {
+		if (m_persistenceIO.CheckDataExistence(coord)) {
 
 
 			m_persistenceIO.RequestToLoadChunk(coord);
@@ -1007,8 +1081,11 @@ void WorldThread::ProcOne_Disk_ChunkLoadResult() {
 		chunks[coord] = std::move(c);
 
 
-		Start_BlockLightTaskForNewChunk(*chunks[coord]);
-		Start_SkyLightTaskForNewChunk(*chunks[coord]);
+		auto ctx = std::make_shared<MeshUpdateContext>();
+
+
+		Start_BlockLightTaskForNewChunk(*chunks[coord], ctx);
+		Start_SkyLightTaskForNewChunk(*chunks[coord], ctx);
 
 	}
 }
@@ -1064,6 +1141,69 @@ bool WorldThread::HasChunkToCreate() {
 }
 
 
+
+void WorldThread::SubmitRaycast(
+	const WorldPos& origin,
+	const glm::vec3& dir,
+	float distance
+)
+{
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+
+		m_pendingRaycast = RaycastRequest{
+			origin,
+			dir,
+			distance
+		};
+
+		m_hasPendingRaycast.store(true);
+	}
+
+	Wake();
+}
+
+
+std::optional<RaycastHit>
+WorldThread::GetLatestRaycastResult()
+{
+	std::lock_guard<std::mutex> lock(m_raycastMutex);
+
+	return m_latestRaycastHit;
+}
+
+void WorldThread::ProcRaycastRequest()
+{
+	std::optional<RaycastRequest> request;
+
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+
+		if (!m_pendingRaycast) {
+			m_hasPendingRaycast.store(false);
+			return;
+		}
+
+		request = std::move(m_pendingRaycast);
+		m_pendingRaycast.reset();
+
+		
+		m_hasPendingRaycast.store(false);
+	}
+
+	RaycastHit result =
+		m_world.Raycast(
+			request->origin,
+			request->direction,
+			request->distance
+		);
+
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+		m_latestRaycastHit = result;
+	}
+}
+
 bool WorldThread::IsChunkWithinUnloadRange(ChunkCoord coord) const {
 	const int64_t dx =
 		coord.x - m_lastStreamCoord.x;
@@ -1076,15 +1216,33 @@ bool WorldThread::IsChunkWithinUnloadRange(ChunkCoord coord) const {
 
 
 void WorldThread::QueueMeshDeletion(ChunkCoord key) {
+	if (Chunk* chunk = m_world.GetTargetChunkFromKey(key)) {
+		chunk->AdvanceMeshGeneration();
+	}
+
 	{
 		std::lock_guard<std::mutex> lock(pendingMeshMutex);
 
-		std::erase_if(
-			m_pendingMeshData,
-			[key](const PendingMesh& mesh) {
-				return mesh.key == key;
+		for (auto it = m_pendingMeshData.begin();
+			it != m_pendingMeshData.end();
+			)
+		{
+			if (it->key == key)
+			{
+				m_meshStagingBuffer
+					.ReleaseWithoutGPU(
+						it->stagedMesh.slotIndex
+					);
+
+
+				it =
+					m_pendingMeshData.erase(it);
 			}
-		);
+			else
+			{
+				++it;
+			}
+		}
 	}
 
 	{
@@ -1141,6 +1299,10 @@ bool WorldThread::RequestEraseOneChunkAround() {
 			continue;
 		}
 
+		if (c && c->dirtyToSave) {
+			QueueChunkToSave(*c);
+		}
+
 		QueueMeshDeletion(it->first);
 
 		chunks.erase(it);
@@ -1187,7 +1349,7 @@ void WorldThread::UpdateChunksAround() {
 
 	auto& chunks = m_world.GetChunks();
 
-	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {//これいい自分の周囲からloadするアルゴリズム
+	for (int32_t r = 0; r <= LOAD_CHUNKS_DISTANCE && !createDone; ++r) {
 		for (int32_t dx = -r; dx <= r && !createDone; ++dx) {
 			for (int32_t dz = -r; dz <= r; ++dz) {
 				if (std::max(std::llabs(dx), std::llabs(dz)) != r) {//内側は処理済みなので外周だけ
@@ -1372,10 +1534,11 @@ void WorldThread::ProcOneChunkResult() {
 	if (m_chunkPipeline.PopFrontMeshResult(meshResult)) {
 		const auto& key = meshResult.key;
 
-		if (meshResult.meshData) {
+		if (meshResult.stagedMesh) {
 			PendingMesh mesh;
-			mesh.meshData = std::move(*meshResult.meshData);
+			mesh.stagedMesh = std::move(*meshResult.stagedMesh);
 			mesh.key = key;
+			mesh.generation = std::move(meshResult.generation);
 
 			PushPendingMesh(std::move(mesh));
 		}
@@ -1404,7 +1567,9 @@ void WorldThread::ProcOneChunkResult() {
 		chunks[key] = std::move(genResult.chunk);
 
 
-		Start_SkyLightTaskForNewChunk(*chunks[key]);
+		auto ctx = std::make_shared<MeshUpdateContext>();
+
+		Start_SkyLightTaskForNewChunk(*chunks[key], ctx);
 
 	}
 
@@ -1423,10 +1588,11 @@ void WorldThread::ProcChunkResults() {
 		const auto& key = meshResult.key;
 
 
-		if (meshResult.meshData) {
+		if (meshResult.stagedMesh) {
 			PendingMesh mesh;
-			mesh.meshData = std::move(*meshResult.meshData);
+			mesh.stagedMesh = std::move(*meshResult.stagedMesh);
 			mesh.key = key;
+			mesh.generation = std::move(meshResult.generation);
 
 			PushPendingMesh(std::move(mesh));
 		}
@@ -1457,7 +1623,10 @@ void WorldThread::ProcChunkResults() {
 		chunks[key] = std::move(genResult.chunk);
 
 
-		Start_SkyLightTaskForNewChunk(*chunks[key]);
+		auto ctx = std::make_shared<MeshUpdateContext>();
+
+
+		Start_SkyLightTaskForNewChunk(*chunks[key], ctx);
 	}
 }
 
@@ -1468,8 +1637,11 @@ void WorldThread::EnqueueMeshJob(Chunk& c) {
 
 	ChunkJob job;
 	job.coord = c.coord;
+
 	job.snapshot = m_world.CreateMeshSnapshot(c);
 	job.type = JobType::BUILD_MESH;
+	job.meshGeneration = c.CaptureMeshGeneration();
+
 
 	if (c.urgentUpdateMesh) {
 		c.urgentUpdateMesh = false;
@@ -1484,13 +1656,45 @@ void WorldThread::EnqueueMeshJob(Chunk& c) {
 bool WorldThread::PopPendingMeshData(PendingMesh& out) {
 
 	std::lock_guard<std::mutex> lock(pendingMeshMutex);
-	
-	if (m_pendingMeshData.empty()) {
-		return false;
+
+	for (auto it = m_pendingMeshData.begin();
+		it != m_pendingMeshData.end();) {
+		if (it->generation.IsCurrent()) {
+			++it;
+			continue;
+		}
+
+		m_meshStagingBuffer.ReleaseWithoutGPU(
+			it->stagedMesh.slotIndex
+		);
+		it = m_pendingMeshData.erase(it);
 	}
 
-	out = std::move(m_pendingMeshData.front());
-	m_pendingMeshData.pop_front();
+	if (m_pendingMeshData.empty()) return false;
+
+	auto nearest = std::min_element(
+
+		m_pendingMeshData.begin(),
+		m_pendingMeshData.end(),
+		[&](const PendingMesh& a, const PendingMesh& b) {
+
+			const int64_t adx = std::abs(a.key.x - m_lastStreamCoord.x);
+			const int64_t adz = std::abs(a.key.z - m_lastStreamCoord.z);
+
+			const int64_t bdx = std::abs(b.key.x - m_lastStreamCoord.x);
+			const int64_t bdz = std::abs(b.key.z - m_lastStreamCoord.z);
+
+			const int64_t distanceA = std::max(adx, adz);
+			const int64_t distanceB = std::max(bdx, bdz);
+
+
+			return distanceA < distanceB;
+		}
+
+	);
+
+	out = std::move(*nearest);
+	m_pendingMeshData.erase(nearest);
 	return true;
 }
 
@@ -1512,12 +1716,41 @@ bool WorldThread::PopPendingDeleteMeshKey(ChunkCoord& out) {
 
 
 void WorldThread::PushPendingMesh(PendingMesh&& mesh) {
+	Chunk* chunk = m_world.GetTargetChunkFromKey(mesh.key);
 	if (!IsChunkWithinUnloadRange(mesh.key) ||
-		!m_world.GetTargetChunkFromKey(mesh.key)) {
+		!chunk ||
+		!chunk->MatchesMeshGeneration(mesh.generation)) {
+
+		m_meshStagingBuffer
+			.ReleaseWithoutGPU(
+				mesh.stagedMesh.slotIndex
+			);
+
+
 		return;
 	}
 
 	std::lock_guard<std::mutex> lock(pendingMeshMutex);
+	for (auto it = m_pendingMeshData.begin();
+		it != m_pendingMeshData.end();) {
+		if (it->key != mesh.key) {
+			++it;
+			continue;
+		}
+
+		if (it->generation.state == mesh.generation.state &&
+			it->generation.value > mesh.generation.value) {
+			m_meshStagingBuffer.ReleaseWithoutGPU(
+				mesh.stagedMesh.slotIndex
+			);
+			return;
+		}
+
+		m_meshStagingBuffer.ReleaseWithoutGPU(
+			it->stagedMesh.slotIndex
+		);
+		it = m_pendingMeshData.erase(it);
+	}
 
 	m_pendingMeshData.push_back(std::move(mesh));
 
@@ -1525,11 +1758,12 @@ void WorldThread::PushPendingMesh(PendingMesh&& mesh) {
 
 
 
-void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
+void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c, const std::shared_ptr<MeshUpdateContext>& ctx) {
 
 	LightTask task;
 	task.lightType = LightType::SKY;
 	task.sourceCoord = c.coord;
+	task.ctx = ctx;
 
 
 	int64_t wx = c.coord.x * Chunk::CHUNK_WIDTH;
@@ -1557,10 +1791,11 @@ void WorldThread::Start_SkyLightTaskForNewChunk(Chunk& c) {
 }
 
 
-void WorldThread::Start_BlockLightTaskForNewChunk(Chunk& c) {
+void WorldThread::Start_BlockLightTaskForNewChunk(Chunk& c, const std::shared_ptr<MeshUpdateContext>& ctx) {
 	LightTask task;
 	task.sourceCoord = c.coord;
 	task.lightType = LightType::BLOCK;
+	task.ctx = ctx;
 
 	const int64_t chunkWorldX =
 		c.coord.x * static_cast<int64_t>(Chunk::CHUNK_WIDTH);
@@ -1677,6 +1912,12 @@ void WorldThread::ProcessLightTask(LightTask& task, int budget) {
 
 
 void WorldThread::FinishLightTask(LightTask& task) {
+	MeshUpdateContext fallbackContext;
+	MeshUpdateContext* context = &fallbackContext;
+	if (task.ctx) {
+		task.ctx->BeginBatch();
+		context = task.ctx.get();
+	}
 
 
 	for (auto& key : task.dirtyChunks_light) {
@@ -1689,13 +1930,13 @@ void WorldThread::FinishLightTask(LightTask& task) {
 		}
 
 		if (task.urgent) {
-			MarkChunkUrgentDirty(*c);
+			MarkChunkUrgentDirty(*c, context);
 		}
 		else {
-			MarkChunkDirty(*c);
+			MarkChunkDirty(*c, context);
 		}
 
-		MarkNeighborChunksDirty(c->coord);
+		MarkNeighborChunksDirty(c->coord, context);
 
 	}
 
@@ -1709,13 +1950,13 @@ void WorldThread::FinishLightTask(LightTask& task) {
 		}
 
 		if (task.urgent) {
-			MarkChunkUrgentDirty(*c);
+			MarkChunkUrgentDirty(*c, context);
 		}
 		else {
-			MarkChunkDirty(*c);
+			MarkChunkDirty(*c, context);
 		}
 
-		MarkNeighborChunksDirty(c->coord);
+		MarkNeighborChunksDirty(c->coord, context);
 
 	}
 
@@ -1797,23 +2038,26 @@ void WorldThread::QueueChunksToAutoSave() {
 
 	for (auto& [key, c_ptr] : chunks) {
 		if (!c_ptr) continue;
-		if (!c_ptr->dirtyToSave) continue;
-		
-
-		ChunkSaveData data;
-		data.coord = c_ptr->coord;
-
-		data.blocks.assign(
-			c_ptr->blocks.begin(),
-			c_ptr->blocks.end()
-		);
-
-		m_persistenceIO.RequestToSaveChunk(std::move(data));
-
-		c_ptr->dirtyToSave = false;
-
+		QueueChunkToSave(*c_ptr);
 	}
 
+}
+
+
+void WorldThread::QueueChunkToSave(Chunk& chunk) {
+	if (!chunk.dirtyToSave) {
+		return;
+	}
+
+	ChunkSaveData data;
+	data.coord = chunk.coord;
+	data.blocks.assign(
+		chunk.blocks.begin(),
+		chunk.blocks.end()
+	);
+
+	m_persistenceIO.RequestToSaveChunk(std::move(data));
+	chunk.dirtyToSave = false;
 }
 
 
@@ -1847,16 +2091,6 @@ void WorldThread::DispatchDirtyMeshJobs() {
 
 	}
 
-	/*for (auto& [key, chunkPtr] : chunks) {
-		
-		if (!chunkPtr->dirty) continue;
-
-		//if (chunkPtr->meshJobInFlight) continue;
-
-		EnqueueMeshJob(*chunkPtr);
-
-		chunkPtr->dirty = false;
-	}*/
 
 }
 
@@ -1907,7 +2141,16 @@ void WorldThread::DispatchOneDirtyMeshJob() {//TODO: 仕組みをunordered_set�
 }
 
 
-void WorldThread::MarkChunkDirty(Chunk& c) {
+void WorldThread::MarkChunkDirty(
+	Chunk& c,
+	MeshUpdateContext* context
+) {
+	if (context) {
+		InvalidateMeshGeneration(c, *context);
+	}
+	else {
+		c.AdvanceMeshGeneration();
+	}
 
 
 	c.dirty = true;
@@ -1938,15 +2181,21 @@ void WorldThread::MarkChunkDirty(Chunk& c) {
 }
 
 
-void WorldThread::MarkChunkUrgentDirty(Chunk& c) {
+void WorldThread::MarkChunkUrgentDirty(
+	Chunk& c,
+	MeshUpdateContext* context
+) {
 
 
 	c.urgentUpdateMesh = true;
 
-	MarkChunkDirty(c);
+	MarkChunkDirty(c, context);
 }
 
-void WorldThread::MarkNeighborChunksDirty(ChunkCoord coord) {
+void WorldThread::MarkNeighborChunksDirty(
+	ChunkCoord coord,
+	MeshUpdateContext* context
+) {
 
 	auto& chunks = m_world.GetChunks();
 
@@ -1963,7 +2212,7 @@ void WorldThread::MarkNeighborChunksDirty(ChunkCoord coord) {
 		}
 
 
-		MarkChunkDirty(*it->second);
+		MarkChunkDirty(*it->second, context);
 	}
 
 	for (int64_t z = coord.z - 1; z <= coord.z + 1; ++z) {
@@ -1980,11 +2229,14 @@ void WorldThread::MarkNeighborChunksDirty(ChunkCoord coord) {
 
 		
 
-		MarkChunkDirty(*it->second);
+		MarkChunkDirty(*it->second, context);
 	}
 }
 
-void WorldThread::MarkNeighborChunksUrgentDirty(ChunkCoord coord) {
+void WorldThread::MarkNeighborChunksUrgentDirty(
+	ChunkCoord coord,
+	MeshUpdateContext* context
+) {
 
 	auto& chunks = m_world.GetChunks();
 
@@ -2001,7 +2253,7 @@ void WorldThread::MarkNeighborChunksUrgentDirty(ChunkCoord coord) {
 
 		it->second->urgentUpdateMesh = true;
 
-		MarkChunkDirty(*it->second);
+		MarkChunkDirty(*it->second, context);
 
 	}
 
@@ -2017,7 +2269,7 @@ void WorldThread::MarkNeighborChunksUrgentDirty(ChunkCoord coord) {
 
 		it->second->urgentUpdateMesh = true;
 
-		MarkChunkDirty(*it->second);
+		MarkChunkDirty(*it->second, context);
 
 
 	}
@@ -2041,21 +2293,36 @@ bool WorldThread::HasImmediateTask() {
 
 	return !m_lightTasks.empty() || !m_urgentLightTasks.empty() || 
 		    m_streamNeedsUpdate  ||  m_hasSettedDesireStreamC.load() ||
-		    m_hasSettedInput.load() || m_hasMovedMouse.load();
+		    m_hasSettedInput.load() || m_hasMovedMouse.load() ||
+			m_hasPendingRaycast.load();
 
 }
 
 
 
-RaycastHit WorldThread::RequestRaycast(const WorldPos& origin, const glm::vec3& dir, float distance) const {
+RaycastHit WorldThread::RequestRaycast(
+	const WorldPos& origin,
+	const glm::vec3& dir,
+	float distance
+) {
+	RaycastHit latest;
+	{
+		std::lock_guard<std::mutex> lock(m_raycastMutex);
+		latest = m_latestRaycastHit;
+		m_pendingRaycast = RaycastRequest{
+			origin,
+			dir,
+			distance
+		};
+		m_hasPendingRaycast.store(true);
+	}
 
-	return m_world.Raycast(
-		origin,
-		dir,
-		distance
-	);
+	Wake();
+	return latest;
 
 }
+
+
 
 
 void WorldThread::ApplyPlayerStatus(float dt) {
@@ -2184,7 +2451,16 @@ void WorldThread::ProcCreateLightVSnap() {
 
 
 
-	std::unique_ptr<LightVolumeSnapshot> snap = m_world.CreateLightVSnapshot(std::move(center));
+	const bool forceFullUpdate =
+		m_lightVolumeForceFullUpdate.exchange(false);
+
+	std::unique_ptr<LightVolumeSnapshot> snap =
+		m_world.CreateLightVSnapshot(
+			center,
+			m_lastLightVolumeSnapshotOrigin,
+			forceFullUpdate
+		);
+	m_lastLightVolumeSnapshotOrigin = snap->origin;
 
 
 	m_exchanger.PublishLightVolumeSnap(std::move(snap));
@@ -2347,14 +2623,32 @@ void WorldThread::SetDebugStateFromDebug(const DebugActions& actions) {
 
 void WorldThread::SetLightVolumeCenter(const glm::i64vec3& origin) {
 
+	bool changed = false;
 
-	std::lock_guard<std::mutex> lock(m_lightVolumeCenterMutex);
+	{
+		std::lock_guard<std::mutex> lock(
+			m_lightVolumeCenterMutex
+		);
 
+		const glm::i64vec3 delta =
+			glm::abs(origin - m_lightVolumeCenter);
 
-	if (m_lightVolumeCenter == origin) return;
+		constexpr int64_t UPDATE_STEP = 4;
 
-	m_lightVolumeDirty.store(true);
-	m_lightVolumeCenter = origin;
+		if (delta.x < UPDATE_STEP &&
+			delta.y < UPDATE_STEP &&
+			delta.z < UPDATE_STEP) {
+			return;
+		}
+
+		m_lightVolumeCenter = origin;
+		m_lightVolumeDirty.store(true);
+		changed = true;
+	}
+
+	if (changed) {
+		Wake();
+	}
 
 }
 

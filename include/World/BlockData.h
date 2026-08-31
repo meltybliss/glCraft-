@@ -33,8 +33,8 @@ constexpr std::array<glm::vec3, static_cast<size_t>(BlockType::COUNT)> lightColo
 	glm::vec3(0.0f),
 	glm::vec3(0.0f),
 	glm::vec3(0.0f),
-	glm::vec3(1.0f, 0.42f, 0.12f),
-	glm::vec3(1.0f, 0.42f, 0.12f),
+	glm::vec3(1.0f, 0.42f, 0.14f),
+	glm::vec3(1.0f, 0.42f, 0.14f),
 
 
 };

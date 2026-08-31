@@ -3,9 +3,11 @@
 #include "Render/MeshBuilder.h"
 #include "World/WorldThread.h"
 #include "World/LightEngine.h"
+#include "Render/StagedMeshData.h"
 #include <memory>
 #include <iostream>
 #include <algorithm>
+#include <cstring>
 #include "Util/ThreadSafeLogUtils.h"
 
 void ChunkPipeline::StartWorkerThreads() {
@@ -19,7 +21,7 @@ void ChunkPipeline::StartWorkerThreads() {
 	unsigned hw = std::thread::hardware_concurrency();
 
 	WorkerCount = std::clamp<int>(
-		static_cast<int>(hw) - 2,
+		static_cast<int>(hw) - 3,
 		1,
 		MAX_WORKER_COUNT
 	);
@@ -112,15 +114,126 @@ void ChunkPipeline::ProcessJob(ChunkJob&& targetJob) {
 
 		
 		case JobType::BUILD_MESH: {
-			if (targetJob.snapshot) {
-				MeshData data = MeshBuilder::BuildChunkMesh(*targetJob.snapshot);
+			if (targetJob.snapshot && targetJob.meshGeneration.IsCurrent()) {
+
+				thread_local MeshData data{};
+
+				if (!MeshBuilder::BuildChunkMesh(
+					*targetJob.snapshot,
+					data,
+					targetJob.meshGeneration
+				)) {
+					break;
+				}
+
+
+				const std::size_t vertexBytes =
+					data.vertices.size()
+					* sizeof(float);
+
+
+				const std::size_t indexBytes =
+					data.indices.size()
+					* sizeof(unsigned int);
+
+
+				const std::size_t totalBytes =
+					vertexBytes
+					+ indexBytes;
+
+				if (
+					totalBytes >
+					MeshStagingBuffer::SLOT_SIZE
+					)
+				{
+					std::cerr
+						<< "mesh too large for staging slot: "
+						<< totalBytes
+						<< " bytes\n";
+
+					break;
+				}
+
+
+				auto reservation = m_meshStagingBuffer->Acquire();
+				if (!reservation) {
+					break;
+				}
+
+				if (!targetJob.meshGeneration.IsCurrent()) {
+					m_meshStagingBuffer->ReleaseWithoutGPU(
+						reservation->slotIndex
+					);
+					break;
+				}
+
+
+
+				if (vertexBytes > 0) {
+
+					std::memcpy(
+						reservation->ptr,
+						data.vertices.data(),
+						vertexBytes
+
+					);
+
+				}
+
+
+				if (indexBytes > 0) {
+
+					std::memcpy(
+						reservation->ptr
+						+ vertexBytes,
+						data.indices.data(),
+
+						indexBytes
+
+
+					);
+
+
+				}
+
+				if (!targetJob.meshGeneration.IsCurrent()) {
+					m_meshStagingBuffer->ReleaseWithoutGPU(
+						reservation->slotIndex
+					);
+					break;
+				}
+
+
+				
+				StagedMeshData staged;
+
+				staged.slotIndex = reservation->slotIndex;
+
+				staged.vertexOffset = reservation->baseOffset;
+
+				staged.vertexBytes = vertexBytes;
+
+				staged.indexOffset =
+					reservation->baseOffset
+					+ vertexBytes;
+
+				staged.indexBytes =
+					indexBytes;
+
+
+				staged.indexCount =
+					static_cast<uint32_t>(
+						data.indices.size()
+					);
+
 
 				{
 					std::lock_guard<std::mutex> lock(meshResultMutex);
 
 					m_meshChunkResult.push_back({
 						targetJob.coord,
-						std::move(data)
+						std::move(staged),
+						targetJob.meshGeneration
 
 					});
 				}
@@ -155,6 +268,7 @@ void ChunkPipeline::StartLoop() {
 			}
 			const ChunkCoord center{m_curStreamCx.load(), m_curStreamCz.load()};
 
+			//urgentなら最優先、urgentがないなら距離で優先度をつける、距離が同じならjobで優先度をつけます。
 			auto bestJob = std::min_element(
 				m_jobQueue.begin(),
 				m_jobQueue.end(),
@@ -212,6 +326,7 @@ void ChunkPipeline::StartLoop() {
 
 void ChunkPipeline::StopWorkerThreads() {
 	runningWorker = false;
+	m_meshStagingBuffer->CancelPendingAcquires();
 
 	workerCv.notify_all();
 
@@ -268,6 +383,21 @@ bool ChunkPipeline::PopFrontMeshResult(MeshChunkResult& out) {
 
 	{
 		std::lock_guard<std::mutex> lock(meshResultMutex);
+		for (auto it = m_meshChunkResult.begin();
+			it != m_meshChunkResult.end();) {
+			if (it->generation.IsCurrent()) {
+				++it;
+				continue;
+			}
+
+			if (it->stagedMesh) {
+				m_meshStagingBuffer->ReleaseWithoutGPU(
+					it->stagedMesh->slotIndex
+				);
+			}
+			it = m_meshChunkResult.erase(it);
+		}
+
 		if (m_meshChunkResult.empty()) {
 			return false;
 		}
@@ -415,12 +545,20 @@ std::vector<ChunkCoord> ChunkPipeline::CancelQueuedOutside_ChunkJob() {
 	{
 		std::lock_guard<std::mutex> lock(meshResultMutex);
 
-		std::erase_if(
-			m_meshChunkResult,
-			[this](const MeshChunkResult& result) {
-				return IsOutsideUnloadDistance(result.key);
+		for (auto it = m_meshChunkResult.begin();
+			it != m_meshChunkResult.end();) {
+			if (!IsOutsideUnloadDistance(it->key)) {
+				++it;
+				continue;
 			}
-		);
+
+			if (it->stagedMesh) {
+				m_meshStagingBuffer->ReleaseWithoutGPU(
+					it->stagedMesh->slotIndex
+				);
+			}
+			it = m_meshChunkResult.erase(it);
+		}
 	}
 
 	{

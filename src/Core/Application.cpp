@@ -4,10 +4,14 @@
 #include <iostream>
 #include <cmath>
 
-Application::Application() : m_exchanger(), m_session(m_exchanger, m_persistenceIO), m_wRenderer(m_exchanger) {}
 
-
-
+Application::Application()
+	: m_exchanger(),
+	m_persistenceIO(),
+	m_session(m_exchanger, m_persistenceIO),
+	m_wRenderer(m_exchanger)
+{
+}
 
 void Application::UpdateStreamCenter() {
 
@@ -74,7 +78,7 @@ void Application::Run() {
 			float fps = static_cast<float>(frameCount) / fpsTimer;
 
 			std::string title =
-				"glCraft++ | FPS: " + std::to_string(static_cast<int>(fps));
+				"glVoxel++ | FPS: " + std::to_string(static_cast<int>(fps));
 
 			glfwSetWindowTitle(m_window, title.c_str());
 
@@ -172,6 +176,13 @@ void Application::Run() {
 
 	m_session.Stop();
 
+
+	m_session
+		.GetWorldThread()
+		.GetMeshStagingBuffer()
+		.Destroy();
+
+
 	m_imguiRenderer.Shutdown();
 
 
@@ -230,6 +241,7 @@ void Application::Tick_main() {
 					std::cerr << "failed to load the world\n";
 
 					//create new world
+					worldInfo.action = WorldSelectionAction::CreateNew;
 
 					m_session.CreateNewWorld();
 				
@@ -389,7 +401,23 @@ bool Application::InitGL() {
 		return false;
 	}
 
-	m_window = glfwCreateWindow(WindowSize::windowWidth, WindowSize::windowHeight, "glCraft++", nullptr, nullptr);
+	glfwWindowHint(
+		GLFW_CONTEXT_VERSION_MAJOR,
+		4
+	);
+
+	glfwWindowHint(
+		GLFW_CONTEXT_VERSION_MINOR,
+		4
+	);
+
+	glfwWindowHint(
+		GLFW_OPENGL_PROFILE,
+		GLFW_OPENGL_CORE_PROFILE
+	);
+
+
+	m_window = glfwCreateWindow(WindowSize::windowWidth, WindowSize::windowHeight, "glVoxel++", nullptr, nullptr);
 
 	if (!m_window) {
 		glfwTerminate();
@@ -403,6 +431,12 @@ bool Application::InitGL() {
 		glfwTerminate();
 		return false;
 	}
+
+
+	m_session
+		.GetWorldThread()
+		.GetMeshStagingBuffer()
+		.Init();
 
 
 	glfwSetWindowUserPointer(m_window, this);
@@ -613,7 +647,21 @@ void Application::UpdateRayHit() {
 
 	float distance = 4.0f;
 
-	lastHit = m_session.GetWorldThread().RequestRaycast(origin, rayDir, distance);
+	auto& worldThread =
+		m_session.GetWorldThread();
+
+	worldThread.SubmitRaycast(
+		origin,
+		rayDir,
+		distance
+	);
+
+	if (auto result =
+		worldThread.GetLatestRaycastResult())
+	{
+		lastHit = *result;
+	}
+
 
 }
 
@@ -658,14 +706,17 @@ void Application::ApplyCameraStatus() {
 	
 
 	m_camera.position = WorldPosLerp(previous.pos, cur.pos, static_cast<double>(alpha));
-	/*m_camera.front = glm::mix(previous.front, cur.front, alpha);
-	m_camera.right = glm::mix(previous.right, cur.right, alpha);
-	m_camera.up = glm::mix(previous.up, cur.up, alpha);
-	*/
+	m_camera.front = glm::normalize(
+		glm::mix(previous.front, cur.front, alpha)
+	);
 
-	m_camera.front = cur.front;
-	m_camera.right = cur.right;
-	m_camera.up = cur.up;
+	m_camera.right = glm::normalize(
+		glm::mix(previous.right, cur.right, alpha)
+	);
+
+	m_camera.up = glm::normalize(
+		glm::mix(previous.up, cur.up, alpha)
+	);
 
 }
 

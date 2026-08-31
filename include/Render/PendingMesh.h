@@ -1,9 +1,12 @@
 #pragma once
-#include "MeshData.h"
+
+#include "Render/StagedMeshData.h"
+#include "Render/MeshGeneration.h"
 #include "World/ChunkCoord.h"
 
 struct PendingMesh {
-	MeshData meshData;
+	StagedMeshData stagedMesh;
 	ChunkCoord key;
+	MeshGenerationStamp generation;
 
 };

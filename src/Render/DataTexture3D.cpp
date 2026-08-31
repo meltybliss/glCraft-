@@ -49,9 +49,12 @@ bool DataTexture3D::Create(
 
 	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	// The light volume is addressed as a ring buffer. The shader rejects
+	// samples outside the logical volume; repeat is only used at an internal
+	// physical wrap boundary.
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
 
 
 
@@ -96,4 +99,27 @@ void DataTexture3D::UpdateSub(const float* data) const {
 
 	);
 
+}
+
+
+void DataTexture3D::UpdateSubRegion(
+	const glm::ivec3& offset,
+	const glm::ivec3& size,
+	const float* data,
+	int sourceRowLength,
+	int sourceImageHeight
+) const {
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, sourceRowLength);
+	glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, sourceImageHeight);
+	glTexSubImage3D(
+		GL_TEXTURE_3D,
+		0,
+		offset.x, offset.y, offset.z,
+		size.x, size.y, size.z,
+		GL_RGBA,
+		GL_FLOAT,
+		data
+	);
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	glPixelStorei(GL_UNPACK_IMAGE_HEIGHT, 0);
 }

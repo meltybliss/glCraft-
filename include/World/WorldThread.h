@@ -14,6 +14,8 @@
 #include "Snapshot/SnapshotExchanger.h"
 #include "Debugs/DebugSettings.h"
 #include "WorldConfig.h"
+#include "RaycastHit.h"
+#include "Render/MeshStagingBuffer.h"
 #include <chrono>
 #include <thread>
 #include <atomic>
@@ -36,13 +38,14 @@ struct ChunkOffset {
 
 
 class PersistenceIO;
+class MeshUpdateContext;
 
 
 class WorldThread {
 public:
 
 	WorldThread(SnapshotExchanger& exchanger, PersistenceIO& pIO)
-		: m_chunkPipeline(&m_world), m_persistenceIO(pIO), m_exchanger(exchanger)  {}
+		: m_chunkPipeline(&m_world, &m_meshStagingBuffer), m_persistenceIO(pIO), m_exchanger(exchanger)  {}
 
 
 	void SetWorldSelectionResult(WorldSelectionResult& info);
@@ -90,7 +93,7 @@ public:
 
 	void AddMouseDelta(float xoffset, float yoffset);
 
-	RaycastHit RequestRaycast(const WorldPos& origin, const glm::vec3& dir, float distance) const;
+	RaycastHit RequestRaycast(const WorldPos& origin, const glm::vec3& dir, float distance);
 
 
 	void Rebuild_allChunks();
@@ -111,10 +114,27 @@ public:
 	void SetLightVolumeCenter(const glm::i64vec3& origin);
 	WorldThreadDebugStats GetDebugStats();
 
+
+	[[nodiscard]] MeshStagingBuffer& GetMeshStagingBuffer()
+	{
+		return m_meshStagingBuffer;
+	}
+
+
+	void SubmitRaycast(
+		const WorldPos& origin,
+		const glm::vec3& dir,
+		float distance
+	);
+
+
+	std::optional<RaycastHit> GetLatestRaycastResult();
 private:
 	
 
 	World m_world;
+	MeshStagingBuffer m_meshStagingBuffer;
+
 	ChunkPipeline m_chunkPipeline;
 	LightEngine m_lightEngine;
 	SnapshotExchanger& m_exchanger;
@@ -143,7 +163,8 @@ private:
 		std::numeric_limits<int64_t>::max()
 	};
 
-	std::atomic<bool> runningWorldThread;
+	std::atomic<bool> runningWorldThread = false;
+	bool m_worldStarted = false;
 
 	bool m_streamNeedsUpdate = false;
 
@@ -185,7 +206,7 @@ private:
 	size_t m_nextLoadOffset = 0;
 
 
-	std::atomic<bool> m_firstTimeCreatePlSnap;
+	std::atomic<bool> m_firstTimeCreatePlSnap = true;
 
 
 	using Clock = std::chrono::steady_clock;
@@ -199,6 +220,7 @@ private:
 
 	std::mutex m_lightVolumeCenterMutex;
 	std::atomic<bool> m_lightVolumeDirty = true;
+	std::atomic<bool> m_lightVolumeForceFullUpdate = true;
 	std::atomic<bool> m_pointLightDirty = false;
 
 	std::atomic<uint64_t> m_debugBusyTimeNs = 0;
@@ -211,6 +233,19 @@ private:
 	std::atomic<size_t> m_debugPendingMeshUploads = 0;
 
 	glm::i64vec3 m_lightVolumeCenter{0};
+	std::optional<glm::i64vec3> m_lastLightVolumeSnapshotOrigin;
+
+	struct RaycastRequest {
+		WorldPos origin;
+		glm::vec3 direction{0.0f};
+		float distance = 0.0f;
+	};
+
+	std::mutex m_raycastMutex;
+	std::optional<RaycastRequest> m_pendingRaycast;
+	RaycastHit m_latestRaycastHit{};
+	std::atomic<bool> m_hasPendingRaycast = false;
+
 
 
 
@@ -229,6 +264,8 @@ private:
 
 private:
 
+
+
 private:
 
 	void ProcCommands();
@@ -238,6 +275,8 @@ private:
 	void ProcOneChunkResult();
 
 	void ProcOne_Disk_ChunkLoadResult();
+
+	void ProcRaycastRequest();
 
 	void ProcCreateLightVSnap();
 	void ProcCreatePointLightsSnapshot();
@@ -251,6 +290,7 @@ private:
 	);
 
 	void QueueChunksToAutoSave();
+	void QueueChunkToSave(Chunk& chunk);
 	void ForcedSave_World();
 	void ForcedSave_Chunks();
 
@@ -262,6 +302,7 @@ private:
 	void ApplyStreamCenter();
 
 	void ApplyPlayerStatus(float dt);
+	
 
 	
 	void ApplyMouseMovement();
@@ -299,13 +340,15 @@ private:
 		int64_t z,
 		uint8_t level,
 		const glm::vec3& color,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 	void Start_RemoveBlockLightTask(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void Start_RemoveBlockLightTask_WithEmissionTask(
@@ -313,23 +356,26 @@ private:
 		int64_t y,
 		int64_t z,
 		uint8_t emissionAfterRemove,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void Start_RemoveSkyLightTask(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
-	void Start_SkyLightTaskForNewChunk(Chunk& c);
-	void Start_BlockLightTaskForNewChunk(Chunk& c);
+	void Start_SkyLightTaskForNewChunk(Chunk& c, const std::shared_ptr<MeshUpdateContext>& ctx);
+	void Start_BlockLightTaskForNewChunk(Chunk& c, const std::shared_ptr<MeshUpdateContext>& ctx);
 	void Start_BlockLightTaskFromNeighbors(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		bool urgent = false
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void Start_SkyLightTask(
@@ -337,14 +383,16 @@ private:
 		int64_t y,
 		int64_t z,
 		int level,
-		bool urgent
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void Add_SkylightTask(
 		int64_t x,
 		int64_t y,
 		int64_t z,
-		bool urgent
+		bool urgent,
+		const std::shared_ptr<MeshUpdateContext>& ctx
 	);
 
 	void ProcLightTasks(std::chrono::steady_clock::time_point deadline);
@@ -355,11 +403,23 @@ private:
 	void DispatchDirtyMeshJobs();
 	void DispatchOneDirtyMeshJob();
 
-	void MarkChunkDirty(Chunk& c);
-	void MarkNeighborChunksDirty(ChunkCoord coord);
-	void MarkNeighborChunksUrgentDirty(ChunkCoord coord);
+	void MarkChunkDirty(
+		Chunk& c,
+		MeshUpdateContext* context = nullptr
+	);
+	void MarkNeighborChunksDirty(
+		ChunkCoord coord,
+		MeshUpdateContext* context = nullptr
+	);
+	void MarkNeighborChunksUrgentDirty(
+		ChunkCoord coord,
+		MeshUpdateContext* context = nullptr
+	);
 
-	void MarkChunkUrgentDirty(Chunk& c);
+	void MarkChunkUrgentDirty(
+		Chunk& c,
+		MeshUpdateContext* context = nullptr
+	);
 
 	bool HasImmediateTask();
 	void Wake();

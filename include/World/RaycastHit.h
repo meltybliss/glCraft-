@@ -15,3 +15,11 @@ struct RaycastHit {
 	int64_t previousZ = 0;
 
 };
+
+
+struct RaycastRequest
+{
+	WorldPos origin;
+	glm::vec3 direction;
+	float distance = 0.0f;
+};

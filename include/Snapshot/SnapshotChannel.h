@@ -3,6 +3,8 @@
 
 #include <mutex>
 #include <optional>
+#include <deque>
+#include <memory>
 #include <utility>
 
 template<typename T>
@@ -58,4 +60,36 @@ public:
 private:
 	std::mutex m_mutex;
 	std::unique_ptr<T> m_pending;
+};
+
+template<typename T>
+class PtrSnapshotQueueChannel {
+public:
+	void publish(std::unique_ptr<T> snapshot) {
+		std::scoped_lock lock(m_mutex);
+		m_pending.push_back(std::move(snapshot));
+	}
+
+	void replace(std::unique_ptr<T> snapshot) {
+		std::scoped_lock lock(m_mutex);
+		m_pending.clear();
+		m_pending.push_back(std::move(snapshot));
+	}
+
+	std::unique_ptr<T> acquire() {
+		std::scoped_lock lock(m_mutex);
+		if (m_pending.empty()) return nullptr;
+		auto result = std::move(m_pending.front());
+		m_pending.pop_front();
+		return result;
+	}
+
+	void clear() {
+		std::scoped_lock lock(m_mutex);
+		m_pending.clear();
+	}
+
+private:
+	std::mutex m_mutex;
+	std::deque<std::unique_ptr<T>> m_pending;
 };

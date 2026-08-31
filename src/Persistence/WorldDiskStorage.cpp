@@ -152,3 +152,10 @@ WorldDiskStorage::LoadFromDisk() const {
 
 	return data;
 }
+
+
+bool WorldDiskStorage::DeleteWorldFromDisk() const {
+	std::error_code error;
+	std::filesystem::remove_all(worldPath, error);
+	return !error;
+}

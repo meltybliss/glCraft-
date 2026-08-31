@@ -188,6 +188,7 @@ void LightEngine::Propagate_BlockLight(
 
 						bfs_queue.push({ nx, ny, nz, targetLevel, baseNode.color });
 
+
 						RecordBlockLightChange(task, nx, ny, nz);
 					}
 				}
@@ -374,6 +375,7 @@ void LightEngine::Propagate_SkyLight(
 							floorDiv(nx, Chunk::CHUNK_WIDTH),
 							floorDiv(nz, Chunk::CHUNK_DEPTH)
 						};
+
 
 						touchedChunkKeys.insert(key);
 
