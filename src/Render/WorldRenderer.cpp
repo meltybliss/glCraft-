@@ -704,6 +704,9 @@ void WorldRenderer::RenderShadowPass(const Camera& cam) {
 
 	glm::vec3 up(0.0f, 1.0f, 0.0f);
 
+	if (std::abs(glm::dot(sunDir, up)) > 0.95f) {
+		up = glm::vec3(0.0f, 0.0f, 1.0f);
+	}
 
 	glm::vec3 shadowCenter = { 0.f, 0.f, 0.f };
 
