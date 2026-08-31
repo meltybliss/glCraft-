@@ -83,7 +83,11 @@ float CalculateShadow(vec4 fragPosLightSpace, vec3 normal)
 
    
     float ndotl = max(dot(normal, normalize(sunDirection)), 0.0);
-    float bias = max(0.00065, 0.0022 * (1.0 - ndotl));
+    float bias =
+    max(
+        0.0015,
+        0.006 * (1.0 - ndotl)
+    );
     vec2 texelSize = 1.0 / vec2(textureSize(shadowMap, 0));
     float visibility = 0.0;
     for (int i = 0; i < 12; ++i) {
